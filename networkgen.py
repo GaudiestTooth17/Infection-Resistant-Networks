@@ -88,7 +88,7 @@ def output_graph(G: nx.Graph, layout_algorithm=None):
     """
     print the graph to stdout using the typical representation
     """
-    print(len(G.nodes) + 1)
+    print(len(G.nodes))
 
     # sometimes the nodes are identified by tuples instead of just integers
     # This doesn't work with other programs in the project, so we must give each tuple
