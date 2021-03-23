@@ -4,7 +4,7 @@ from typing import List
 
 import networkx as nx
 import matplotlib.pyplot as plt
-# import sys
+import sys
 
 
 # make a component-gate graph
@@ -75,15 +75,6 @@ def make_complete_clique_gate_graph(num_big_components, big_component_size, gate
     return master_graph
 
 
-def make_caveman_graph(num_cliques, clique_size) -> nx.Graph:
-    """
-    Make a graph consisting of cliques with some number of edges between cliques
-    :param clique_size: number of nodes in each clique
-    :param num_cliques: how many social circles to make
-    """
-    return nx.connected_caveman_graph(num_cliques, clique_size)
-
-
 def output_graph(G: nx.Graph, layout_algorithm=None):
     """
     print the graph to stdout using the typical representation
@@ -114,9 +105,10 @@ def output_graph(G: nx.Graph, layout_algorithm=None):
 
 
 if __name__ == '__main__':
-    G = nx.hexagonal_lattice_graph(15, 15)
+    main(sys.argv)
+    # G = nx.hexagonal_lattice_graph(15, 15)
     # print(len(G.nodes))
     # nx.draw_spectral(G, node_size=10)
-    plt.show()
-    output_graph(G, nx.spectral_layout)
+    # plt.show()
+    # output_graph(G, nx.spectral_layout)
     # main(sys.argv)
