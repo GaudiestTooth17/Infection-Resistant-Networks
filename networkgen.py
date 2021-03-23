@@ -20,8 +20,8 @@ def main(argv):
     graph = make_complete_clique_gate_graph(num_big_components, big_component_size, gate_size)
 
     output_graph(graph)
-    # nx.draw(graph)
-    # plt.show()
+    nx.draw(graph, node_size=100)
+    plt.show()
 
 
 def union_components(components: List[nx.Graph]) -> nx.Graph:
