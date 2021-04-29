@@ -15,7 +15,7 @@ def read_file(fileName) -> Tuple[np.ndarray, Optional[Layout]]:
     with open(fileName, 'r') as f:
         line = f.readline()
         shape = (int(line[:-1]), int(line[:-1]))
-        matrix = np.zeros(shape, dtype=np.uint8)
+        matrix = np.zeros(shape, dtype='uint8')
 
         line = f.readline()[:-1]
         i = 1
@@ -26,7 +26,8 @@ def read_file(fileName) -> Tuple[np.ndarray, Optional[Layout]]:
             line = f.readline()[:-1]
             i += 1
 
-        rest_of_lines = map(lambda s: s.split(' '), f.readlines())
+        rest_of_lines = tuple(map(lambda s: s.split(),
+                              filter(lambda s: len(s) > 1, f.readlines())))
         layout = {int(line[0]): (float(line[1]), float(line[2]))
                   for line in rest_of_lines} if len(rest_of_lines) > 0 else None
     return matrix, layout
@@ -133,15 +134,23 @@ def analyze_graph(adj_matrix, name, layout) -> None:
     show_deg_dist_from_matrix(adj_mat, name, display=True, save=True)
 
 
-def visualize_graph(adj_mat: np.ndarray, layout: Optional[Layout]) -> None:
+def visualize_graph(adj_mat: np.ndarray, layout: Optional[Layout], name='', save=False) -> None:
     G = nx.Graph(adj_mat)
+    node_color = ['blue']*len(G.edges)
     if layout is None:
-        nx.draw_kamada_kawai(G, node_size=100)
+        nx.draw_kamada_kawai(G, node_size=50, node_color=node_color)
     else:
-        nx.draw_networkx(G, pos=layout, node_size=100, with_labels=False)
-    plt.show()
+        nx.draw_networkx(G, pos=layout, node_size=100, with_labels=False, node_color=node_color)
+    plt.title(name)
+    if save:
+        plt.savefig(name, dpi=300)
+    else:
+        plt.show()
 
 
 if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print(f'Usage: {sys.argv[0]} <network>')
     adj_mat, layout = read_file(sys.argv[1])
-    analyze_graph(adj_mat, sys.argv[1][:-4], layout)
+    # analyze_graph(adj_mat, sys.argv[1][:-4], layout)
+    visualize_graph(adj_mat, layout, sys.argv[1][:-4], True)

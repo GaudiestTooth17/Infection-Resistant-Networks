@@ -98,8 +98,10 @@ def output_graph(G: nx.Graph, layout_algorithm=None):
     # this code is just for the visualization program I made ("graph-visualizer")
     # It writes out where each of the nodes should be drawn.
     print()
-    layout = nx.kamada_kawai_layout(G)
-    for node, coordinate in layout.items():
+    if layout_algorithm is None:
+        layout_algorithm = nx.kamada_kawai_layout
+    layout = layout_algorithm(G)
+    for node, coordinate in sorted(layout.items(), key=lambda x: x[0]):
         print(f'{node_to_id[node]} {coordinate[0]} {coordinate[1]}')
     print()
 
