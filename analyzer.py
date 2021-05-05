@@ -5,10 +5,19 @@ import collections
 import networkx as nx
 import numpy as np
 import sys
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, Iterable, List, Set, Tuple, Optional, Union
 
 
 Layout = Dict[int, Tuple[float, float]]
+Number = Union[int, float]
+
+
+def main(argv: List[str]):
+    if len(argv) < 2:
+        print(f'Usage: {argv[0]} <network>')
+    M, layout = read_file(argv[1])
+    # analyze_graph(M, argv[1][:-4], layout)
+    visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True)
 
 
 def read_file(fileName) -> Tuple[np.ndarray, Optional[Layout]]:
@@ -33,7 +42,7 @@ def read_file(fileName) -> Tuple[np.ndarray, Optional[Layout]]:
     return matrix, layout
 
 
-def show_deg_dist_from_matrix(matrix: np.ndarray, title, *, color='b', display=False, save=False):
+def show_deg_dist_from_matrix(M: np.ndarray, title, *, color='b', display=False, save=False):
     """
     This shows a degree distribution from a matrix.
 
@@ -45,7 +54,7 @@ def show_deg_dist_from_matrix(matrix: np.ndarray, title, *, color='b', display=F
     :return: None
     """
 
-    graph = nx.from_numpy_matrix(matrix)
+    graph = nx.from_numpy_matrix(M)
     degree_sequence = sorted([d for n, d in graph.degree()], reverse=True)
     degreeCount = collections.Counter(degree_sequence)
     deg, cnt = zip(*degreeCount.items())
@@ -70,11 +79,11 @@ def show_deg_dist_from_matrix(matrix: np.ndarray, title, *, color='b', display=F
     plt.clf()
 
 
-def make_node_to_degree(adj_mat) -> List[int]:
-    node_to_degree = [0 for _ in range(adj_mat.shape[0])]
-    for i in range(adj_mat.shape[0]):
-        for j in range(adj_mat.shape[1]):
-            if adj_mat[i][j] > 0:
+def make_node_to_degree(M) -> List[int]:
+    node_to_degree = [0 for _ in range(M.shape[0])]
+    for i in range(M.shape[0]):
+        for j in range(M.shape[1]):
+            if M[i][j] > 0:
                 node_to_degree[i] += 1
     return node_to_degree
 
@@ -100,13 +109,13 @@ def show_clustering_coefficent_dist(node_to_coefficient: Dict[int, float], node_
     plt.show()
 
 
-def calc_edge_density(adj_mat) -> float:
+def calc_edge_density(M) -> float:
     num_edges = 0
-    for i in range(adj_mat.shape[0]):
-        for j in range(i+1, adj_mat.shape[1]):
-            if adj_mat[i][j] > 0:
+    for i in range(M.shape[0]):
+        for j in range(i+1, M.shape[1]):
+            if M[i][j] > 0:
                 num_edges += 1
-    density = num_edges / (adj_mat.shape[0]*(adj_mat.shape[0]-1)/2)
+    density = num_edges / (M.shape[0]*(M.shape[0]-1)/2)
     return density
 
 
@@ -120,27 +129,29 @@ def get_components(graph) -> List[Set]:
 
 # shows degree distribution, degree assortativity coefficient, clustering coefficient,
 # edge density
-def analyze_graph(adj_matrix, name, layout) -> None:
-    # edge_density = calc_edge_density(adj_mat)
+def analyze_graph(M, name, layout) -> None:
+    # edge_density = calc_edge_density(M)
     # dac = nx.degree_assortativity_coefficient(G)
     # clustering_coefficients = nx.clustering(G)
-    # node_to_degree = make_node_to_degree(adj_mat)
+    # node_to_degree = make_node_to_degree(M)
     # components = get_components(G)
 
     # print(f'Edge density: {edge_density}')
     # print(f'Degree assortativity coefficient: {dac}')
     # show_clustering_coefficent_dist(clustering_coefficients, node_to_degree)
     # print(f'size of components: {[len(comp) for comp in components]}')
-    show_deg_dist_from_matrix(adj_mat, name, display=True, save=True)
+    show_deg_dist_from_matrix(M, name, display=True, save=True)
 
 
-def visualize_graph(adj_mat: np.ndarray, layout: Optional[Layout], name='', save=False) -> None:
-    G = nx.Graph(adj_mat)
+def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='',
+                    save=False, show_edge_betweeness=False) -> None:
+    G = nx.Graph(M)
     node_color = ['blue']*len(G.edges)
+    edge_width = 5*normalize(nx.edge_betweenness_centrality(G).values()) if show_edge_betweeness else 1
     if layout is None:
-        nx.draw_kamada_kawai(G, node_size=50, node_color=node_color)
+        nx.draw_kamada_kawai(G, node_size=100, node_color=node_color, width=edge_width)
     else:
-        nx.draw_networkx(G, pos=layout, node_size=100, with_labels=False, node_color=node_color)
+        nx.draw_networkx(G, pos=layout, node_size=100, node_color=node_color, width=edge_width)
     plt.title(name)
     if save:
         plt.savefig(name, dpi=300)
@@ -148,9 +159,10 @@ def visualize_graph(adj_mat: np.ndarray, layout: Optional[Layout], name='', save
         plt.show()
 
 
+def normalize(xs: Iterable[Number]) -> np.ndarray:
+    max_x = max(xs)
+    return np.array([x/max_x for x in xs])
+
+
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print(f'Usage: {sys.argv[0]} <network>')
-    adj_mat, layout = read_file(sys.argv[1])
-    # analyze_graph(adj_mat, sys.argv[1][:-4], layout)
-    visualize_graph(adj_mat, layout, sys.argv[1][:-4], True)
+    main(sys.argv)
