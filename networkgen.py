@@ -108,9 +108,3 @@ def output_graph(G: nx.Graph, layout_algorithm=None):
 
 if __name__ == '__main__':
     main(sys.argv)
-    # G = nx.hexagonal_lattice_graph(15, 15)
-    # print(len(G.nodes))
-    # nx.draw_spectral(G, node_size=10)
-    # plt.show()
-    # output_graph(G, nx.spectral_layout)
-    # main(sys.argv)
