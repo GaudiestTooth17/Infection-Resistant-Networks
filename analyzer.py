@@ -16,7 +16,7 @@ def main(argv: List[str]):
     if len(argv) < 2:
         print(f'Usage: {argv[0]} <network>')
     M, layout = read_file(argv[1])
-    # analyze_graph(M, argv[1][:-4], layout)
+    analyze_graph(M, argv[1][:-4], layout)
     visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True)
 
 
@@ -130,13 +130,15 @@ def get_components(graph) -> List[Set]:
 # shows degree distribution, degree assortativity coefficient, clustering coefficient,
 # edge density
 def analyze_graph(M, name, layout) -> None:
-    # edge_density = calc_edge_density(M)
     # dac = nx.degree_assortativity_coefficient(G)
     # clustering_coefficients = nx.clustering(G)
     # node_to_degree = make_node_to_degree(M)
     # components = get_components(G)
 
-    # print(f'Edge density: {edge_density}')
+    edge_density = calc_edge_density(M)
+    print(f'Edge density: {edge_density}')
+    diameter = nx.diameter(nx.Graph(M))
+    print(f'Diameter: {diameter}')
     # print(f'Degree assortativity coefficient: {dac}')
     # show_clustering_coefficent_dist(clustering_coefficients, node_to_degree)
     # print(f'size of components: {[len(comp) for comp in components]}')
