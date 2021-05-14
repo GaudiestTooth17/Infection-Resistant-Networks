@@ -1,10 +1,14 @@
 #!/usr/bin/python3
 
-from typing import List
+from typing import List, Tuple, Dict
+import sys
+from itertools import product
 
 import networkx as nx
+import numpy as np
 import matplotlib.pyplot as plt
-import sys
+
+from customtypes import Layout, NodeColors, Agent
 
 
 # make a component-gate graph
@@ -73,6 +77,58 @@ def make_complete_clique_gate_graph(num_big_components, big_component_size, gate
                 master_graph.add_edge(node, dest_nodes[i])
 
     return master_graph
+
+
+def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
+                                grid_size: Tuple[int, int], pbar=False) -> Tuple[nx.Graph, Layout, NodeColors]:
+    agents = sorted(agent_type_to_quantity.items(),
+                    key=lambda x: x[0][1], reverse=True)
+    grid = np.zeros(grid_size, dtype='uint8')
+    num_nodes = sum(agent_type_to_quantity.values())
+    M = np.zeros((num_nodes, num_nodes), dtype='uint8')
+    # place the agents with the largest reach first
+    loc_to_id = {}
+    current_id = 0
+    for agent, quantity in agents:
+        new_agents = []
+        for _ in range(quantity):
+            x, y = choose_empty_spot(grid)
+            grid[x, y] = agent.reach
+            new_agents.append((x, y))
+            loc_to_id[(x, y)] = current_id
+            current_id += 1
+        for x, y in new_agents:
+            neighbors = search_for_neighbors(grid, x, y)
+            for i, j in neighbors:
+                M[loc_to_id[(x, y)], loc_to_id[(i, j)]] = 1
+                M[loc_to_id[(i, j)], loc_to_id[(x, y)]] = 1
+
+    colors = []
+    for agent, quantity in agent_type_to_quantity.items():
+        colors += [agent.color]*quantity
+    layout = {id_: (2*x/grid_size[0]-1, 2*y/grid_size[1]-1)
+              for (x, y), id_ in loc_to_id.items()}
+    return nx.Graph(M), layout, colors
+
+
+def choose_empty_spot(grid):
+    x, y = np.random.randint(grid.shape[0]), np.random.randint(grid.shape[1])
+    while grid[x, y] > 0:
+        x, y = np.random.randint(grid.shape[0]), np.random.randint(grid.shape[1])
+    return x, y
+
+
+def search_for_neighbors(grid, x, y):
+    reach = grid[x, y]
+    min_x = max(0, x-reach)
+    max_x = min(grid.shape[0]-1, x+reach)
+    min_y = max(0, y-reach)
+    max_y = min(grid.shape[1]-1, y+reach)
+    neighbors = {(i, j)
+                 for (i, j) in product(range(min_x, max_x),
+                                       range(min_y, max_y))
+                 if grid[i, j] > 0 and (x, y) != (i, j)}
+    return neighbors
 
 
 def output_graph(G: nx.Graph, layout_algorithm=None):
