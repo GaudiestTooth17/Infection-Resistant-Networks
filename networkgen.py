@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from typing import List, Tuple, Dict
+from typing import Callable, List, Tuple, Dict, Union, Optional
 import sys
 from itertools import product
 
@@ -13,19 +13,22 @@ from customtypes import Layout, NodeColors, Agent
 
 # make a component-gate graph
 def main(argv):
-    if len(argv) < 3:
-        print(f'Usage: {argv[0]} <num-big-components> <big-component-size> <gate-size>')
-        return
+    # if len(argv) < 3:
+    #     print(f'Usage: {argv[0]} <num-big-components> <big-component-size> <gate-size>')
+    #     return
 
-    num_big_components = int(argv[1])
-    big_component_size = int(argv[2])
-    gate_size = int(argv[3])
+    # num_big_components = int(argv[1])
+    # big_component_size = int(argv[2])
+    # gate_size = int(argv[3])
 
-    graph = make_complete_clique_gate_graph(num_big_components, big_component_size, gate_size)
+    # graph = make_complete_clique_gate_graph(num_big_components, big_component_size, gate_size)
 
-    output_graph(graph)
-    nx.draw(graph, node_size=100)
-    plt.show()
+    # output_graph(graph)
+    # nx.draw(graph, node_size=100)
+    # plt.show()
+    agents = {Agent('green', 30): 350, Agent('blue', 40): 100, Agent('purple', 50): 50}
+    G, layout, _ = make_social_circles_network(agents, (500, 500))
+    output_graph(G, layout)
 
 
 def union_components(components: List[nx.Graph]) -> nx.Graph:
@@ -131,7 +134,7 @@ def search_for_neighbors(grid, x, y):
     return neighbors
 
 
-def output_graph(G: nx.Graph, layout_algorithm=None):
+def output_graph(G: nx.Graph, layout_algorithm: Optional[Union[Callable, Layout]] = None):
     """
     print the graph to stdout using the typical representation
     """
@@ -156,7 +159,10 @@ def output_graph(G: nx.Graph, layout_algorithm=None):
     print()
     if layout_algorithm is None:
         layout_algorithm = nx.kamada_kawai_layout
-    layout = layout_algorithm(G)
+    if callable(layout_algorithm):
+        layout = layout_algorithm(G)
+    else:
+        layout = layout_algorithm
     for node, coordinate in sorted(layout.items(), key=lambda x: x[0]):
         print(f'{node_to_id[node]} {coordinate[0]} {coordinate[1]}')
     print()
