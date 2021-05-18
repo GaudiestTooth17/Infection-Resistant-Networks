@@ -13,19 +13,26 @@ from customtypes import Layout, NodeColors, Agent
 
 # make a component-gate graph
 def main(argv):
-    # if len(argv) < 3:
-    #     print(f'Usage: {argv[0]} <num-big-components> <big-component-size> <gate-size>')
-    #     return
+    cgg_entry_point(argv)
 
-    # num_big_components = int(argv[1])
-    # big_component_size = int(argv[2])
-    # gate_size = int(argv[3])
 
-    # graph = make_complete_clique_gate_graph(num_big_components, big_component_size, gate_size)
+def cgg_entry_point(argv):
+    if len(argv) < 3:
+        print(f'Usage: {argv[0]} <num-big-components> <big-component-size> <gate-size>')
+        return
 
-    # output_graph(graph)
-    # nx.draw(graph, node_size=100)
-    # plt.show()
+    num_big_components = int(argv[1])
+    big_component_size = int(argv[2])
+    gate_size = int(argv[3])
+
+    graph = make_complete_clique_gate_graph(num_big_components, big_component_size, gate_size)
+
+    output_graph(graph)
+    nx.draw(graph, node_size=100)
+    plt.show()
+
+
+def social_circles_entry_point(argv):
     agents = {Agent('green', 30): 350, Agent('blue', 40): 100, Agent('purple', 50): 50}
     G, layout, _ = make_social_circles_network(agents, (500, 500))
     output_graph(G, layout)
