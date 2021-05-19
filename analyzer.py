@@ -167,6 +167,11 @@ def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='',
 
 
 def visualize_eigen_communities(G: nx.Graph, layout: Optional[Layout] = None, name='') -> None:
+    """
+    Helps visualize communities created with the fiedler partitioning algorithm. The user enters
+    different values to act as cutoffs when determining how to partition the network and the
+    resulting partitions are plotted.
+    """
     L = nx.linalg.laplacian_matrix(G).toarray()  # type: ignore
     _, eigenvectors = np.linalg.eigh(L)
     partitioning_vector = eigenvectors[:, 1]
@@ -186,10 +191,17 @@ def visualize_eigen_communities(G: nx.Graph, layout: Optional[Layout] = None, na
         plt.show(block=False)
 
 
-def make_partitioner(partitioning_vector: np.ndarray) -> Callable:
+def make_partitioner(partitioning_vector: np.ndarray) -> Callable[[float], List[str]]:
+    """
+    Return a partitioning closure for the graph whose Laplacian's fiedler vector is provided.
+
+    The closure iterates over partitioning_vector looking for gaps larger or equal to the cutoff
+    it is passed. When one of these gaps is found, the new community begins accumulating members.
+    A list of color strings for use with NetworkX drawing functions is returned.
+    """
     node_to_value = sorted(enumerate(partitioning_vector), key=lambda x: x[1])  # type: ignore
 
-    def partitioner(community_cutoff: float):
+    def partitioner(community_cutoff: float) -> List[str]:
         community = 0
         community_colors = ['black'] * len(node_to_value)
         node = 0
