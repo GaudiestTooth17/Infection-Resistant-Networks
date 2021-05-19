@@ -13,7 +13,8 @@ from customtypes import Layout, NodeColors, Agent
 
 # make a component-gate graph
 def main(argv):
-    cgg_entry_point(argv)
+    # cgg_entry_point(argv)
+    social_circles_entry_point(argv)
 
 
 def cgg_entry_point(argv):
@@ -90,35 +91,45 @@ def make_complete_clique_gate_graph(num_big_components, big_component_size, gate
 
 
 def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
-                                grid_size: Tuple[int, int], pbar=False) -> Tuple[nx.Graph, Layout, NodeColors]:
-    agents = sorted(agent_type_to_quantity.items(),
-                    key=lambda x: x[0][1], reverse=True)
-    grid = np.zeros(grid_size, dtype='uint8')
-    num_nodes = sum(agent_type_to_quantity.values())
-    M = np.zeros((num_nodes, num_nodes), dtype='uint8')
-    # place the agents with the largest reach first
-    loc_to_id = {}
-    current_id = 0
-    for agent, quantity in agents:
-        new_agents = []
-        for _ in range(quantity):
-            x, y = choose_empty_spot(grid)
-            grid[x, y] = agent.reach
-            new_agents.append((x, y))
-            loc_to_id[(x, y)] = current_id
-            current_id += 1
-        for x, y in new_agents:
-            neighbors = search_for_neighbors(grid, x, y)
-            for i, j in neighbors:
-                M[loc_to_id[(x, y)], loc_to_id[(i, j)]] = 1
-                M[loc_to_id[(i, j)], loc_to_id[(x, y)]] = 1
+                                grid_size: Tuple[int, int], pbar=False,
+                                force_connected=True) -> Tuple[nx.Graph, Layout, NodeColors]:
+    # repeat the algorithm up to some maximum attempting to generate a connected network.
+    max_tries = 100
+    for _ in range(max_tries):
+        agents = sorted(agent_type_to_quantity.items(),
+                        key=lambda x: x[0][1], reverse=True)
+        grid = np.zeros(grid_size, dtype='uint8')
+        num_nodes = sum(agent_type_to_quantity.values())
+        M = np.zeros((num_nodes, num_nodes), dtype='uint8')
+        # place the agents with the largest reach first
+        loc_to_id = {}
+        current_id = 0
+        for agent, quantity in agents:
+            new_agents = []
+            for _ in range(quantity):
+                x, y = choose_empty_spot(grid)
+                grid[x, y] = agent.reach
+                new_agents.append((x, y))
+                loc_to_id[(x, y)] = current_id
+                current_id += 1
+            for x, y in new_agents:
+                neighbors = search_for_neighbors(grid, x, y)
+                for i, j in neighbors:
+                    M[loc_to_id[(x, y)], loc_to_id[(i, j)]] = 1
+                    M[loc_to_id[(i, j)], loc_to_id[(x, y)]] = 1
 
-    colors = []
-    for agent, quantity in agent_type_to_quantity.items():
-        colors += [agent.color]*quantity
-    layout = {id_: (2*x/grid_size[0]-1, 2*y/grid_size[1]-1)
-              for (x, y), id_ in loc_to_id.items()}
-    return nx.Graph(M), layout, colors
+        colors = []
+        for agent, quantity in agent_type_to_quantity.items():
+            colors += [agent.color]*quantity
+        layout = {id_: (2*x/grid_size[0]-1, 2*y/grid_size[1]-1)
+                  for (x, y), id_ in loc_to_id.items()}
+        G = nx.Graph(M)
+        # return the generated network if it is connected or if we don't care
+        if (not force_connected) or nx.is_connected(G):
+            return G, layout, colors
+
+    # Abort execution on failure
+    exit(f'Failed to generate a connected network after {max_tries} tries.')
 
 
 def choose_empty_spot(grid):
