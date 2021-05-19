@@ -6,14 +6,15 @@ import networkx as nx
 import numpy as np
 import sys
 from typing import Callable, Dict, Iterable, List, Set, Tuple, Optional, Union
+from circularlist import CircularList
 
 
 Layout = Dict[int, Tuple[float, float]]
 Number = Union[int, float]
-COLORS = ['blue', 'green', 'lightcoral', 'chocolate', 'darkred', 'navy',
-          'darkorange', 'darkgreen', 'springgreen', 'darkcyan',
-          'indigo', 'slategrey', 'crimson', 'magenta', 'darkviolet',
-          'palegreen', 'goldenrod', 'darkolivegreen']
+COLORS = CircularList(['blue', 'green', 'lightcoral', 'chocolate', 'darkred',
+                       'navy', 'darkorange', 'springgreen', 'darkcyan', 'indigo',
+                       'slategrey', 'darkgreen', 'crimson', 'magenta', 'darkviolet',
+                       'palegreen', 'goldenrod', 'darkolivegreen'])
 
 
 def main(argv: List[str]):
@@ -173,8 +174,13 @@ def visualize_eigen_communities(G: nx.Graph, layout: Optional[Layout] = None, na
     resulting partitions are plotted.
     """
     L = nx.linalg.laplacian_matrix(G).toarray()  # type: ignore
-    _, eigenvectors = np.linalg.eigh(L)
+    eigvs, eigenvectors = np.linalg.eigh(L)
+    plt.title('Eigenvalues')
+    plt.plot(eigvs)
+    plt.show(block=False)
+    plt.figure()
     partitioning_vector = eigenvectors[:, 1]
+    plt.title('Partitioning Vector')
     plt.plot(sorted(partitioning_vector))
     plt.show(block=False)
 
