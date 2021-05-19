@@ -14,7 +14,8 @@ from customtypes import Layout, NodeColors, Agent
 # make a component-gate graph
 def main(argv):
     # cgg_entry_point(argv)
-    social_circles_entry_point(argv)
+    # social_circles_entry_point(argv)
+    output_graph(nx.connected_watts_strogatz_graph(500, 4, .1), nx.circular_layout)
 
 
 def cgg_entry_point(argv):

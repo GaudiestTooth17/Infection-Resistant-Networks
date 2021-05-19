@@ -6,12 +6,10 @@ import networkx as nx
 import numpy as np
 import sys
 from itertools import takewhile
-from typing import Callable, Dict, Iterable, List, Set, Tuple, Optional, Union
-from circularlist import CircularList
+from typing import Callable, Dict, Iterable, List, Set, Tuple, Optional
+from customtypes import Layout, Number, CircularList
 
 
-Layout = Dict[int, Tuple[float, float]]
-Number = Union[int, float]
 COLORS = CircularList(['blue', 'green', 'lightcoral', 'chocolate', 'darkred',
                        'navy', 'darkorange', 'springgreen', 'darkcyan', 'indigo',
                        'slategrey', 'darkgreen', 'crimson', 'magenta', 'darkviolet',
@@ -23,13 +21,13 @@ def main(argv: List[str]):
         print(f'Usage: {argv[0]} <network>')
     M, layout = read_file(argv[1])
     # analyze_graph(M, argv[1][:-4], layout)
-    # visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True)
+    visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True, save=True)
     # visualize_eigen_communities(nx.Graph(M), layout, argv[1][:-4])
-    visualize_girvan_newman_communities(nx.Graph(M), layout, argv[1][:-4])
+    # visualize_girvan_newman_communities(nx.Graph(M), layout, argv[1][:-4])
 
 
-def read_file(fileName) -> Tuple[np.ndarray, Optional[Layout]]:
-    with open(fileName, 'r') as f:
+def read_file(file_name: str) -> Tuple[np.ndarray, Optional[Layout]]:
+    with open(file_name, 'r') as f:
         line = f.readline()
         shape = (int(line[:-1]), int(line[:-1]))
         matrix = np.zeros(shape, dtype='uint8')
@@ -161,10 +159,11 @@ def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='',
     if layout is None:
         nx.draw_kamada_kawai(G, node_size=100, node_color=node_color, width=edge_width)
     else:
-        nx.draw_networkx(G, pos=layout, node_size=100, node_color=node_color, width=edge_width)
+        nx.draw_networkx(G, pos=layout, node_size=100, node_color=node_color,
+                         width=edge_width, with_labels=False)
     plt.title(name)
     if save:
-        plt.savefig(name, dpi=300)
+        plt.savefig(name, dpi=300, format='png')
     else:
         plt.show()
 

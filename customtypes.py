@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple, Union, Set
+from typing import List, Dict, Tuple, Union, Set, TypeVar, Generic
 from collections import namedtuple, defaultdict
 import numpy as np
 
@@ -7,6 +7,16 @@ import numpy as np
 Agent = namedtuple('Agent', 'color reach')
 NodeColors = Union[List[str], List[Tuple[int, int, int]]]
 Layout = Dict[int, Tuple[float, float]]
+Number = Union[int, float]
+T = TypeVar('T')
+
+
+class CircularList(Generic[T]):
+    def __init__(self, base_list: List[T]) -> None:
+        self._list = base_list
+
+    def __getitem__(self, i: int) -> T:
+        return self._list[i % len(self._list)]
 
 
 class CommunityEdges:
@@ -35,7 +45,7 @@ class CommunityEdges:
         node_to_community = {node: find_cell_index(x)*sqrt_num_communities+find_cell_index(y)
                              for node, (x, y) in layout.items()}
 
-        edges = zip(*np.where(M > 0))
+        edges = zip(*np.where(M > 0))  # type: ignore
         community_to_outgoing_edges = defaultdict(lambda: set())
         for u, v in edges:
             if node_to_community[u] != node_to_community[v]:
@@ -70,7 +80,7 @@ class CommunityEdges:
             self.unquarantine_community_by_id(c)
 
         agents = np.where(agents)[0]
-        communities_to_quarantine = {self._node_to_community[agent] for agent in agents}
+        communities_to_quarantine = {self._node_to_community[agent] for agent in agents}  # type: ignore
         # print('q communities:', communities_to_quarantine)
 
         for c in communities_to_quarantine:
