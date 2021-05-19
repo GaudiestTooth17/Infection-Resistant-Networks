@@ -5,6 +5,7 @@ import collections
 import networkx as nx
 import numpy as np
 import sys
+from itertools import takewhile
 from typing import Callable, Dict, Iterable, List, Set, Tuple, Optional, Union
 from circularlist import CircularList
 
@@ -23,7 +24,8 @@ def main(argv: List[str]):
     M, layout = read_file(argv[1])
     # analyze_graph(M, argv[1][:-4], layout)
     # visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True)
-    visualize_eigen_communities(nx.Graph(M), layout, argv[1][:-4])
+    # visualize_eigen_communities(nx.Graph(M), layout, argv[1][:-4])
+    visualize_girvan_newman_communities(nx.Graph(M), layout, argv[1][:-4])
 
 
 def read_file(fileName) -> Tuple[np.ndarray, Optional[Layout]]:
@@ -195,6 +197,35 @@ def visualize_eigen_communities(G: nx.Graph, layout: Optional[Layout] = None, na
         nx.draw_networkx(G, layout, node_color=community_colors, with_labels=False, node_size=100)
         plt.title(f'{name} cutoff = {comm_cutoff}\n{len(set(community_colors))} communities')
         plt.show(block=False)
+
+
+def visualize_girvan_newman_communities(G: nx.Graph, layout: Optional[Layout] = None,
+                                        name='', max_communities=10) -> None:
+    """
+    Show a visualization of the Girvan-Newman Method for network G.
+
+    This function displays a plot of G slowly losing its edges. When new communities are formed,
+    they are given a new color.
+    """
+    communities_generator = nx.algorithms.community.centrality.girvan_newman(G)  # type: ignore
+    for communities in takewhile(lambda comms: len(comms) <= max_communities,
+                                 communities_generator):
+        community_colors = colors_from_communities(communities)
+        plt.figure()
+        nx.draw_networkx(G, layout, node_color=community_colors, with_labels=False, node_size=100)
+        plt.title(f'{name}\n{len(communities)} communities')
+        plt.show(block=False)
+
+    while input('Type "continue" to continue: ') != 'continue':
+        pass
+
+
+def colors_from_communities(communities: Tuple[List[int]]) -> List[str]:
+    colors = [(COLORS[i], vertex)
+              for i, community in enumerate(communities)
+              for vertex in community]
+    colors.sort(key=lambda x: x[1])
+    return [x[0] for x in colors]
 
 
 def make_partitioner(partitioning_vector: np.ndarray) -> Callable[[float], List[str]]:
