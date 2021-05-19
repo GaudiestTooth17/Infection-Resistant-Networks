@@ -5,19 +5,24 @@ import collections
 import networkx as nx
 import numpy as np
 import sys
-from typing import Dict, Iterable, List, Set, Tuple, Optional, Union
+from typing import Callable, Dict, Iterable, List, Set, Tuple, Optional, Union
 
 
 Layout = Dict[int, Tuple[float, float]]
 Number = Union[int, float]
+COLORS = ['blue', 'green', 'lightcoral', 'chocolate', 'darkred', 'navy',
+          'darkorange', 'darkgreen', 'springgreen', 'darkcyan',
+          'indigo', 'slategrey', 'crimson', 'magenta', 'darkviolet',
+          'palegreen', 'goldenrod', 'darkolivegreen']
 
 
 def main(argv: List[str]):
     if len(argv) < 2:
         print(f'Usage: {argv[0]} <network>')
     M, layout = read_file(argv[1])
-    analyze_graph(M, argv[1][:-4], layout)
-    visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True)
+    # analyze_graph(M, argv[1][:-4], layout)
+    # visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True)
+    visualize_eigen_communities(nx.Graph(M), layout, argv[1][:-4])
 
 
 def read_file(fileName) -> Tuple[np.ndarray, Optional[Layout]]:
@@ -161,10 +166,55 @@ def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='',
         plt.show()
 
 
+def visualize_eigen_communities(G: nx.Graph, layout: Optional[Layout] = None, name='') -> None:
+    L = nx.linalg.laplacian_matrix(G).toarray()  # type: ignore
+    _, eigenvectors = np.linalg.eigh(L)
+    partitioning_vector = eigenvectors[:, 1]
+    plt.plot(sorted(partitioning_vector))
+    plt.show(block=False)
+
+    if layout is None:
+        layout = nx.kamada_kawai_layout(G)
+
+    partition_network = make_partitioner(partitioning_vector)
+    while True:
+        comm_cutoff = float(input('Max diff for communities: '))
+        community_colors = partition_network(comm_cutoff)
+        plt.figure()
+        nx.draw_networkx(G, layout, node_color=community_colors, with_labels=False, node_size=100)
+        plt.title(f'{name} cutoff = {comm_cutoff}\n{len(set(community_colors))} communities')
+        plt.show(block=False)
+
+
+def make_partitioner(partitioning_vector: np.ndarray) -> Callable:
+    node_to_value = sorted(enumerate(partitioning_vector), key=lambda x: x[1])  # type: ignore
+
+    def partitioner(community_cutoff: float):
+        community = 0
+        community_colors = ['black'] * len(node_to_value)
+        node = 0
+        # assign every node but the last one to a community
+        while node < len(node_to_value)-1:
+            if np.abs(node_to_value[node][1] - node_to_value[node+1][1]) >= community_cutoff:
+                community += 1
+            community_colors[node] = COLORS[community]
+            node += 1
+        # assign the last node to a community
+        community_colors[node] = COLORS[community]\
+            if np.abs(node_to_value[node-1][1]-node_to_value[node][1]) < community_cutoff\
+            else COLORS[community+1]
+        return community_colors
+
+    return partitioner
+
+
 def normalize(xs: Iterable[Number]) -> np.ndarray:
     max_x = max(xs)
     return np.array([x/max_x for x in xs])
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    try:
+        main(sys.argv)
+    except EOFError:
+        print('\nGood-bye.')
