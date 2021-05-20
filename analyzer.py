@@ -21,9 +21,10 @@ def main(argv: List[str]):
         print(f'Usage: {argv[0]} <network>')
     M, layout = read_file(argv[1])
     # analyze_graph(M, argv[1][:-4], layout)
-    visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True, save=True)
+    # visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True, save=True)
     # visualize_eigen_communities(nx.Graph(M), layout, argv[1][:-4])
     # visualize_girvan_newman_communities(nx.Graph(M), layout, argv[1][:-4])
+    plot_edge_betweeness_centralities(nx.Graph(M), argv[1][:-4])
 
 
 def read_file(file_name: str) -> Tuple[np.ndarray, Optional[Layout]]:
@@ -254,6 +255,13 @@ def make_partitioner(partitioning_vector: np.ndarray) -> Callable[[float], List[
         return community_colors
 
     return partitioner
+
+
+def plot_edge_betweeness_centralities(G: nx.Graph, name: str) -> None:
+    centralities = nx.edge_betweenness_centrality(G)
+    plt.title(f'{name} Edge Centralities')
+    plt.hist(centralities.values(), bins=None)
+    plt.savefig(name+'.png', format='png')
 
 
 def normalize(xs: Iterable[Number]) -> np.ndarray:
