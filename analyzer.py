@@ -26,8 +26,8 @@ def main(argv: List[str]):
     # analyze_graph(M, name, layout)
     # visualize_graph(M, layout, name, show_edge_betweeness=True, save=True)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
-    visualize_girvan_newman_communities(nx.Graph(M), layout, name)
-    # plot_edge_betweeness_centralities(nx.Graph(M), name)
+    # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
+    plot_edge_betweeness_centralities(nx.Graph(M), name)
 
 
 def show_deg_dist_from_matrix(M: np.ndarray, title, *, color='b', display=False, save=False):
@@ -246,7 +246,7 @@ def plot_edge_betweeness_centralities(G: nx.Graph, name: str) -> None:
     centralities = nx.edge_betweenness_centrality(G)
     plt.title(f'{name} Edge Centralities')
     plt.hist(centralities.values(), bins=None)
-    plt.savefig(name+'.png', format='png')
+    plt.savefig(name+' edge betweeness.png', format='png')
 
 
 def normalize(xs: Iterable[Number]) -> np.ndarray:
