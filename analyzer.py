@@ -22,7 +22,7 @@ def main(argv: List[str]):
     if len(argv) < 2:
         print(f'Usage: {argv[0]} <network>')
     M, layout = read_network_file(argv[1])
-    name = op.basename(argv[1]).split('.')[0]
+    name = '.'.join(op.basename(argv[1]).split('.')[:-1])
     # analyze_graph(M, name, layout)
     # visualize_graph(M, layout, name, show_edge_betweeness=True, save=True)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
