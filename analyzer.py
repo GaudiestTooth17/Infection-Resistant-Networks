@@ -21,10 +21,10 @@ def main(argv: List[str]):
         print(f'Usage: {argv[0]} <network>')
     M, layout = read_file(argv[1])
     # analyze_graph(M, argv[1][:-4], layout)
-    # visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True, save=True)
+    visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True, save=False)
     # visualize_eigen_communities(nx.Graph(M), layout, argv[1][:-4])
     # visualize_girvan_newman_communities(nx.Graph(M), layout, argv[1][:-4])
-    plot_edge_betweeness_centralities(nx.Graph(M), argv[1][:-4])
+    # plot_edge_betweeness_centralities(nx.Graph(M), argv[1][:-4])
 
 
 def read_file(file_name: str) -> Tuple[np.ndarray, Optional[Layout]]:
@@ -164,7 +164,7 @@ def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='',
                          width=edge_width, with_labels=False)
     plt.title(name)
     if save:
-        plt.savefig(name, dpi=300, format='png')
+        plt.savefig(name+'.png', dpi=300, format='png')
     else:
         plt.show()
 
@@ -239,6 +239,10 @@ def make_partitioner(partitioning_vector: np.ndarray) -> Callable[[float], List[
     node_to_value = sorted(enumerate(partitioning_vector), key=lambda x: x[1])  # type: ignore
 
     def partitioner(community_cutoff: float) -> List[str]:
+        """
+        This doesn't contain much actual partitioning logic. It just assigns colors to nodes
+        based on the cutoff value for determining communities.
+        """
         community = 0
         community_colors = ['black'] * len(node_to_value)
         node = 0
