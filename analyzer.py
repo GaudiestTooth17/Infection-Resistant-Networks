@@ -5,9 +5,11 @@ import collections
 import networkx as nx
 import numpy as np
 import sys
+import os.path as op
 from itertools import takewhile
 from typing import Callable, Dict, Iterable, List, Set, Tuple, Optional
 from customtypes import Layout, Number, CircularList
+from fileio import read_network_file
 
 
 COLORS = CircularList(['blue', 'green', 'lightcoral', 'chocolate', 'darkred',
@@ -19,34 +21,13 @@ COLORS = CircularList(['blue', 'green', 'lightcoral', 'chocolate', 'darkred',
 def main(argv: List[str]):
     if len(argv) < 2:
         print(f'Usage: {argv[0]} <network>')
-    M, layout = read_file(argv[1])
-    # analyze_graph(M, argv[1][:-4], layout)
-    visualize_graph(M, layout, argv[1][:-4], show_edge_betweeness=True, save=False)
-    # visualize_eigen_communities(nx.Graph(M), layout, argv[1][:-4])
-    # visualize_girvan_newman_communities(nx.Graph(M), layout, argv[1][:-4])
-    # plot_edge_betweeness_centralities(nx.Graph(M), argv[1][:-4])
-
-
-def read_file(file_name: str) -> Tuple[np.ndarray, Optional[Layout]]:
-    with open(file_name, 'r') as f:
-        line = f.readline()
-        shape = (int(line[:-1]), int(line[:-1]))
-        matrix = np.zeros(shape, dtype='uint8')
-
-        line = f.readline()[:-1]
-        i = 1
-        while len(line) > 0:
-            coord = line.split(' ')
-            matrix[int(coord[0]), int(coord[1])] = 1
-            matrix[int(coord[1]), int(coord[0])] = 1
-            line = f.readline()[:-1]
-            i += 1
-
-        rest_of_lines = tuple(map(lambda s: s.split(),
-                              filter(lambda s: len(s) > 1, f.readlines())))
-        layout = {int(line[0]): (float(line[1]), float(line[2]))
-                  for line in rest_of_lines} if len(rest_of_lines) > 0 else None
-    return matrix, layout
+    M, layout = read_network_file(argv[1])
+    name = op.basename(argv[1]).split('.')[0]
+    # analyze_graph(M, name, layout)
+    # visualize_graph(M, layout, name, show_edge_betweeness=True, save=True)
+    # visualize_eigen_communities(nx.Graph(M), layout, name)
+    visualize_girvan_newman_communities(nx.Graph(M), layout, name)
+    # plot_edge_betweeness_centralities(nx.Graph(M), name)
 
 
 def show_deg_dist_from_matrix(M: np.ndarray, title, *, color='b', display=False, save=False):
@@ -157,12 +138,12 @@ def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='',
     G = nx.Graph(M)
     node_color = ['blue']*len(G.edges)
     edge_width = 5*normalize(nx.edge_betweenness_centrality(G).values()) if show_edge_betweeness else 1
+    plt.title(name)
     if layout is None:
         nx.draw_kamada_kawai(G, node_size=100, node_color=node_color, width=edge_width)
     else:
         nx.draw_networkx(G, pos=layout, node_size=100, node_color=node_color,
                          width=edge_width, with_labels=False)
-    plt.title(name)
     if save:
         plt.savefig(name+'.png', dpi=300, format='png')
     else:

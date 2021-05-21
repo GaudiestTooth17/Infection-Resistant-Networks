@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from typing import Callable, List, Tuple, Dict, Union, Optional
+from typing import List, Tuple, Dict
 import sys
 from itertools import product
 
@@ -9,13 +9,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from customtypes import Layout, NodeColors, Agent
+from fileio import output_network
 
 
 # make a component-gate graph
 def main(argv):
     # cgg_entry_point(argv)
     # social_circles_entry_point(argv)
-    output_graph(nx.connected_watts_strogatz_graph(500, 4, .1), nx.circular_layout)
+    output_network(nx.connected_watts_strogatz_graph(500, 4, .1), nx.circular_layout)
 
 
 def cgg_entry_point(argv):
@@ -29,7 +30,7 @@ def cgg_entry_point(argv):
 
     graph = make_complete_clique_gate_graph(num_big_components, big_component_size, gate_size)
 
-    output_graph(graph)
+    output_network(graph)
     nx.draw(graph, node_size=100)
     plt.show()
 
@@ -37,7 +38,7 @@ def cgg_entry_point(argv):
 def social_circles_entry_point(argv):
     agents = {Agent('green', 30): 350, Agent('blue', 40): 100, Agent('purple', 50): 50}
     G, layout, _ = make_social_circles_network(agents, (500, 500))
-    output_graph(G, layout)
+    output_network(G, layout)
 
 
 def union_components(components: List[nx.Graph]) -> nx.Graph:
@@ -151,40 +152,6 @@ def search_for_neighbors(grid, x, y):
                                        range(min_y, max_y))
                  if grid[i, j] > 0 and (x, y) != (i, j)}
     return neighbors
-
-
-def output_graph(G: nx.Graph, layout_algorithm: Optional[Union[Callable, Layout]] = None):
-    """
-    print the graph to stdout using the typical representation
-    """
-    print(len(G.nodes))
-
-    # sometimes the nodes are identified by tuples instead of just integers
-    # This doesn't work with other programs in the project, so we must give each tuple
-    # a unique integer ID.
-    node_to_id = {}
-    current_id = 0
-    for e in G.edges:
-        n0, n1 = e[0], e[1]
-        if n0 not in node_to_id:
-            node_to_id[n0] = current_id
-            current_id += 1
-        if n1 not in node_to_id:
-            node_to_id[n1] = current_id
-            current_id += 1
-        print(f'{node_to_id[n0]} {node_to_id[n1]}')
-    # this code is just for the visualization program I made ("graph-visualizer")
-    # It writes out where each of the nodes should be drawn.
-    print()
-    if layout_algorithm is None:
-        layout_algorithm = nx.kamada_kawai_layout
-    if callable(layout_algorithm):
-        layout = layout_algorithm(G)
-    else:
-        layout = layout_algorithm
-    for node, coordinate in sorted(layout.items(), key=lambda x: x[0]):
-        print(f'{node_to_id[node]} {coordinate[0]} {coordinate[1]}')
-    print()
 
 
 if __name__ == '__main__':
