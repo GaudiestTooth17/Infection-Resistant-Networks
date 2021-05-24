@@ -24,10 +24,10 @@ def main(argv: List[str]):
     M, layout = read_network_file(argv[1])
     name = '.'.join(op.basename(argv[1]).split('.')[:-1])
     # analyze_graph(M, name, layout)
-    # visualize_graph(M, layout, name, show_edge_betweeness=True, save=True)
+    visualize_graph(M, layout, name, edge_width_func=common_neigh, save=True)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
     # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
-    plot_edge_betweeness_centralities(nx.Graph(M), name)
+    # plot_edge_betweeness_centralities(nx.Graph(M), name)
 
 
 def show_deg_dist_from_matrix(M: np.ndarray, title, *, color='b', display=False, save=False):
@@ -133,11 +133,23 @@ def analyze_graph(M, name, layout) -> None:
     show_deg_dist_from_matrix(M, name, display=True, save=True)
 
 
-def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='',
-                    save=False, show_edge_betweeness=False) -> None:
+def all_same(G: nx.Graph) -> List[float]:
+    return [1.0 for _ in G.edges]
+
+
+def betw_centrality(G: nx.Graph) -> List[float]:
+    return [5*betweenness for betweenness in nx.edge_betweenness_centrality(G).values()]
+
+
+def common_neigh(G: nx.Graph) -> List[float]:
+    return [.1+2*calc_prop_common_neighbors(G, u, v) for u, v in G.edges]
+
+
+def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='', save=False,
+                    edge_width_func: Callable[[nx.Graph], List[float]] = all_same) -> None:
     G = nx.Graph(M)
     node_color = ['blue']*len(G.edges)
-    edge_width = 5*normalize(nx.edge_betweenness_centrality(G).values()) if show_edge_betweeness else 1
+    edge_width = edge_width_func(G)
     plt.title(name)
     if layout is None:
         nx.draw_kamada_kawai(G, node_size=100, node_color=node_color, width=edge_width)
@@ -252,6 +264,13 @@ def plot_edge_betweeness_centralities(G: nx.Graph, name: str) -> None:
 def normalize(xs: Iterable[Number]) -> np.ndarray:
     max_x = max(xs)
     return np.array([x/max_x for x in xs])
+
+
+def calc_prop_common_neighbors(G: nx.Graph, u: int, v: int) -> float:
+    u_neighbors = set(nx.neighbors(G, u))
+    v_neighbors = set(nx.neighbors(G, v))
+    n_common_neighbors = len(u_neighbors.intersection(v_neighbors))
+    return n_common_neighbors / len(u_neighbors)
 
 
 if __name__ == '__main__':
