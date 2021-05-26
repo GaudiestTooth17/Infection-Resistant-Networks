@@ -4,10 +4,10 @@ from typing import Iterable, List, Callable, Sequence
 from customtypes import Layout
 import networkx as nx
 import numpy as np
-import sys
+# import sys
 import matplotlib.pyplot as plt
 from random import choice
-from fileio import read_network_file
+# from fileio import read_network_file
 from analyzer import COLORS, calc_prop_common_neighbors
 
 
@@ -28,15 +28,16 @@ def main():
     # step = make_two_type_step(set(range(len(G.nodes)//10)), set(range(len(G.nodes)//10, len(G.nodes))))
     # step = homogenous_step
     step = make_time_based_step(N)
+    node_size = 200
     for i in range(100):
         if i % 10 == 0:
             layout = nx.kamada_kawai_layout(G)
         plt.clf()
         plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
-        nx.draw_networkx_nodes(G, pos=layout, node_size=100, node_color=assign_colors(G))
+        nx.draw_networkx_nodes(G, pos=layout, node_size=node_size, node_color=assign_colors(G))
         nx.draw_networkx_edges(G, pos=layout)
         plt.pause(.25)  # type: ignore
-        step(G, layout)
+        node_size = step(G, layout)
 
     input('Press "enter" to continue.')
 
@@ -135,7 +136,7 @@ def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int
 def make_time_based_step(N: int):
     time_satisfied = np.zeros(N, dtype='int')
     lower_bound = 7
-    upper_bound = 9
+    upper_bound = 10
     satisfied_border = 10
 
     def unsatisfied_behavior(G: nx.Graph, layout: Layout, agent: int, neighbors: Sequence[int]):
@@ -164,7 +165,7 @@ def make_time_based_step(N: int):
             if len(neigbhor_choices) > 0:
                 connect_agents(G, layout, agent, choice(neigbhor_choices))
 
-    def time_based_step(G: nx.Graph, layout: Layout) -> None:
+    def time_based_step(G: nx.Graph, layout: Layout) -> Iterable[int]:
         for agent in G.nodes:
             neighbors = tuple(G[agent])
             # choose behavior
@@ -177,6 +178,9 @@ def make_time_based_step(N: int):
                 time_satisfied[agent] += 1
             else:
                 time_satisfied[agent] = 0
+
+        node_size = 200 - time_satisfied*20
+        return np.where(node_size == 0, 0, node_size)
 
     return time_based_step
 
