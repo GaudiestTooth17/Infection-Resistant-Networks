@@ -5,11 +5,10 @@ import collections
 import networkx as nx
 import numpy as np
 import sys
-import os.path as op
 from itertools import takewhile
 from typing import Callable, Dict, Iterable, List, Set, Tuple, Optional
 from customtypes import Layout, Number, CircularList
-from fileio import read_network_file
+from fileio import read_network_file, get_network_name
 
 
 COLORS = CircularList(['blue', 'green', 'lightcoral', 'chocolate', 'darkred',
@@ -22,9 +21,9 @@ def main(argv: List[str]):
     if len(argv) < 2:
         print(f'Usage: {argv[0]} <network>')
     M, layout = read_network_file(argv[1])
-    name = '.'.join(op.basename(argv[1]).split('.')[:-1])
+    name = get_network_name(argv[1])
     analyze_network(M, name, layout)
-    # visualize_graph(M, layout, name, edge_width_func=common_neigh, save=True)
+    visualize_graph(M, layout, name, edge_width_func=common_neigh, save=False)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
     # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
     # plot_edge_betweeness_centralities(nx.Graph(M), name)

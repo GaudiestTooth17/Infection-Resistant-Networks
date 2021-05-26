@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 from typing import Optional, Union, Callable, Tuple, Dict, Any
 from customtypes import Layout
+import os.path as op
 
 
 def output_network(G: nx.Graph, network_name: str, layout_algorithm: Optional[Union[Callable, Layout]] = None):
@@ -60,3 +61,7 @@ def read_network_file(file_name: str) -> Tuple[np.ndarray, Optional[Layout]]:
         layout = {int(line[0]): (float(line[1]), float(line[2]))
                   for line in rest_of_lines} if len(rest_of_lines) > 0 else None
     return matrix, layout
+
+
+def get_network_name(path_string: str) -> str:
+    return '.'.join(op.basename(path_string).split('.')[:-1])
