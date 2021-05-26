@@ -18,7 +18,7 @@ def main(argv):
 
     G = nx.Graph(M)
     layout = nx.kamada_kawai_layout(G)
-    output_network(G, name+'-with-layout.txt', layout)
+    output_network(G, name+'-with-layout', layout)
 
 
 if __name__ == '__main__':

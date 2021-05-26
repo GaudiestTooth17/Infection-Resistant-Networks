@@ -5,7 +5,8 @@ from customtypes import Layout
 import networkx as nx
 import numpy as np
 # import sys
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
+from tqdm import tqdm
 from random import choice
 from fileio import output_network
 from analyzer import COLORS, calc_prop_common_neighbors
@@ -28,22 +29,26 @@ def main():
     # step = make_two_type_step(set(range(len(G.nodes)//10)), set(range(len(G.nodes)//10, len(G.nodes))))
     # step = homogenous_step
     step = make_time_based_step(N)
-    node_size = 200
-    for i in range(100):
-        if i % 10 == 0:
-            layout = nx.kamada_kawai_layout(G)
-        plt.clf()
-        plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
-        nx.draw_networkx_nodes(G, pos=layout, node_size=node_size, node_color=assign_colors(G))
-        nx.draw_networkx_edges(G, pos=layout)
-        plt.pause(.25)  # type: ignore
-        node_size = step(G, layout)
+    # node_size = 200
+    for i in tqdm(range(150)):
+        # if i % 10 == 0:
+        #     layout = nx.kamada_kawai_layout(G)
+        # plt.clf()
+        # plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
+        # nx.draw_networkx_nodes(G, pos=layout, node_size=node_size, node_color=assign_colors(G))
+        # nx.draw_networkx_edges(G, pos=layout)
+        # plt.pause(.25)  # type: ignore
+        # node_size = step(G, layout)
         step(G, layout)
         if nx.is_connected(G):
+            print(f'Finished after {i+1} steps.')
             break
 
-    output_network(G, f'agent-generated-{N}')
-    input('Press "enter" to continue.')
+    if nx.is_connected(G):
+        output_network(G, f'agent-generated-{N}')
+    else:
+        print('Network was not connected!')
+    # input('Press "enter" to continue.')
 
 
 def assign_colors(G: nx.Graph) -> List[str]:
@@ -139,8 +144,8 @@ def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int
 
 def make_time_based_step(N: int):
     time_satisfied = np.zeros(N, dtype='int')
-    lower_bound = 3
-    upper_bound = 5
+    lower_bound = 7
+    upper_bound = 8
     satisfied_border = 10
     agent_to_previous_neighbors = {n: set() for n in range(N)}
     steps_taken = 0
