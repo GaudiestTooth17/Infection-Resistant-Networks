@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-from typing import Iterable, List, Callable
+from typing import Iterable, List, Callable, Sequence
 
 from customtypes import Layout
 import networkx as nx
@@ -12,20 +12,22 @@ from analyzer import COLORS, calc_prop_common_neighbors
 
 
 def main():
-    if len(sys.argv) < 2:
-        print(f'Usage: {sys.argv[0]} <network>')
-        return
+    # if len(sys.argv) < 2:
+    #     print(f'Usage: {sys.argv[0]} <network>')
+    #     return
 
-    M, layout = read_network_file(sys.argv[1])
-    G = nx.Graph(M)
-    # N = 500
-    # G = nx.empty_graph(N)
+    # M, layout = read_network_file(sys.argv[1])
+    # G = nx.Graph(M)
+    # N = len(G.nodes)
+    N = 100
+    G = nx.empty_graph(N)
     layout = None
     if layout is None:
         layout = nx.kamada_kawai_layout(G)
 
-    step = make_two_type_step(set(range(len(G.nodes)//10)), set(range(len(G.nodes)//10, len(G.nodes))))
+    # step = make_two_type_step(set(range(len(G.nodes)//10)), set(range(len(G.nodes)//10, len(G.nodes))))
     # step = homogenous_step
+    step = make_time_based_step(N)
     for i in range(100):
         if i % 10 == 0:
             layout = nx.kamada_kawai_layout(G)
@@ -33,7 +35,7 @@ def main():
         plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
         nx.draw_networkx_nodes(G, pos=layout, node_size=100, node_color=assign_colors(G))
         nx.draw_networkx_edges(G, pos=layout)
-        plt.pause(.1)  # type: ignore
+        plt.pause(.25)  # type: ignore
         step(G, layout)
 
     input('Press "enter" to continue.')
@@ -128,6 +130,55 @@ def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int
                 G.remove_edge(agent, to_remove)
 
     return two_type_step
+
+
+def make_time_based_step(N: int):
+    time_satisfied = np.zeros(N, dtype='int')
+    lower_bound = 7
+    upper_bound = 9
+    satisfied_border = 10
+
+    def unsatisfied_behavior(G: nx.Graph, layout: Layout, agent: int, neighbors: Sequence[int]):
+        # add a neighbor if lonely
+        if len(neighbors) < lower_bound:
+            if len(neighbors) == 0:
+                connect_agents(G, layout, agent, choice(tuple(G.nodes)))
+            else:
+                neighbor_to_strength = {(neighbor, calc_prop_common_neighbors(G, agent, neighbor))
+                                        for neighbor in neighbors}
+                closest_neighbor = max(neighbor_to_strength, key=lambda x: x[1])[0]
+                neighbor_choices = tuple(set(G[closest_neighbor]) - {agent})
+                to_add = choice(neighbor_choices if len(neighbor_choices) > 0 else tuple(G.nodes))
+                connect_agents(G, layout, agent, to_add)
+        # remove a neighbor if overwhelmed
+        elif len(neighbors) > upper_bound:
+            neighbor_to_strength = {(neighbor, calc_prop_common_neighbors(G, agent, neighbor))
+                                    for neighbor in neighbors}
+            farthest_neighbor = min(neighbor_to_strength, key=lambda x: x[1])[0]
+            G.remove_edge(agent, farthest_neighbor)
+
+    def satisfied_behavior(G: nx.Graph, layout: Layout, agent: int, neighbors: Sequence[int]):
+        if len(neighbors) < upper_bound - 1:
+            neigbhor_choices = [n for n in G.nodes
+                                if (time_satisfied[n] > satisfied_border) and (n not in neighbors)]
+            if len(neigbhor_choices) > 0:
+                connect_agents(G, layout, agent, choice(neigbhor_choices))
+
+    def time_based_step(G: nx.Graph, layout: Layout) -> None:
+        for agent in G.nodes:
+            neighbors = tuple(G[agent])
+            # choose behavior
+            if time_satisfied[agent] < satisfied_border:
+                unsatisfied_behavior(G, layout, agent, neighbors)
+            else:
+                satisfied_behavior(G, layout, agent, neighbors)
+            # update satisfaction
+            if lower_bound <= len(neighbors) < upper_bound:
+                time_satisfied[agent] += 1
+            else:
+                time_satisfied[agent] = 0
+
+    return time_based_step
 
 
 def connect_agents(G: nx.Graph, layout: Layout, u: int, v: int) -> None:
