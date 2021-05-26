@@ -24,7 +24,7 @@ def output_network(G: nx.Graph, network_name: str, layout_algorithm: Optional[Un
                 current_id += 1
             return node_to_id[node]
 
-        edge_lines = [f'{get_id_of_node(n0)} {get_id_of_node(n1)}' for n0, n1 in G.edges]
+        edge_lines = [f'{get_id_of_node(n0)} {get_id_of_node(n1)}\n' for n0, n1 in G.edges]
         f.writelines(edge_lines)
         # this code is just for the visualization program I made ("graph-visualizer")
         # It writes out where each of the nodes should be drawn.

@@ -24,7 +24,7 @@ def main(argv: List[str]):
     M, layout = read_network_file(argv[1])
     name = '.'.join(op.basename(argv[1]).split('.')[:-1])
     # analyze_graph(M, name, layout)
-    visualize_graph(M, layout, name, edge_width_func=common_neigh, save=True)
+    visualize_graph(M, layout, name, edge_width_func=betw_centrality, save=True)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
     # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
     # plot_edge_betweeness_centralities(nx.Graph(M), name)
@@ -152,9 +152,9 @@ def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='', save=False
     edge_width = edge_width_func(G)
     plt.title(name)
     if layout is None:
-        nx.draw_kamada_kawai(G, node_size=100, node_color=node_color, width=edge_width)
+        nx.draw_kamada_kawai(G, node_size=50, node_color=node_color, width=edge_width)
     else:
-        nx.draw_networkx(G, pos=layout, node_size=100, node_color=node_color,
+        nx.draw_networkx(G, pos=layout, node_size=50, node_color=node_color,
                          width=edge_width, with_labels=False)
     if save:
         plt.savefig(name+'.png', dpi=300, format='png')

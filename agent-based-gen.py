@@ -6,6 +6,7 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 from random import choice
+from fileio import output_network
 from analyzer import COLORS, calc_prop_common_neighbors
 
 
@@ -21,16 +22,19 @@ def main():
     if layout is None:
         layout = nx.kamada_kawai_layout(G)
 
-    step = make_two_type_step(set(range(len(G.nodes)//100)), set(range(len(G.nodes)//100, len(G.nodes))))
+    step = make_two_type_step(set(range(len(G.nodes)//100)),
+                              set(range(len(G.nodes)//100, len(G.nodes))))
     for i in range(100):
         if i % 10 == 0:
             layout = nx.kamada_kawai_layout(G)
         plt.clf()
-        plt.title(f'Step {i} Edge Density == {len(G.edges)/(N*(N-1)//2)}')
+        plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
         nx.draw_networkx_nodes(G, pos=layout, node_size=100, node_color=assign_colors(G))
         nx.draw_networkx_edges(G, pos=layout)
-        plt.pause(.25)  # type: ignore
+        plt.pause(.1)  # type: ignore
         step(G, layout)
+
+    output_network(G, f'networks/agent-generated-{N}')
     input('Press "enter" to continue.')
 
 
@@ -68,7 +72,7 @@ def homogenous_step(G: nx.Graph, layout: Layout) -> None:
             G.remove_edge(agent, to_remove)
 
 
-def make_two_type_step(normal_agents: Iterable[int], bridge_agents: Iterable[int])\
+def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int])\
                        -> Callable[[nx.Graph, Layout], None]:
     """
     agent_roles should contain two entries: 'bridge', 'normal'. The iterables
