@@ -16,21 +16,24 @@ from fileio import output_network
 def main(argv):
     # cgg_entry_point(argv)
     # social_circles_entry_point(argv)
-    output_network(nx.connected_watts_strogatz_graph(500, 4, .1), nx.circular_layout)
+    output_network(nx.connected_watts_strogatz_graph(500, 4, .1),
+                   'watts-strogatz-500-4-.1.txt',
+                   nx.circular_layout)
 
 
 def cgg_entry_point(argv):
-    if len(argv) < 3:
+    if len(argv) < 4:
         print(f'Usage: {argv[0]} <num-big-components> <big-component-size> <gate-size>')
         return
 
     num_big_components = int(argv[1])
     big_component_size = int(argv[2])
     gate_size = int(argv[3])
+    name = argv[4]
 
     graph = make_complete_clique_gate_graph(num_big_components, big_component_size, gate_size)
 
-    output_network(graph)
+    output_network(graph, name)
     nx.draw(graph, node_size=100)
     plt.show()
 
@@ -38,7 +41,7 @@ def cgg_entry_point(argv):
 def social_circles_entry_point(argv):
     agents = {Agent('green', 30): 350, Agent('blue', 40): 100, Agent('purple', 50): 50}
     G, layout, _ = make_social_circles_network(agents, (500, 500))
-    output_network(G, layout)
+    output_network(G, argv[1], layout)
 
 
 def union_components(components: List[nx.Graph]) -> nx.Graph:
