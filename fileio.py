@@ -1,41 +1,43 @@
 import networkx as nx
 import numpy as np
-from typing import Optional, Union, Callable, Tuple
+from typing import Optional, Union, Callable, Tuple, Dict, Any
 from customtypes import Layout
 
 
-def output_network(G: nx.Graph, layout_algorithm: Optional[Union[Callable, Layout]] = None):
+def output_network(G: nx.Graph, network_name: str, layout_algorithm: Optional[Union[Callable, Layout]] = None):
     """
-    print the graph to stdout using the typical representation
+    Saves the network to a file using the typical representation
     """
-    print(len(G.nodes))
+    with open(network_name+'.txt', 'w') as f:
+        f.write(f'{len(G.nodes)}\n')
 
-    # sometimes the nodes are identified by tuples instead of just integers
-    # This doesn't work with other programs in the project, so we must give each tuple
-    # a unique integer ID.
-    node_to_id = {}
-    current_id = 0
-    for e in G.edges:
-        n0, n1 = e[0], e[1]
-        if n0 not in node_to_id:
-            node_to_id[n0] = current_id
-            current_id += 1
-        if n1 not in node_to_id:
-            node_to_id[n1] = current_id
-            current_id += 1
-        print(f'{node_to_id[n0]} {node_to_id[n1]}')
-    # this code is just for the visualization program I made ("graph-visualizer")
-    # It writes out where each of the nodes should be drawn.
-    print()
-    if layout_algorithm is None:
-        layout_algorithm = nx.kamada_kawai_layout
-    if callable(layout_algorithm):
-        layout = layout_algorithm(G)
-    else:
-        layout = layout_algorithm
-    for node, coordinate in sorted(layout.items(), key=lambda x: x[0]):
-        print(f'{node_to_id[node]} {coordinate[0]} {coordinate[1]}')
-    print()
+        # sometimes the nodes are identified by tuples instead of just integers
+        # This doesn't work with other programs in the project, so we must give each tuple
+        # a unique integer ID.
+        node_to_id: Dict[Any, int] = {}
+        current_id = 0
+
+        def get_id_of_node(node) -> int:
+            nonlocal current_id
+            if node not in node_to_id:
+                node_to_id[node] = current_id
+                current_id += 1
+            return node_to_id[node]
+
+        edge_lines = [f'{get_id_of_node(n0)} {get_id_of_node(n1)}' for n0, n1 in G.edges]
+        f.writelines(edge_lines)
+        # this code is just for the visualization program I made ("graph-visualizer")
+        # It writes out where each of the nodes should be drawn.
+        f.write('\n')
+        if layout_algorithm is None:
+            layout_algorithm = nx.kamada_kawai_layout
+        if callable(layout_algorithm):
+            layout = layout_algorithm(G)
+        else:
+            layout = layout_algorithm
+        for node, coordinate in sorted(layout.items(), key=lambda x: x[0]):
+            f.write(f'{node_to_id[node]} {coordinate[0]} {coordinate[1]}\n')
+        f.write('\n')
 
 
 def read_network_file(file_name: str) -> Tuple[np.ndarray, Optional[Layout]]:
