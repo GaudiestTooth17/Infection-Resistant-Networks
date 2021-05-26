@@ -30,14 +30,14 @@ def main():
     step = make_time_based_step(N)
     node_size = 200
     for i in range(100):
-        # if i % 10 == 0:
-        #     layout = nx.kamada_kawai_layout(G)
-        # plt.clf()
-        # plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
-        # nx.draw_networkx_nodes(G, pos=layout, node_size=node_size, node_color=assign_colors(G))
-        # nx.draw_networkx_edges(G, pos=layout)
-        # plt.pause(.25)  # type: ignore
-        # node_size = step(G, layout)
+        if i % 10 == 0:
+            layout = nx.kamada_kawai_layout(G)
+        plt.clf()
+        plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
+        nx.draw_networkx_nodes(G, pos=layout, node_size=node_size, node_color=assign_colors(G))
+        nx.draw_networkx_edges(G, pos=layout)
+        plt.pause(.25)  # type: ignore
+        node_size = step(G, layout)
         step(G, layout)
         if nx.is_connected(G):
             break

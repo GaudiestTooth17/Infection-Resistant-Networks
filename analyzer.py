@@ -23,8 +23,8 @@ def main(argv: List[str]):
         print(f'Usage: {argv[0]} <network>')
     M, layout = read_network_file(argv[1])
     name = '.'.join(op.basename(argv[1]).split('.')[:-1])
-    # analyze_graph(M, name, layout)
-    visualize_graph(M, layout, name, edge_width_func=betw_centrality, save=True)
+    analyze_network(M, name, layout)
+    # visualize_graph(M, layout, name, edge_width_func=common_neigh, save=True)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
     # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
     # plot_edge_betweeness_centralities(nx.Graph(M), name)
@@ -57,14 +57,14 @@ def show_deg_dist_from_matrix(M: np.ndarray, title, *, color='b', display=False,
     ax.set_xticklabels(deg)
 
     if display:
-        plt.show()
+        plt.show(block=False)
     if save:
         # plt.savefig(title[:-4] + '.png')  # This line just saves a blank pic instead of the plot.
         with open(title + '.csv', 'w') as file:
             for i in range(len(cnt)):
                 file.write(f'{deg[i]},{cnt[i]}\n')
         # print(title + ' saved')
-    plt.clf()
+    plt.figure()
 
 
 def make_node_to_degree(M) -> List[int]:
@@ -94,7 +94,8 @@ def show_clustering_coefficent_dist(node_to_coefficient: Dict[int, float], node_
     avg_clustering_coefficient = sum((e[1] for e in plot_data)) / len(plot_data)
     print(f'Average clustering coefficient for all nodes: {avg_clustering_coefficient}')
 
-    plt.show()
+    plt.show(block=False)
+    plt.figure()
 
 
 def calc_edge_density(M) -> float:
@@ -117,10 +118,11 @@ def get_components(graph) -> List[Set]:
 
 # shows degree distribution, degree assortativity coefficient, clustering coefficient,
 # edge density
-def analyze_graph(M, name, layout) -> None:
+def analyze_network(M, name, layout) -> None:
+    G = nx.Graph(M)
     # dac = nx.degree_assortativity_coefficient(G)
-    # clustering_coefficients = nx.clustering(G)
-    # node_to_degree = make_node_to_degree(M)
+    clustering_coefficients = nx.clustering(G)
+    node_to_degree = make_node_to_degree(M)
     # components = get_components(G)
 
     edge_density = calc_edge_density(M)
@@ -128,20 +130,32 @@ def analyze_graph(M, name, layout) -> None:
     diameter = nx.diameter(nx.Graph(M))
     print(f'Diameter: {diameter}')
     # print(f'Degree assortativity coefficient: {dac}')
-    # show_clustering_coefficent_dist(clustering_coefficients, node_to_degree)
+    show_clustering_coefficent_dist(clustering_coefficients, dict(enumerate(node_to_degree)))   # type: ignore
     # print(f'size of components: {[len(comp) for comp in components]}')
-    show_deg_dist_from_matrix(M, name, display=True, save=True)
+    show_deg_dist_from_matrix(M, name, display=True, save=False)
+    input('Press <enter> to continue.')
 
 
 def all_same(G: nx.Graph) -> List[float]:
+    """
+    All the edges are the same width.
+    """
     return [1.0 for _ in G.edges]
 
 
 def betw_centrality(G: nx.Graph) -> List[float]:
+    """
+    Edge width depends on betweeness centrality.
+    (higher centrality -> more width)
+    """
     return [5*betweenness for betweenness in nx.edge_betweenness_centrality(G).values()]
 
 
 def common_neigh(G: nx.Graph) -> List[float]:
+    """
+    Edge width depends on how many common neighbors the two end points have.
+    (more in common -> more width).
+    """
     return [.1+2*calc_prop_common_neighbors(G, u, v) for u, v in G.edges]
 
 
@@ -157,7 +171,7 @@ def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='', save=False
         nx.draw_networkx(G, pos=layout, node_size=50, node_color=node_color,
                          width=edge_width, with_labels=False)
     if save:
-        plt.savefig(name+'.png', dpi=300, format='png')
+        plt.savefig(f'vis-{name}.png', dpi=300, format='png')
     else:
         plt.show()
 
