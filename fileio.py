@@ -35,8 +35,8 @@ def output_network(G: nx.Graph, network_name: str, layout_algorithm: Optional[Un
             layout = layout_algorithm(G)
         else:
             layout = layout_algorithm
-        for node, coordinate in sorted(layout.items(), key=lambda x: x[0]):
-            f.write(f'{node_to_id[node]} {coordinate[0]} {coordinate[1]}\n')
+        f.writelines(f'{node_to_id[node]} {x} {y}\n'
+                     for node, (x, y) in sorted(layout.items(), key=lambda x: x[0]))
         f.write('\n')
 
 
