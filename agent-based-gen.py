@@ -4,26 +4,28 @@ from typing import Iterable, List, Callable
 from customtypes import Layout
 import networkx as nx
 import numpy as np
+import sys
 import matplotlib.pyplot as plt
 from random import choice
-from fileio import output_network
+from fileio import read_network_file
 from analyzer import COLORS, calc_prop_common_neighbors
 
 
 def main():
-    # if len(sys.argv) < 2:
-    #     print(f'Usage: {sys.argv[0]} <network>')
-    #     return
+    if len(sys.argv) < 2:
+        print(f'Usage: {sys.argv[0]} <network>')
+        return
 
-    # M, layout = read_network_file(sys.argv[1])
-    N = 500
-    G = nx.empty_graph(N)
+    M, layout = read_network_file(sys.argv[1])
+    G = nx.Graph(M)
+    # N = 500
+    # G = nx.empty_graph(N)
     layout = None
     if layout is None:
         layout = nx.kamada_kawai_layout(G)
 
-    step = make_two_type_step(set(range(len(G.nodes)//100)),
-                              set(range(len(G.nodes)//100, len(G.nodes))))
+    step = make_two_type_step(set(range(len(G.nodes)//10)), set(range(len(G.nodes)//10, len(G.nodes))))
+    # step = homogenous_step
     for i in range(100):
         if i % 10 == 0:
             layout = nx.kamada_kawai_layout(G)
@@ -34,7 +36,6 @@ def main():
         plt.pause(.1)  # type: ignore
         step(G, layout)
 
-    output_network(G, f'networks/agent-generated-{N}')
     input('Press "enter" to continue.')
 
 
@@ -81,16 +82,18 @@ def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int
     bridge agents will try to connect themselves to a few different clusters.
     """
     def two_type_step(G: nx.Graph, layout: Layout) -> None:
-        normal_happy_number = 5
+        normal_lb = 2  # lower bound
+        normal_ub = 10  # upper bound
         bridge_happy_number = 2
 
+        # how a normal agent behaves
         for agent in normal_agents:
             neighbors = tuple(nx.neighbors(G, agent))
             # connect to a new neighbor
-            if len(neighbors) == 0:
+            if len(neighbors) < normal_lb:
                 to_add = choice(tuple(G.nodes))
                 connect_agents(G, layout, agent, to_add)
-            elif len(neighbors) < normal_happy_number:
+            elif len(neighbors) < normal_ub:
                 neighbor_to_strength = {(neighbor, calc_prop_common_neighbors(G, agent, neighbor))
                                         for neighbor in neighbors}
                 closest_neighbor = max(neighbor_to_strength, key=lambda x: x[1])[0]
@@ -101,12 +104,13 @@ def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int
                     to_add = choice(tuple(G.nodes))
                 connect_agents(G, layout, agent, to_add)
             # disconnect from a neighbor
-            elif len(neighbors) > normal_happy_number:
+            elif len(neighbors) > normal_ub:
                 neighbor_to_strength = {(neighbor, calc_prop_common_neighbors(G, agent, neighbor))
                                         for neighbor in neighbors}
                 to_remove = min(neighbor_to_strength, key=lambda x: x[1])[0]
                 G.remove_edge(agent, to_remove)
 
+        # how a bridge agent behaves
         for agent in bridge_agents:
             neighbors = tuple(nx.neighbors(G, agent))
             # search for more connections
