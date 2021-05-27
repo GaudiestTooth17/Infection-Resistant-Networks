@@ -2,6 +2,7 @@
 
 from typing import List, Tuple, Dict
 import sys
+import math
 from itertools import product
 
 import networkx as nx
@@ -153,8 +154,14 @@ def search_for_neighbors(grid, x, y):
     neighbors = {(i, j)
                  for (i, j) in product(range(min_x, max_x),
                                        range(min_y, max_y))
-                 if grid[i, j] > 0 and (x, y) != (i, j)}
+                 if all((grid[i, j] > 0,
+                         distance(x, y, i, j) <= reach,
+                         (x, y) != (i, j)))}
     return neighbors
+
+
+def distance(x0, y0, x1, y1) -> float:
+    return math.sqrt((x0-x1)**2 + (y0-y1)**2)
 
 
 if __name__ == '__main__':
