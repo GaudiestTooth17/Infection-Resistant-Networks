@@ -16,10 +16,7 @@ from fileio import output_network
 # make a component-gate graph
 def main(argv):
     # cgg_entry_point(argv)
-    # social_circles_entry_point(argv)
-    output_network(nx.connected_watts_strogatz_graph(500, 4, .1),
-                   'watts-strogatz-500-4-.1.txt',
-                   nx.circular_layout)
+    social_circles_entry_point(argv)
 
 
 def cgg_entry_point(argv):
@@ -97,11 +94,11 @@ def make_complete_clique_gate_graph(num_big_components, big_component_size, gate
 
 
 def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
-                                grid_size: Tuple[int, int], pbar=False,
+                                grid_size: Tuple[int, int],
                                 force_connected=True) -> Tuple[nx.Graph, Layout, NodeColors]:
     # repeat the algorithm up to some maximum attempting to generate a connected network.
     max_tries = 100
-    for _ in range(max_tries):
+    for attempt in range(max_tries):
         agents = sorted(agent_type_to_quantity.items(),
                         key=lambda x: x[0][1], reverse=True)
         grid = np.zeros(grid_size, dtype='uint8')
@@ -132,7 +129,10 @@ def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
         G = nx.Graph(M)
         # return the generated network if it is connected or if we don't care
         if (not force_connected) or nx.is_connected(G):
+            print(f'Success after {attempt+1} tries.')
             return G, layout, colors
+        else:
+            print(f'Finished {attempt+1} tries.')
 
     # Abort execution on failure
     exit(f'Failed to generate a connected network after {max_tries} tries.')
