@@ -5,7 +5,7 @@ from customtypes import Layout
 import networkx as nx
 import numpy as np
 import sys
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 from random import choice
 from fileio import output_network, read_network_file
@@ -28,28 +28,28 @@ def main():
     if layout is None:
         layout = nx.kamada_kawai_layout(G)
 
+    step = homogenous_step
     # step = make_two_type_step(set(range(len(G.nodes)//10)), set(range(len(G.nodes)//10, len(G.nodes))))
-    # step = homogenous_step
-    step = make_time_based_step(N)
-    # node_size = 200
+    # step = make_time_based_step(N)
+    node_size = 200
     for i in tqdm(range(150)):
-        # if i % 10 == 0:
-        #     layout = nx.kamada_kawai_layout(G)
-        # plt.clf()
-        # plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
-        # nx.draw_networkx_nodes(G, pos=layout, node_size=node_size, node_color=assign_colors(G))
-        # nx.draw_networkx_edges(G, pos=layout)
-        # plt.pause(.25)  # type: ignore
-        # node_size = step(G, layout)
-        step(G, layout)
-        if nx.is_connected(G):
-            print(f'Finished after {i+1} steps.')
-            break
+        if i % 10 == 0:
+            layout = nx.kamada_kawai_layout(G)
+        plt.clf()
+        plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
+        nx.draw_networkx(G, pos=layout, node_size=node_size, node_color=assign_colors(G),
+                         with_labels=False)
+        plt.pause(.2)  # type: ignore
+        node_size = step(G, layout)
+    #     step(G, N)
+    #     if nx.is_connected(G):
+    #         print(f'Finished after {i+1} steps.')
+    #         break
 
-    if nx.is_connected(G):
-        output_network(G, f'agent-generated-{N}')
-    else:
-        print('Network was not connected!')
+    # if nx.is_connected(G):
+    #     output_network(G, f'agent-generated-{N}')
+    # else:
+    #     print('Network was not connected!')
     # input('Press "enter" to continue.')
 
 
