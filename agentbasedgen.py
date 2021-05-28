@@ -60,6 +60,14 @@ def assign_colors(G: nx.Graph) -> List[str]:
 
 
 def homogenous_step(G: nx.Graph, layout: Layout) -> None:
+    """
+    All agents behave the same, and that behave doesn't vary with time.
+    The agents are trying to reach happy_number connections. If they are not connected
+    to any other agents, they choose a random one to connect to. If they are connected
+    to less than happy_number, they connect to one of the agents connected to their
+    neighbor with the most common neighbors. If they have too many connections, they
+    disconnect from the neighbor with the fewest common neighbors.
+    """
     happy_number = 10
     for agent in G.nodes:
         neighbors = tuple(nx.neighbors(G, agent))
@@ -143,14 +151,32 @@ def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int
 
 
 def make_time_based_step(N: int):
-    time_satisfied = np.zeros(N, dtype='int')
-    lower_bound = 7
-    upper_bound = 8
-    satisfied_border = 10
+    """
+    Agents try to have between [lower_bound, upper_bound] connections. However,
+    behavior changes once an agent's connections have not changed for steps_to_stable
+    steps. Whether or not they have changed is determined after all agents have taken
+    an action, so if A connects to B, but B disconnects from A, A's connections will
+    have not changed.
+
+    In the unstable state, agents add neighbors if beneath lower_bound and remove agents
+    if above upper_bound. Agents add a random agent adjacent to the agent with the most
+    common neighbors. If that agent has no other neighbors, or the original agent has no
+    neighbors, an agent is chosen at random to connect to.
+
+    In the stable state, agents only look for more connections if they have less than
+    upper_bound-1 connections. This is to minimize the probability that they start
+    pruning connections after adding a new one.
+
+    :param N: number of agents the simulation has.
+    """
+    time_stable = np.zeros(N, dtype='int')
+    lower_bound = 4
+    upper_bound = 6
+    steps_to_stable = 10
     agent_to_previous_neighbors = {n: set() for n in range(N)}
     steps_taken = 0
 
-    def unsatisfied_behavior(G: nx.Graph, layout: Layout, agent: int, neighbors: Sequence[int]):
+    def unstable_behavior(G: nx.Graph, layout: Layout, agent: int, neighbors: Sequence[int]):
         # add a neighbor if lonely
         if len(neighbors) < lower_bound:
             if len(neighbors) == 0:
@@ -159,6 +185,8 @@ def make_time_based_step(N: int):
                 neighbor_to_strength = {(neighbor, calc_prop_common_neighbors(G, agent, neighbor))
                                         for neighbor in neighbors}
                 closest_neighbor = max(neighbor_to_strength, key=lambda x: x[1])[0]
+                # TODO: neighbor_choices will likely include agents already adjacent to agent.
+                # These should be filtered out.
                 neighbor_choices = tuple(set(G[closest_neighbor]) - {agent})
                 to_add = choice(neighbor_choices if len(neighbor_choices) > 0 else tuple(G.nodes))
                 connect_agents(G, layout, agent, to_add)
@@ -169,10 +197,10 @@ def make_time_based_step(N: int):
             farthest_neighbor = min(neighbor_to_strength, key=lambda x: x[1])[0]
             G.remove_edge(agent, farthest_neighbor)
 
-    def satisfied_behavior(G: nx.Graph, layout: Layout, agent: int, neighbors: Sequence[int]):
+    def stable_behavior(G: nx.Graph, layout: Layout, agent: int, neighbors: Sequence[int]):
         if len(neighbors) < upper_bound - 1:
             neighbor_choices = [n for n in G.nodes
-                                if all((time_satisfied[n] > satisfied_border,
+                                if all((time_stable[n] > steps_to_stable,
                                         n not in neighbors,
                                         len(G[n]) < upper_bound - 1))]
             if len(neighbor_choices) > 0:
@@ -184,24 +212,24 @@ def make_time_based_step(N: int):
         for agent in agents:
             neighbors = tuple(G[agent])
             # choose behavior
-            if time_satisfied[agent] < satisfied_border:
-                unsatisfied_behavior(G, layout, agent, neighbors)
+            if time_stable[agent] < steps_to_stable:
+                unstable_behavior(G, layout, agent, neighbors)
             else:
-                satisfied_behavior(G, layout, agent, neighbors)
+                stable_behavior(G, layout, agent, neighbors)
 
         # Update satisfaction. Agents are satisifed by having consistant neighbors
         for agent in agents:
             neighbors = set(G[agent])
             if agent_to_previous_neighbors[agent] == neighbors:
-                time_satisfied[agent] += 1
+                time_stable[agent] += 1
             else:
-                time_satisfied[agent] = 0
+                time_stable[agent] = 0
             agent_to_previous_neighbors[agent] = neighbors
 
         nonlocal steps_taken
         # print(steps_taken, np.sum(time_satisfied > 0))
         steps_taken += 1
-        node_size = 200 - time_satisfied*20
+        node_size = 200 - time_stable*20
         return np.where(node_size == 0, 0, node_size)
 
     return time_based_step
@@ -209,7 +237,8 @@ def make_time_based_step(N: int):
 
 def connect_agents(G: nx.Graph, layout: Layout, u: int, v: int) -> None:
     """
-    Connect agents u and v in the network G and update the layout.
+    Connect agents u and v in the network G. The layout may be updated depending
+    on whether or not that code is commented out. ;)
     """
     # # if u has no neighbors, move u close to v
     # if len(G[u]) == 0:
