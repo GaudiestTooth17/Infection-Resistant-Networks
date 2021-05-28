@@ -1,28 +1,30 @@
 #!/usr/bin/python3
-from typing import Iterable, List, Callable, Sequence
+from typing import Iterable, List, Callable, Optional, Sequence
 
 from customtypes import Layout
 import networkx as nx
 import numpy as np
-# import sys
+import sys
 # import matplotlib.pyplot as plt
 from tqdm import tqdm
 from random import choice
-from fileio import output_network
+from fileio import output_network, read_network_file
 from analyzer import COLORS, calc_prop_common_neighbors
 
 
 def main():
-    # if len(sys.argv) < 2:
-    #     print(f'Usage: {sys.argv[0]} <network>')
-    #     return
+    if len(sys.argv) < 2:
+        print(f'Usage: {sys.argv[0]} <network or number of agents>')
+        return
 
-    # M, layout = read_network_file(sys.argv[1])
-    # G = nx.Graph(M)
-    # N = len(G.nodes)
-    N = 500
-    G = nx.empty_graph(N)
-    layout = None
+    N = int_or_none(sys.argv[1])
+    if N is None:
+        M, layout = read_network_file(sys.argv[1])
+        G = nx.Graph(M)
+        N = len(G.nodes)
+    else:
+        G = nx.empty_graph(N)
+        layout = None
     if layout is None:
         layout = nx.kamada_kawai_layout(G)
 
@@ -253,6 +255,13 @@ def connect_agents(G: nx.Graph, layout: Layout, u: int, v: int) -> None:
     #     new_y += choice(np.linspace(-.01, .01, 10))
     #     layout[v] = (new_x, new_y)
     G.add_edge(u, v)
+
+
+def int_or_none(string: str) -> Optional[int]:
+    try:
+        return int(string)
+    except ValueError:
+        return None
 
 
 if __name__ == '__main__':
