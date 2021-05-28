@@ -5,7 +5,8 @@ from customtypes import Layout
 import os.path as op
 
 
-def output_network(G: nx.Graph, network_name: str, layout_algorithm: Optional[Union[Callable, Layout]] = None):
+def output_network(G: nx.Graph, network_name: str,
+                   layout_algorithm: Optional[Union[Callable, Layout]] = None):
     """
     Saves the network to a file using the typical representation
     """

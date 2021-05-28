@@ -23,7 +23,7 @@ def main(argv: List[str]):
     M, layout = read_network_file(argv[1])
     name = get_network_name(argv[1])
     # analyze_network(M, name, layout)
-    visualize_graph(M, layout, name, edge_width_func=betw_centrality, save=True)
+    visualize_graph(M, layout, name, edge_width_func=common_neigh, save=False)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
     # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
     # plot_edge_betweeness_centralities(nx.Graph(M), name)
