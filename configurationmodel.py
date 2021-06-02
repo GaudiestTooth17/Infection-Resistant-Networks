@@ -11,7 +11,7 @@ def main():
     n_steps = 500
     n_vertices = 100
     degrees = np.zeros(n_vertices, dtype='uint') + 4
-    optimizer_step = make_sa_optimizer(clustering_objective, make_fast_schedule(.01),
+    optimizer_step = make_sa_optimizer(make_component_objective(), make_fast_schedule(.01),
                                        configuration_neighbor, degrees)
     pbar = tqdm(range(n_steps))
     energies = np.zeros(n_steps)
@@ -34,11 +34,44 @@ def main():
     input('Press <enter> to exit.')
 
 
-def clustering_objective(degrees: Sequence[int]) -> float:
-    networks = (network_from_degree_sequence(degrees, make_vis_func(False), False)
-                for _ in range(25))
-    clustering_coefficients = tuple(nx.average_clustering(G) for G in networks)
-    return -sum(clustering_coefficients) / len(clustering_coefficients)  # type: ignore
+def make_clustering_objective():
+    configuration_to_energy = {}
+
+    def clustering_objective(degrees: Sequence[int]) -> float:
+        hashable_degrees = tuple(degrees)
+        if hashable_degrees in configuration_to_energy:
+            return configuration_to_energy[hashable_degrees]
+
+        networks = (network_from_degree_sequence(degrees, make_vis_func(False), False)
+                    for _ in range(25))
+        clustering_coefficients = tuple(nx.average_clustering(G) for G in networks)
+        energy = sum(clustering_coefficients) / len(clustering_coefficients)
+        configuration_to_energy[hashable_degrees] = energy
+        return energy
+
+    return clustering_objective
+
+
+def make_component_objective():
+    """
+    This one should be pretty easy for the model to do.
+    But it isn't.
+    """
+    configuration_to_energy = {}
+
+    def objective(degrees: Sequence[int]) -> float:
+        hashable_degrees = tuple(degrees)
+        if hashable_degrees in configuration_to_energy:
+            return configuration_to_energy[hashable_degrees]
+
+        networks = (network_from_degree_sequence(degrees, make_vis_func(False), False)
+                    for _ in range(25))
+        comp_lens = tuple(len(tuple(nx.connected_components(G))) for G in networks)
+        energy = -sum(comp_lens) / len(comp_lens)
+        configuration_to_energy[hashable_degrees] = energy
+        return energy
+
+    return objective
 
 
 def configuration_neighbor(degrees: Sequence[int]) -> Sequence[int]:
