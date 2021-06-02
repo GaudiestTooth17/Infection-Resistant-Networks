@@ -6,7 +6,7 @@ import networkx as nx
 import numpy as np
 import sys
 from itertools import takewhile
-from typing import Callable, Dict, Iterable, List, Set, Tuple, Optional
+from typing import Callable, Dict, Iterable, List, Sequence, Set, Optional, Tuple
 from customtypes import Layout, Number, CircularList
 from fileio import read_network_file, get_network_name
 
@@ -22,8 +22,8 @@ def main(argv: List[str]):
         print(f'Usage: {argv[0]} <network>')
     M, layout = read_network_file(argv[1])
     name = get_network_name(argv[1])
-    # analyze_network(M, name, layout)
-    visualize_graph(M, layout, name, edge_width_func=common_neigh, save=False)
+    analyze_network(M, name)
+    # visualize_graph(M, layout, name, edge_width_func=common_neigh, save=False)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
     # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
     # plot_edge_betweeness_centralities(nx.Graph(M), name)
@@ -107,30 +107,30 @@ def calc_edge_density(M) -> float:
     return density
 
 
-def get_components(graph) -> List[Set]:
+def get_components(graph) -> Tuple[Set, ...]:
     """
     returns a list of the components in graph
     :param graph: a networkx graph
     """
-    return list(nx.connected_components(graph))
+    return tuple(nx.connected_components(graph))
 
 
 # shows degree distribution, degree assortativity coefficient, clustering coefficient,
 # edge density
-def analyze_network(M, name, layout) -> None:
+def analyze_network(M, name) -> None:
     G = nx.Graph(M)
     # dac = nx.degree_assortativity_coefficient(G)
     clustering_coefficients = nx.clustering(G)
     node_to_degree = make_node_to_degree(M)
-    # components = get_components(G)
 
     edge_density = calc_edge_density(M)
     print(f'Edge density: {edge_density}')
-    diameter = nx.diameter(nx.Graph(M))
-    print(f'Diameter: {diameter}')
+    # diameter = nx.diameter(nx.Graph(M))
+    # print(f'Diameter: {diameter}')
     # print(f'Degree assortativity coefficient: {dac}')
     show_clustering_coefficent_dist(clustering_coefficients, dict(enumerate(node_to_degree)))   # type: ignore
-    # print(f'size of components: {[len(comp) for comp in components]}')
+    components = get_components(G)
+    print(f'size of components: {[len(comp) for comp in components]}')
     show_deg_dist_from_matrix(M, name, display=True, save=False)
     input('Press <enter> to continue.')
 
@@ -161,9 +161,10 @@ def common_neigh(G: nx.Graph) -> List[float]:
 def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='', save=False,
                     edge_width_func: Callable[[nx.Graph], List[float]] = all_same) -> None:
     G = nx.Graph(M)
-    node_color = ['blue']*len(G.edges)
+    comps = tuple(nx.connected_components(G))
+    node_color = colors_from_communities(comps)
     edge_width = edge_width_func(G)
-    plt.title(name)
+    plt.title(f'{name}\n{len(comps)} Components')
     if layout is None:
         nx.draw_kamada_kawai(G, node_size=50, node_color=node_color, width=edge_width)
     else:
@@ -226,7 +227,7 @@ def visualize_girvan_newman_communities(G: nx.Graph, layout: Optional[Layout] = 
         pass
 
 
-def colors_from_communities(communities: Tuple[List[int]]) -> List[str]:
+def colors_from_communities(communities: Sequence[Sequence[int]]) -> List[str]:
     colors = [(COLORS[i], vertex)
               for i, community in enumerate(communities)
               for vertex in community]
