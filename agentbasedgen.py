@@ -8,7 +8,7 @@ import sys
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from random import choice
-from fileio import output_network, read_network_file
+from fileio import read_network_file
 from analyzer import COLORS, calc_prop_common_neighbors
 
 
