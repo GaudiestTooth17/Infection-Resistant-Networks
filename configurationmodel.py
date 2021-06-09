@@ -5,31 +5,39 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sa import make_sa_optimizer, make_fast_schedule
+from analyzer import colors_from_communities
 
 
 def main():
-    n_steps = 500
-    n_vertices = 100
-    degrees = np.zeros(n_vertices, dtype='uint') + 4
-    optimizer_step = make_sa_optimizer(make_component_objective(), make_fast_schedule(.01),
-                                       configuration_neighbor, degrees)
+    n_steps = 20_000
+    N = 500
+    rand = np.random.default_rng()
+    node_to_degree = np.clip(rand.normal(5, 3, N), 1, None).astype('int')
+    # All of the degrees must sum to an even number. This if block ensures that happens.
+    if np.sum(node_to_degree) % 2 == 1:
+        node_to_degree[np.argmin(node_to_degree)] += 1
+    edge_list = np.array([node
+                          for node, degree in enumerate(node_to_degree)
+                          for _ in range(degree)])
+    rand.shuffle(edge_list)
+    optimizer_step = make_sa_optimizer(make_component_objective(), make_fast_schedule(100),
+                                       edge_list_neighbor, edge_list)
     pbar = tqdm(range(n_steps))
     energies = np.zeros(n_steps)
     for step in pbar:
-        degrees, energy = optimizer_step()
+        edge_list, energy = optimizer_step()
         energies[step] = energy
         pbar.set_description('Energy: {:.5f}'.format(energy))
 
     plt.plot(energies)
     plt.show(block=False)
     plt.figure()
-    plt.hist(degrees, bins=max(degrees) - min(degrees))
+    plt.hist(edge_list, bins=(max(edge_list) - min(edge_list))//4)
     plt.show(block=False)
-    for _ in range(5):
-        G = network_from_degree_sequence(degrees, make_vis_func(False), False)
-        plt.figure()
-        nx.draw_kamada_kawai(G)
-        plt.show(block=False)
+    G = network_from_edge_list(edge_list)  # type: ignore
+    plt.figure()
+    nx.draw_kamada_kawai(G, node_size=50, node_color=colors_from_communities(nx.connected_components(G)))
+    plt.show(block=False)
 
     input('Press <enter> to exit.')
 
@@ -53,22 +61,33 @@ def make_clustering_objective():
 
 
 def make_component_objective():
+    configuration_to_energy = {}
+
+    # def objective(degrees: Sequence[int]) -> float:
     """
     This one should be pretty easy for the model to do.
     But it isn't.
     """
-    configuration_to_energy = {}
+    #     hashable_degrees = tuple(degrees)
+    #     if hashable_degrees in configuration_to_energy:
+    #         return configuration_to_energy[hashable_degrees]
 
-    def objective(degrees: Sequence[int]) -> float:
-        hashable_degrees = tuple(degrees)
-        if hashable_degrees in configuration_to_energy:
-            return configuration_to_energy[hashable_degrees]
+    #     networks = (network_from_degree_sequence(degrees, make_vis_func(False), False)
+    #                 for _ in range(25))
+    #     comp_lens = tuple(len(tuple(nx.connected_components(G))) for G in networks)
+    #     energy = -sum(comp_lens) / len(comp_lens)
+    #     configuration_to_energy[hashable_degrees] = energy
+    #     return energy
 
-        networks = (network_from_degree_sequence(degrees, make_vis_func(False), False)
-                    for _ in range(25))
-        comp_lens = tuple(len(tuple(nx.connected_components(G))) for G in networks)
-        energy = -sum(comp_lens) / len(comp_lens)
-        configuration_to_energy[hashable_degrees] = energy
+    def objective(edge_list: np.ndarray) -> float:
+        hashable_edge_list = tuple(edge_list)  # type: ignore
+        if hashable_edge_list in configuration_to_energy:
+            return configuration_to_energy[hashable_edge_list]
+
+        G = network_from_edge_list(edge_list)
+        largest_component = max(nx.connected_components(G), key=len)
+        energy = len(largest_component) - nx.diameter(G.subgraph(largest_component))  # type: ignore
+        configuration_to_energy[hashable_edge_list] = energy
         return energy
 
     return objective
@@ -81,6 +100,20 @@ def configuration_neighbor(degrees: Sequence[int]) -> Sequence[int]:
     neighbor[i] += np.random.choice((-1, 1))
     neighbor[j] += np.random.choice((-1, 1))
     return neighbor
+
+
+def edge_list_neighbor(edge_list: np.ndarray) -> np.ndarray:
+    index0 = np.random.randint(0, edge_list.shape[0])
+    index1 = np.random.randint(0, edge_list.shape[0])
+
+    # to eliminate self-loops check the value adjacent to index0 to make sure edge_list[index1] != that_value
+    offset = 1 if index0 % 2 == 0 else -1
+    while edge_list[index0+offset] == edge_list[index1]:
+        index1 = np.random.randint(0, edge_list.shape[0])
+
+    new_edge_list = np.copy(edge_list)
+    new_edge_list[index0], new_edge_list[index1] = new_edge_list[index1], new_edge_list[index0]
+    return new_edge_list
 
 
 def network_from_degree_sequence(degrees: Sequence[int], vis_func, force_good_behavior: bool) -> nx.Graph:
@@ -107,6 +140,20 @@ def network_from_degree_sequence(degrees: Sequence[int], vis_func, force_good_be
         G.add_edge(u, v)
         vis_func(G, u, v)
 
+    return G
+
+
+def network_from_edge_list(edge_list: np.ndarray) -> nx.Graph:
+    """
+    edge_list is the concrete implementation of the thing created by a degree configuration.
+    If a node has degree n, that node's integer ID will appear n times in edge_list. Edges are
+    created by putting the values in groups of two starting at index 0 and proceeding to the end.
+    In this way, edge_list can be viewed as a List[Tuple[int, int]].
+    """
+    N = np.max(edge_list)
+    G = nx.empty_graph(N)
+    G.add_edges_from(((edge_list[i], edge_list[i+1])
+                      for i in range(0, len(edge_list), 2)))
     return G
 
 
