@@ -4,13 +4,13 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from sa import make_sa_optimizer, make_fast_schedule
+import hcmioptim as ho
 from analyzer import colors_from_communities
 
 
 def main():
-    n_steps = 20_000
-    N = 500
+    n_steps = 1000
+    N = 100
     rand = np.random.default_rng()
     node_to_degree = np.clip(rand.normal(5, 3, N), 1, None).astype('int')
     # All of the degrees must sum to an even number. This if block ensures that happens.
@@ -20,12 +20,12 @@ def main():
                           for node, degree in enumerate(node_to_degree)
                           for _ in range(degree)])
     rand.shuffle(edge_list)
-    optimizer_step = make_sa_optimizer(make_component_objective(), make_fast_schedule(100),
-                                       edge_list_neighbor, edge_list)
+    optimizer = ho.sa.SAOptimizer(component_objective, ho.sa.make_fast_schedule(100),
+                                  edge_list_neighbor, edge_list, True)
     pbar = tqdm(range(n_steps))
     energies = np.zeros(n_steps)
     for step in pbar:
-        edge_list, energy = optimizer_step()
+        edge_list, energy = optimizer.step()
         energies[step] = energy
         pbar.set_description('Energy: {:.5f}'.format(energy))
 
@@ -42,55 +42,19 @@ def main():
     input('Press <enter> to exit.')
 
 
-def make_clustering_objective():
-    configuration_to_energy = {}
-
-    def clustering_objective(degrees: Sequence[int]) -> float:
-        hashable_degrees = tuple(degrees)
-        if hashable_degrees in configuration_to_energy:
-            return configuration_to_energy[hashable_degrees]
-
-        networks = (network_from_degree_sequence(degrees, make_vis_func(False), False)
-                    for _ in range(25))
-        clustering_coefficients = tuple(nx.average_clustering(G) for G in networks)
-        energy = sum(clustering_coefficients) / len(clustering_coefficients)
-        configuration_to_energy[hashable_degrees] = energy
-        return energy
-
-    return clustering_objective
+def clustering_objective(degrees: Sequence[int]) -> float:
+    networks = (network_from_degree_sequence(degrees, make_vis_func(False), False)
+                for _ in range(25))
+    clustering_coefficients = tuple(nx.average_clustering(G) for G in networks)
+    energy = sum(clustering_coefficients) / len(clustering_coefficients)
+    return energy
 
 
-def make_component_objective():
-    configuration_to_energy = {}
-
-    # def objective(degrees: Sequence[int]) -> float:
-    """
-    This one should be pretty easy for the model to do.
-    But it isn't.
-    """
-    #     hashable_degrees = tuple(degrees)
-    #     if hashable_degrees in configuration_to_energy:
-    #         return configuration_to_energy[hashable_degrees]
-
-    #     networks = (network_from_degree_sequence(degrees, make_vis_func(False), False)
-    #                 for _ in range(25))
-    #     comp_lens = tuple(len(tuple(nx.connected_components(G))) for G in networks)
-    #     energy = -sum(comp_lens) / len(comp_lens)
-    #     configuration_to_energy[hashable_degrees] = energy
-    #     return energy
-
-    def objective(edge_list: np.ndarray) -> float:
-        hashable_edge_list = tuple(edge_list)  # type: ignore
-        if hashable_edge_list in configuration_to_energy:
-            return configuration_to_energy[hashable_edge_list]
-
-        G = network_from_edge_list(edge_list)
-        largest_component = max(nx.connected_components(G), key=len)
-        energy = len(largest_component) - nx.diameter(G.subgraph(largest_component))  # type: ignore
-        configuration_to_energy[hashable_edge_list] = energy
-        return energy
-
-    return objective
+def component_objective(edge_list: np.ndarray) -> float:
+    G = network_from_edge_list(edge_list)
+    largest_component = max(nx.connected_components(G), key=len)
+    energy = len(largest_component) - nx.diameter(G.subgraph(largest_component))  # type: ignore
+    return energy
 
 
 def configuration_neighbor(degrees: Sequence[int]) -> Sequence[int]:
@@ -173,6 +137,11 @@ def make_vis_func(visualize: bool) -> Callable[[nx.Graph, int, int], None]:
         return None
 
     return do_vis if visualize else dont_vis
+
+
+class GeneratingFunction:
+    def __init__(self):
+        pass
 
 
 if __name__ == '__main__':
