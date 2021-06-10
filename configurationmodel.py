@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from customtypes import Number
 from typing import Callable, Sequence
 import networkx as nx
 import numpy as np
@@ -137,11 +138,6 @@ def make_vis_func(visualize: bool) -> Callable[[nx.Graph, int, int], None]:
         return None
 
     return do_vis if visualize else dont_vis
-
-
-class GeneratingFunction:
-    def __init__(self):
-        pass
 
 
 if __name__ == '__main__':

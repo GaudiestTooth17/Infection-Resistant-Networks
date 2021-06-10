@@ -32,7 +32,6 @@ class CommunityEdges:
         :param layout: layout is used to partition the graph
         :param num_communities: The number of communities to split the graph into
         """
-        # print(sorted(layout.keys()))
         # create communities based off location of nodes in layout
         divisions = np.linspace(-1, 1, sqrt_num_communities+1)
 
@@ -47,7 +46,7 @@ class CommunityEdges:
 
         edges = zip(*np.where(M > 0))  # type: ignore
         community_to_outgoing_edges = defaultdict(lambda: set())
-        for u, v in edges:
+        for u, v in edges:  # type: ignore
             if node_to_community[u] != node_to_community[v]:
                 community_to_outgoing_edges[node_to_community[u]].add((u, v))
 
