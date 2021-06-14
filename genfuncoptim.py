@@ -14,20 +14,24 @@ def main():
 
 
 def with_ga():
-    desired_sequence = np.array((0, 1, 4, 9, 16, 25, 36))  # example from pdf p. 6
+    # example from pdf p. 6
+    desired_sequence = np.array((0, 1, 4, 9, 16, 25, 36))
+    # I think this one might not be possible with the current transformations
     # desired_sequence = np.array((9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
+    # This should be possible
+    # desired_sequence = np.array((4, 5, 6, 7, 8, 9, 10, 11, 12, 13))
     base_sequence = np.ones(desired_sequence.shape, dtype=desired_sequence.dtype)
     objective = make_sequence_objective(desired_sequence, base_sequence)
     optimizer = ga.GAOptimizer(objective,
                                next_transformation_gen,  # type: ignore
-                               [np.random.randint(len(NUM_TO_TRANSFORMATION), size=4)
-                                for _ in range(10)],
+                               [np.random.randint(len(NUM_TO_TRANSFORMATION), size=8)
+                                for _ in range(100)],
                                True)
     
     population_with_fitness = []
     diversities = []
     costs = []
-    pbar = tqdm(range(3000))
+    pbar = tqdm(range(6000))
     global_best = None
     for _ in pbar:
         population_with_fitness = optimizer.step()
@@ -37,7 +41,7 @@ def with_ga():
         costs.append(iteration_best[0])
         if global_best is None or iteration_best[0] < global_best[0]:
             global_best = iteration_best
-        pbar.set_description('cost: {} div {:2f}'.format(costs[-1], diversities[-1]))
+        pbar.set_description('cost: {} div {:.2f}'.format(costs[-1], diversities[-1]))
         if global_best[0] == 0:
             break
 
