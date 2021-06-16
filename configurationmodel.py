@@ -1,5 +1,7 @@
 #!/usr/bin/python3
-from typing import Callable, Sequence
+import itertools as it
+from customtypes import Number
+from typing import Callable, Sequence, Tuple
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,32 +11,44 @@ from analyzer import colors_from_communities
 
 
 def main():
-    n_steps = 1000
+    n_steps = 5000
     N = 100
     rand = np.random.default_rng()
-    node_to_degree = np.clip(rand.normal(5, 3, N), 1, None).astype('int')
-    # All of the degrees must sum to an even number. This if block ensures that happens.
-    if np.sum(node_to_degree) % 2 == 1:
-        node_to_degree[np.argmin(node_to_degree)] += 1
-    edge_list = np.array([node
-                          for node, degree in enumerate(node_to_degree)
-                          for _ in range(degree)])
-    rand.shuffle(edge_list)
-    optimizer = ho.sa.SAOptimizer(component_objective, ho.sa.make_fast_schedule(100),
-                                  make_edge_list_neighbor(), edge_list, True)
+    # node_to_degree = np.clip(rand.normal(5, 3, N), 1, None).astype('int')
+    # # All of the degrees must sum to an even number. This if block ensures that happens.
+    # if np.sum(node_to_degree) % 2 == 1:
+    #     node_to_degree[np.argmin(node_to_degree)] += 1
+    # edge_list = np.array([node
+    #                       for node, degree in enumerate(node_to_degree)
+    #                       for _ in range(degree)])
+    # rand.shuffle(edge_list)
+    # optimizer = ho.sa.SAOptimizer(component_objective, ho.sa.make_fast_schedule(100),
+    #                               make_edge_list_neighbor(), edge_list, True)
+    optimizer = ho.ga.GAOptimizer(component_objective,
+                                  make_next_network_gen(N, rand),
+                                  make_starting_pop(20, N, rand),
+                                  True)
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
+    global_best = None
     for step in pbar:
-        edge_list, cost = optimizer.step()
-        costs[step] = cost
-        pbar.set_description('Cost: {:.3f}'.format(cost))
+        cost_to_encoding = optimizer.step()
+        local_best = min(cost_to_encoding, key=lambda x: x[0])
+        if global_best is None or local_best[0] < global_best[0]:
+            global_best = local_best
+        costs[step] = local_best[0]
+        pbar.set_description('Cost: {:.3f}'.format(local_best[0]))
+
+    G = network_from_edge_list(global_best[1])  # type: ignore
+    print('Number of nodes:', len(G.nodes))
+    print('Number of edges:', len(G.edges))
+    print('Number of components:', len(tuple(nx.connected_components(G))))
 
     plt.plot(costs)
     plt.show(block=False)
     plt.figure()
-    plt.hist(edge_list, bins=(max(edge_list) - min(edge_list))//4)
+    plt.hist(tuple(x[1] for x in G.degree), bins=None)
     plt.show(block=False)
-    G = network_from_edge_list(edge_list)  # type: ignore
     plt.figure()
     nx.draw_kamada_kawai(G, node_size=50, node_color=colors_from_communities(nx.connected_components(G)))
     plt.show(block=False)
@@ -55,10 +69,13 @@ def make_clustering_objective():
     return clustering_objective
 
 
-def component_objective(edge_list: np.ndarray) -> float:
+def component_objective(edge_list: np.ndarray) -> int:
     G = network_from_edge_list(edge_list)
-    largest_component = max(nx.connected_components(G), key=len)
-    energy = len(largest_component) - nx.diameter(G.subgraph(largest_component))  # type: ignore
+    conn_comps = tuple(nx.connected_components(G))
+    largest_component = max(conn_comps, key=len)
+    bad = len(largest_component) + len(conn_comps)
+    good = nx.diameter(G.subgraph(largest_component)) + len(G) + len(G.edges)  # type: ignore
+    energy = bad - good
     return energy
 
 
@@ -115,6 +132,30 @@ def network_from_degree_sequence(degrees: Sequence[int], vis_func, force_good_be
         vis_func(G, u, v)
 
     return G
+
+
+def make_next_network_gen(N: int, rand):
+    vertex_choices = tuple(range(N))
+
+    def next_network_gen(degree_sequences: Sequence[Tuple[Number, np.ndarray]]) -> Tuple[np.ndarray, ...]:
+        couples = ho.ga.roulette_wheel_cost_selection(degree_sequences)
+        offspring = (ho.ga.single_point_crossover(*couple) for couple in couples)
+        children = tuple(child for pair in offspring for child in pair)
+        for i, j in it.product(range(len(children)), range(len(children[0]))):
+            if rand.random() < .001:
+                children[i][j] = rand.choice(vertex_choices)
+
+        return children
+
+    return next_network_gen
+
+
+def make_starting_pop(size: int, N: int, rand) -> Tuple[np.ndarray, ...]:
+    population = tuple(np.clip(rand.normal(15, 3, N), 1, None).astype('int') for _ in range(size))
+    for i, edge_list in enumerate(population):
+        if np.sum(edge_list) % 2 != 0:
+            population[i][np.argmin(edge_list)] += 1
+    return population
 
 
 def network_from_edge_list(edge_list: np.ndarray) -> nx.Graph:

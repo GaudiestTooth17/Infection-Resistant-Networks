@@ -9,6 +9,7 @@ from genfuncs import identity, make_scaler, make_right_shift, differentiation, s
 NUM_TO_TRANSFORMATION = dict(enumerate((identity, make_scaler(2),  make_right_shift(1),
                                         differentiation, summation)))
 
+
 def main():
     with_ga()
 
@@ -27,7 +28,7 @@ def with_ga():
                                [np.random.randint(len(NUM_TO_TRANSFORMATION), size=8)
                                 for _ in range(100)],
                                True)
-    
+
     population_with_fitness = []
     diversities = []
     costs = []
@@ -52,7 +53,7 @@ def with_ga():
 
 
 def next_transformation_gen(transforms: Tuple[Tuple[int, np.ndarray], ...])\
-    -> Tuple[np.ndarray, ...]:
+        -> Tuple[np.ndarray, ...]:
     # couples = ga.roulette_wheel_rank_selection(transforms)
     couples = ga.roulette_wheel_cost_selection(transforms)
     # couples = ga.tournament_selection(transforms, 2)
@@ -74,7 +75,7 @@ def with_sa():
     desired_sequence = np.array((0, 1, 4, 9, 16, 25, 36))  # example from pdf p. 6
     # desired_sequence = np.array((9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
     base_sequence = np.ones(desired_sequence.shape, dtype=desired_sequence.dtype)
-    transforms = np.zeros(6, dtype=np.int64)
+    transforms = np.zeros(6, dtype='int64')
     optimizer = sa.SAOptimizer(make_sequence_objective(desired_sequence, base_sequence),
                                sa.make_fast_schedule(1000),
                                sequence_neighbor,
