@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-from customtypes import Number
 from typing import Callable, Sequence
 import networkx as nx
 import numpy as np
@@ -22,15 +21,15 @@ def main():
                           for _ in range(degree)])
     rand.shuffle(edge_list)
     optimizer = ho.sa.SAOptimizer(component_objective, ho.sa.make_fast_schedule(100),
-                                  edge_list_neighbor, edge_list, True)
+                                  make_edge_list_neighbor(), edge_list, True)
     pbar = tqdm(range(n_steps))
-    energies = np.zeros(n_steps)
+    costs = np.zeros(n_steps)
     for step in pbar:
-        edge_list, energy = optimizer.step()
-        energies[step] = energy
-        pbar.set_description('Energy: {:.5f}'.format(energy))
+        edge_list, cost = optimizer.step()
+        costs[step] = cost
+        pbar.set_description('Cost: {:.3f}'.format(cost))
 
-    plt.plot(energies)
+    plt.plot(costs)
     plt.show(block=False)
     plt.figure()
     plt.hist(edge_list, bins=(max(edge_list) - min(edge_list))//4)
@@ -43,12 +42,17 @@ def main():
     input('Press <enter> to exit.')
 
 
-def clustering_objective(degrees: Sequence[int]) -> float:
-    networks = (network_from_degree_sequence(degrees, make_vis_func(False), False)
-                for _ in range(25))
-    clustering_coefficients = tuple(nx.average_clustering(G) for G in networks)
-    energy = sum(clustering_coefficients) / len(clustering_coefficients)
-    return energy
+def make_clustering_objective():
+    rand = np.random.default_rng()
+
+    def clustering_objective(degrees: Sequence[int]) -> float:
+        networks = (network_from_degree_sequence(degrees, make_vis_func(False), False, rand)
+                    for _ in range(25))
+        clustering_coefficients = tuple(nx.average_clustering(G) for G in networks)
+        energy = sum(clustering_coefficients) / len(clustering_coefficients)
+        return energy
+
+    return clustering_objective
 
 
 def component_objective(edge_list: np.ndarray) -> float:
@@ -58,30 +62,35 @@ def component_objective(edge_list: np.ndarray) -> float:
     return energy
 
 
-def configuration_neighbor(degrees: Sequence[int]) -> Sequence[int]:
+def configuration_neighbor(degrees: Sequence[int], rand) -> Sequence[int]:
     neighbor = np.copy(degrees)
     nonzero_entries = np.where(neighbor > 0)[0]
-    i, j = np.random.choice(nonzero_entries, 2, replace=False)
-    neighbor[i] += np.random.choice((-1, 1))
-    neighbor[j] += np.random.choice((-1, 1))
+    i, j = rand.choice(nonzero_entries, 2, replace=False)
+    neighbor[i] += rand.choice((-1, 1))
+    neighbor[j] += rand.choice((-1, 1))
     return neighbor
 
 
-def edge_list_neighbor(edge_list: np.ndarray) -> np.ndarray:
-    index0 = np.random.randint(0, edge_list.shape[0])
-    index1 = np.random.randint(0, edge_list.shape[0])
+def make_edge_list_neighbor() -> Callable[[np.ndarray], np.ndarray]:
+    rand = np.random.default_rng()
 
-    # to eliminate self-loops check the value adjacent to index0 to make sure edge_list[index1] != that_value
-    offset = 1 if index0 % 2 == 0 else -1
-    while edge_list[index0+offset] == edge_list[index1]:
-        index1 = np.random.randint(0, edge_list.shape[0])
+    def edge_list_neighbor(edge_list: np.ndarray) -> np.ndarray:
+        index0 = rand.integers(0, edge_list.shape[0])
+        index1 = rand.integers(0, edge_list.shape[0])
 
-    new_edge_list = np.copy(edge_list)
-    new_edge_list[index0], new_edge_list[index1] = new_edge_list[index1], new_edge_list[index0]
-    return new_edge_list
+        # to eliminate self-loops check the value adjacent to index0 to make sure edge_list[index1] != that_value
+        offset = 1 if index0 % 2 == 0 else -1
+        while edge_list[index0+offset] == edge_list[index1]:
+            index1 = rand.integers(0, edge_list.shape[0])
+
+        new_edge_list = np.copy(edge_list)
+        new_edge_list[index0], new_edge_list[index1] = new_edge_list[index1], new_edge_list[index0]
+        return new_edge_list
+
+    return edge_list_neighbor
 
 
-def network_from_degree_sequence(degrees: Sequence[int], vis_func, force_good_behavior: bool) -> nx.Graph:
+def network_from_degree_sequence(degrees: Sequence[int], vis_func, force_good_behavior: bool, rand) -> nx.Graph:
     if sum(degrees) % 2 != 0:
         raise Exception('The sum of degrees must be even.')
 
@@ -90,7 +99,7 @@ def network_from_degree_sequence(degrees: Sequence[int], vis_func, force_good_be
     while sum(node_to_remaining_stubs.values()) > 0:
         available_nodes = tuple(filter(lambda u: node_to_remaining_stubs[u],
                                        node_to_remaining_stubs.keys()))
-        u = np.random.choice(available_nodes)
+        u = rand.choice(available_nodes)
         node_to_remaining_stubs[u] -= 1
         available_nodes = tuple(filter(lambda v: all((node_to_remaining_stubs[v],
                                                       any((not force_good_behavior,
@@ -98,9 +107,9 @@ def network_from_degree_sequence(degrees: Sequence[int], vis_func, force_good_be
                                        node_to_remaining_stubs.keys()))
         if len(available_nodes) == 0:
             print('Network generation failed. Restarting.')
-            return network_from_degree_sequence(degrees, vis_func, force_good_behavior)
+            return network_from_degree_sequence(degrees, vis_func, force_good_behavior, rand)
 
-        v = np.random.choice(available_nodes)
+        v = rand.choice(available_nodes)
         node_to_remaining_stubs[v] -= 1
         G.add_edge(u, v)
         vis_func(G, u, v)

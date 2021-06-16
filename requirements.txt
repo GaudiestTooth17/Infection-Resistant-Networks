@@ -2,3 +2,5 @@ networkx
 hcmioptim
 matplotlib
 numpy
+tqdm
+scipy
