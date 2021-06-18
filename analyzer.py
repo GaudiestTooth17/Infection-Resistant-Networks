@@ -159,7 +159,8 @@ def common_neigh(G: nx.Graph) -> List[float]:
 
 
 def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='', save=False,
-                    edge_width_func: Callable[[nx.Graph], List[float]] = all_same) -> None:
+                    edge_width_func: Callable[[nx.Graph], List[float]] = all_same,
+                    block=True) -> None:
     G = nx.Graph(M)
     comps = tuple(nx.connected_components(G))
     node_color = colors_from_communities(comps)
@@ -173,7 +174,7 @@ def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='', save=False
     if save:
         plt.savefig(f'vis-{name}.png', dpi=300, format='png')
     else:
-        plt.show()
+        plt.show(block=block)
 
 
 def visualize_eigen_communities(G: nx.Graph, layout: Optional[Layout] = None, name='') -> None:
@@ -271,7 +272,7 @@ def make_partitioner(partitioning_vector: np.ndarray) -> Callable[[float], List[
 def plot_edge_betweeness_centralities(G: nx.Graph, name: str) -> None:
     centralities = nx.edge_betweenness_centrality(G)
     plt.title(f'{name} Edge Centralities')
-    plt.hist(centralities.values(), bins=None)
+    plt.hist(centralities.values(), bins=None)  # type: ignore
     plt.savefig(name+' edge betweeness.png', format='png')
 
 

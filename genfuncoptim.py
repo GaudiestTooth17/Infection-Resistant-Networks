@@ -64,11 +64,11 @@ def next_transformation_gen(transforms: Tuple[Tuple[int, np.ndarray], ...])\
     return children
 
 
-def mutate(encodings: Tuple[np.ndarray, ...], prob: float):
+def mutate(encodings: Tuple[np.ndarray, ...], prob: float, rand):
     for i, j in it.product(range(len(encodings)), range(len(encodings[0]))):
-        if np.random.rand() < prob:
+        if rand.random() < prob:
             # encodings[i][j] += np.random.choice((-1, 1))
-            encodings[i][j] = np.random.randint(len(NUM_TO_TRANSFORMATION))
+            encodings[i][j] = rand.integers(len(NUM_TO_TRANSFORMATION))
 
 
 def with_sa():
