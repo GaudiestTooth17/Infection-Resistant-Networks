@@ -6,7 +6,7 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-import hcmioptim as ho
+import hcmioptim.ga as ga
 from analyzer import visualize_graph, betw_centrality
 
 
@@ -14,10 +14,10 @@ def main():
     n_steps = 1000
     N = 100
     rand = np.random.default_rng()
-    optimizer = ho.ga.GAOptimizer(PercolationResistanceObjective(rand, 10, edge_set_to_network),
-                                  NextNetworkGenEdgeSet(rand),
-                                  new_edge_set_pop(20, N, rand),
-                                  True, 6)
+    optimizer = ga.GAOptimizer(PercolationResistanceObjective(rand, 10, edge_set_to_network),
+                               NextNetworkGenEdgeSet(rand),
+                               new_edge_set_pop(20, N, rand),
+                               True, 6)
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
     global_best = None
@@ -190,8 +190,8 @@ class NextNetworkGenEdgeList:
         self._rand = rand
 
     def __call__(self, rated_pop: Sequence[Tuple[Number, np.ndarray]]) -> Tuple[np.ndarray, ...]:
-        couples = ho.ga.roulette_wheel_cost_selection(rated_pop)
-        offspring = (ho.ga.single_point_crossover(*couple) for couple in couples)
+        couples = ga.roulette_wheel_cost_selection(rated_pop)
+        offspring = (ga.single_point_crossover(*couple) for couple in couples)
         children = tuple(child for pair in offspring for child in pair)
 
         for i, j in it.product(range(len(children)), range(len(children[0]))):
@@ -206,8 +206,8 @@ class NextNetworkGenEdgeSet:
         self._rand = rand
 
     def __call__(self, rated_pop: Sequence[Tuple[Number, np.ndarray]]) -> Tuple[np.ndarray, ...]:
-        couples = ho.ga.roulette_wheel_cost_selection(rated_pop)
-        offspring = (ho.ga.single_point_crossover(*couple) for couple in couples)
+        couples = ga.roulette_wheel_cost_selection(rated_pop)
+        offspring = (ga.single_point_crossover(*couple) for couple in couples)
         children = tuple(child for pair in offspring for child in pair)
 
         for i, j in it.product(range(len(children)), range(len(children[0]))):
