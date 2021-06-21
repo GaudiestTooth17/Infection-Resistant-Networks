@@ -14,19 +14,9 @@ def main():
     n_steps = 1000
     N = 100
     rand = np.random.default_rng()
-    # node_to_degree = np.clip(rand.normal(5, 3, N), 1, None).astype('int')
-    # # All of the degrees must sum to an even number. This if block ensures that happens.
-    # if np.sum(node_to_degree) % 2 == 1:
-    #     node_to_degree[np.argmin(node_to_degree)] += 1
-    # edge_list = np.array([node
-    #                       for node, degree in enumerate(node_to_degree)
-    #                       for _ in range(degree)])
-    # rand.shuffle(edge_list)
-    # optimizer = ho.sa.SAOptimizer(component_objective, ho.sa.make_fast_schedule(100),
-    #                               make_edge_list_neighbor(), edge_list, True)
-    optimizer = ho.ga.GAOptimizer(ClusteringObjective(edge_list_to_network, .01),
-                                  NextNetworkGenEdgeList(N, rand),
-                                  new_edge_list_pop(20, N, rand),
+    optimizer = ho.ga.GAOptimizer(PercolationResistanceObjective(rand, 10, edge_set_to_network),
+                                  NextNetworkGenEdgeSet(rand),
+                                  new_edge_set_pop(20, N, rand),
                                   True, 6)
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
@@ -38,8 +28,10 @@ def main():
             global_best = local_best
         costs[step] = local_best[0]
         pbar.set_description('Cost: {:.3f}'.format(local_best[0]))
+        if global_best[0] == 1:
+            break
 
-    G = edge_list_to_network(global_best[1])
+    G = edge_set_to_network(global_best[1])
     print('Number of nodes:', len(G.nodes))
     print('Number of edges:', len(G.edges))
     print('Number of components:', len(tuple(nx.connected_components(G))))
@@ -51,9 +43,33 @@ def main():
     plt.show(block=False)
     plt.figure()
     visualize_graph(nx.adjacency_matrix(G), None, f'From Edge List\nCost: {global_best[0]}',  # type: ignore
-                    True, betw_centrality, False)
+                    False, betw_centrality, False)
 
     input('Press <enter> to exit.')
+
+
+class PercolationResistanceObjective:
+    """
+    This is very interesting because it actually works pretty darn well. It seem sto create resilient hairballs.
+    """
+    def __init__(self, rand, edges_to_remove: int,
+                 encoding_to_network: Callable[[np.ndarray], nx.Graph]):
+        self._rand = rand
+        self._encoding_to_network = encoding_to_network
+        self._edges_to_remove = edges_to_remove
+
+    def __call__(self, encoding: np.ndarray) -> int:
+        n_components = np.zeros(100, dtype=np.uint32)
+        G = self._encoding_to_network(encoding)
+        for i in range(len(n_components)):
+            G1 = nx.Graph(G)
+            edges = list(G1.edges)
+            self._rand.shuffle(edges)
+            G1.remove_edges_from(edges[:self._edges_to_remove])
+            n_components[i] = nx.number_connected_components(G1)
+        N = len(G)
+        E = (N**2-N)//2
+        return np.sum(n_components)/len(n_components) + 2*len(G.edges)/E
 
 
 class ClusteringObjective:
