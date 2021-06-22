@@ -4,11 +4,13 @@ import matplotlib.pyplot as plt
 import collections
 import networkx as nx
 import numpy as np
+from tqdm import tqdm
 import sys
 from itertools import takewhile
 from typing import Callable, Dict, Iterable, List, Sequence, Set, Optional, Tuple
 from customtypes import Layout, Number, CircularList
 from fileio import read_network_file, get_network_name
+RAND = np.random.default_rng()
 
 
 COLORS = CircularList(['blue', 'green', 'lightcoral', 'chocolate', 'darkred',
@@ -23,7 +25,7 @@ def main(argv: List[str]):
     M, layout = read_network_file(argv[1])
     name = get_network_name(argv[1])
     # analyze_network(M, name)
-    visualize_graph(M, layout, name, edge_width_func=betw_centrality, save=False)
+    visualize_graph(M, layout, name, edge_width_func=rw_centrality, save=False)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
     # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
     # plot_edge_betweeness_centralities(nx.Graph(M), name)
@@ -158,6 +160,16 @@ def common_neigh(G: nx.Graph) -> List[float]:
     return [.1+2*calc_prop_common_neighbors(G, u, v) for u, v in G.edges]
 
 
+def rw_centrality(G: nx.Graph) -> List[float]:
+    # This doesn't do a good job of distinguishing between edges
+    centralities = random_walk_centrality(G, 10000)
+    width = [1500 * centrality for centrality in centralities.values()]
+    plt.hist(width, bins=None)
+    plt.show(block=False)
+    plt.figure()
+    return width
+
+
 def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='', save=False,
                     edge_width_func: Callable[[nx.Graph], List[float]] = all_same,
                     block=True) -> None:
@@ -166,12 +178,12 @@ def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='', save=False
     node_color = colors_from_communities(comps)
     edge_width = edge_width_func(G)
     plt.title(f'{name}\n{len(comps)} Components')
-    node_size = np.array(tuple(nx.betweenness_centrality(G).values()))
+    # node_size = np.array(tuple(nx.betweenness_centrality(G).values()))
     # node_size = np.array(tuple(nx.eigenvector_centrality_numpy(G).values()))
     if layout is None:
-        nx.draw_kamada_kawai(G, node_size=node_size*500, node_color=node_color, width=edge_width)
+        nx.draw_kamada_kawai(G, node_size=50, node_color=node_color, width=edge_width)
     else:
-        nx.draw_networkx(G, pos=layout, node_size=node_size*500, node_color=node_color,
+        nx.draw_networkx(G, pos=layout, node_size=50, node_color=node_color,
                          width=edge_width, with_labels=False)
     if save:
         plt.savefig(f'vis-{name}.png', dpi=300, format='png')
@@ -288,6 +300,25 @@ def calc_prop_common_neighbors(G: nx.Graph, u: int, v: int) -> float:
     v_neighbors = set(nx.neighbors(G, v))
     n_common_neighbors = len(u_neighbors.intersection(v_neighbors))
     return n_common_neighbors / len(u_neighbors)
+
+
+def random_walk_centrality(G: nx.Graph, num_paths: int) -> Dict[Tuple[int, int], float]:
+    """
+    Sample num_paths paths to calculate the random walk centrality of the edges in G.
+    """
+    rand = RAND
+    edge_to_times_crossed = collections.defaultdict(lambda: 0)
+    edges_crossed = 0
+    for _ in tqdm(range(num_paths)):
+        s, t = rand.choice(G), rand.choice(G)
+        current = s
+        while current != t:
+            next = rand.choice(G[current])
+            edge_to_times_crossed[(current, next)] += 1
+            edges_crossed += 1
+            current = next
+
+    return {edge: frequency/edges_crossed for edge, frequency in edge_to_times_crossed.items()}
 
 
 if __name__ == '__main__':
