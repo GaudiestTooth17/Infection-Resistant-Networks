@@ -4,7 +4,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from fileio import read_network_file
 from customtypes import Layout
-RAND = np.random.default_rng(seed=0)
+RAND = np.random.default_rng()
 
 UpdateConnections = Callable[[np.ndarray, np.ndarray, int, np.ndarray], np.ndarray]
 """
@@ -31,29 +31,29 @@ def simulate(M: np.ndarray,
     D = np.copy(M)
     N = M.shape[0]
     vis_func = Visualize(layout) if layout is not None else None
+    if vis_func is not None:
+        vis_func(nx.Graph(D), sirs[0])
 
     for step in range(1, max_steps):
-        if vis_func is not None:
-            vis_func(nx.Graph(D), sirs[step-1])
         # Get the adjacency matrix to use at this step
         D = update_connections(D, M, step, sirs[step-1])
 
         # next_sir is the workhorse of the simulation because it is responsible
         # for simulating the disease spread
         sirs[step], states_changed = next_sir(sirs[step-1], D, disease, rand)
+        if vis_func is not None:
+            vis_func(nx.Graph(D), sirs[step])
 
         # find all the agents that are in the removed state. If that number is N,
         # the simulation is done.
         all_nodes_infected = len(np.where(sirs[step][2] > 0)[0]) == N
         if (not states_changed) and all_nodes_infected:
-            print('Ending early because all nodes are infected.')
             return sirs[:step]
 
         # If there aren't any exposed or infectious agents, the disease is gone and we
         # can take a short cut to finish the simulation.
         disease_gone = np.sum(sirs[step][1]) == 0
         if (not states_changed) and disease_gone:
-            print('Ending early because disease is gone.')
             for i in range(step, max_steps):
                 sirs[i] = np.copy(sirs[step])
             return sirs
@@ -113,18 +113,23 @@ class Visualize:
                 if sir[state, node] > 0:
                     node_colors[node] = self._state_to_color[state]
         plt.clf()
-        nx.draw_networkx(G, pos=self._layout, with_labels=True, node_color=node_colors, node_size=50)
+        nx.draw_networkx(G, pos=self._layout, with_labels=False, node_color=node_colors, node_size=50)
         plt.pause(.2)  # type: ignore
 
 
 if __name__ == '__main__':
     # M, layout = read_network_file('networks/annealed-medium-diameter.txt')
-    M, layout = read_network_file('networks/cavemen-10-10.txt')
-    disease = Disease(4, .25)
+    # M, layout = read_network_file('networks/cavemen-10-10.txt')
+    M, layout = read_network_file('networks/elitist-500-500.txt')
+    # M, layout = read_network_file('networks/cgg-520.txt')
+    # M, layout = read_network_file('networks/barabasi-albert-500-3.txt')
+    # M, layout = read_network_file('networks/watts-strogatz-500-4-.1.txt')
+    disease = Disease(4, .2)
     sir0 = np.zeros((3, M.shape[0]), dtype=np.int64)
     sir0[0] = 1
-    sir0[1, 0] = 1
-    sir0[0, 0] = 0
+    to_infect = RAND.choice(range(M.shape[0]))
+    sir0[1, to_infect] = 1
+    sir0[0, to_infect] = 0
 
     simulate(M, sir0, disease, remove_dead_agents, 100, layout)
-    input()
+    input('Press <enter> to continue.')
