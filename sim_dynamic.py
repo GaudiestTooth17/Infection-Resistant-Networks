@@ -78,7 +78,7 @@ def next_sir(old_sir: np.ndarray, M: np.ndarray, disease: Disease, rand) -> Tupl
 
     # susceptible to infectious
     i_filter = seir[1] > 0
-    to_i_probs = (1 - np.prod(1 - (M * disease.trans_prob)[:, i_filter], axis=1)).reshape((N,))
+    to_i_probs = (1 - np.prod(1 - (M * disease.trans_prob)[i_filter], axis=1)).reshape((N,))
     to_i_filter = (seir[0] > 0) & (probs < to_i_probs)
     seir[1, to_i_filter] = -1
     seir[0, to_i_filter] = 0
