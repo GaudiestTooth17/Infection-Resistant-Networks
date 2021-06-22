@@ -1,5 +1,4 @@
 from typing import Callable, List, Optional, Tuple
-import time
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
