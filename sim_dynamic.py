@@ -1,4 +1,5 @@
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Union
+from dataclasses import dataclass
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -13,10 +14,10 @@ Parameters are D, M, current step, current sir array
 """
 
 
+@dataclass
 class Disease:
-    def __init__(self, days_infectious: int, trans_prob: float) -> None:
-        self.days_infectious = days_infectious
-        self.trans_prob = trans_prob
+    days_infectious: int
+    trans_prob: float
 
 
 def simulate(M: np.ndarray,
@@ -25,6 +26,12 @@ def simulate(M: np.ndarray,
              update_connections: UpdateConnections,
              max_steps: int,
              layout: Optional[Layout]) -> List[np.ndarray]:
+    """
+    Simulate an infection on a dynamic network.
+
+    M: The base network.
+    sir0: The initial states of the agents. It has shape (3, N). TODO: add explanation of how it works.
+    """
     rand = RAND  # increase access speed by making a local reference
     sirs: List[np.ndarray] = [None] * max_steps  # type: ignore
     sirs[0] = np.copy(sir0)
@@ -90,10 +97,12 @@ def next_sir(old_sir: np.ndarray, M: np.ndarray, disease: Disease, rand) -> Tupl
 
 
 def no_update(D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
+    """Dynamic function that actually isn't dynamic."""
     return D
 
 
 def remove_dead_agents(D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
+    """Dynamic function that removes edges from agents in the R state."""
     new_D = np.copy(D)
     r_nodes = sir[2] > 0
     new_D[r_nodes, :] = 0
@@ -102,7 +111,11 @@ def remove_dead_agents(D: np.ndarray, M: np.ndarray, time_step: int, sir: np.nda
 
 
 class Visualize:
+    """Show the network for .2 seconds."""
     def __init__(self, layout: Layout) -> None:
+        """
+        layout: Layout to use. This will not be automatically computed.
+        """
         self._layout = layout
         self._state_to_color = {0: 'blue', 1: 'green', 2: 'grey'}
 
@@ -115,6 +128,23 @@ class Visualize:
         plt.clf()
         nx.draw_networkx(G, pos=self._layout, with_labels=False, node_color=node_colors, node_size=50)
         plt.pause(.2)  # type: ignore
+
+
+def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]]) -> np.ndarray:
+    """
+    Make an initial SIR.
+
+    N: number of agents in the simulation.
+    to_infect: a tuple of agent id's or the number of agents to infect.
+               If it is just a number, the agents will be randomly selected.
+    """
+    if isinstance(to_infect, int):
+        to_infect = RAND.choice(N, size=to_infect)
+    sir0 = np.zeros((3, N), dtype=np.int64)
+    sir0[0] = 1
+    sir0[1, to_infect] = 1
+    sir0[0, to_infect] = 0
+    return sir0
 
 
 if __name__ == '__main__':
