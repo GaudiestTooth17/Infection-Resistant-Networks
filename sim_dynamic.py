@@ -29,8 +29,21 @@ def simulate(M: np.ndarray,
     """
     Simulate an infection on a dynamic network.
 
+    The simulation will end early if there are no susceptible agents left or if there are no
+    infectious agents left. In the first case, the returned list will be the same length as
+    the number of steps taken. In the second case, the list will have length == max_steps and the
+    entries after the current step will be the same as the entry at the current step. This is so
+    that an objective function can use the length of the returned list.
+
     M: The base network.
-    sir0: The initial states of the agents. It has shape (3, N). TODO: add explanation of how it works.
+    sir0: The initial states of the agents. It has shape (3, N). The first dimension is for each
+          state in SIR. The second dimension is for an agent. A 0 entry means that the agent is not
+          in that state. A positive entry means that the agent has spent 1 fewer days than the
+          number in that state.
+    disease: The Disease to simulate.
+    update_connections: A function that updates the dynamic adjacency matrix.
+    max_steps: The maximum number of steps to run the simulation for before returning.
+    layout: If you want visualization, provide a layout to use. Pass None for no visualization.
     """
     rand = RAND  # increase access speed by making a local reference
     sirs: List[np.ndarray] = [None] * max_steps  # type: ignore
