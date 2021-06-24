@@ -15,8 +15,10 @@ class CircularList(Generic[T]):
     def __init__(self, base_list: List[T]) -> None:
         self._list = base_list
 
-    def __getitem__(self, i: int) -> T:
-        return self._list[i % len(self._list)]
+    def __getitem__(self, i: Union[int, slice]) -> Union[T, List[T]]:
+        if isinstance(i, int):
+            return self._list[i % len(self._list)]
+        return self._list[i]
 
 
 class CommunityEdges:
