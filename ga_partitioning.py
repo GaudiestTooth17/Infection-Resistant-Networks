@@ -4,18 +4,19 @@ from analyzer import all_same, visualize_graph
 from hcmioptim import ga
 import networkx as nx
 import numpy as np
-from typing import Sequence, Tuple
+from typing import Dict, Sequence, Tuple
 import sys
+import itertools as it
 
 from tqdm.std import tqdm
 from customtypes import Number
-import itertools as it
 from fileio import read_network_file
 
 
 def main():
     """
     Initial testing indicates that this is a REALLY good community detection algorithm!!
+    UPDATE: Further testing showed it to be lack luster.
     It didn't do great on the elitist network, but perhaps with more time it could get better results.
     It was really crappy on Watts-Strogatz.
     """
@@ -35,7 +36,7 @@ def main():
     n_steps = 1000
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
-    global_best = None
+    global_best: Tuple = None  # type: ignore
     for step in pbar:
         cost_to_encoding = optimizer.step()
         local_best = min(cost_to_encoding, key=lambda x: x[0])
@@ -104,6 +105,38 @@ class NextEdgesToRm:
 def new_to_rm_pop(edges: int, size: int, rand) -> Tuple[np.ndarray, ...]:
     population = tuple(rand.integers(0, 2, edges) for _ in range(size))
     return population
+
+
+class ChakrabortySatoObjective:
+    def __init__(self, G: nx.Graph) -> None:
+        self._E = len(G.edges)
+        self._M = nx.to_numpy_array(G)
+        self._nodes = tuple(G.nodes)
+        self._k: Dict = nx.degree(G)  # type: ignore
+
+    def __call__(self, encoding: np.ndarray) -> float:
+        """
+        Rate the encoding based on how well it clusters.
+
+        Encodings encode a list of N edges. One end of the edge is the location in the array. The other is the value.
+        """
+        cluster_forest = nx.Graph(tuple((u, v) for u, v in enumerate(encoding)))
+        clusters = nx.connected_components(cluster_forest)
+
+        def lookup_cluster(node):
+            for cluster in clusters:
+                if node in cluster:
+                    return cluster
+            raise Exception(f'Could not find cluster for {node}.')
+        node_to_cluster = {node: lookup_cluster(node) for node in self._nodes}
+
+        return (1/(2*self._E)) * np.sum(tuple((self._M[i, j] - (self._k[i]*self._k[j])/(2*self._E))
+                                        * self._delta(node_to_cluster[i], node_to_cluster[j])
+                                              for i, j in it.product(self._nodes, self._nodes)))
+
+    @staticmethod
+    def _delta(cluster_i, cluster_j) -> int:
+        return cluster_i == cluster_j
 
 
 if __name__ == '__main__':
