@@ -1,3 +1,4 @@
+from typing import Tuple
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
@@ -55,6 +56,30 @@ def main():
     G.remove_edges_from(edges_to_remove)
     plt.clf()
     visualize_graph(nx.to_numpy_array(G), layout, 'Final Version')
+
+
+def partition(G: nx.Graph, num_labels: int) -> Tuple[Tuple[int, int], ...]:
+    """Return the edges to remove in order to break G into communities."""
+    labels = tuple(range(num_labels))
+    rand = np.random.default_rng()
+    node_to_label = rand.choice(labels, size=len(G))
+
+    for _ in range(100):
+        # do label propagation
+        new_labels = np.zeros(len(G), dtype=np.int64)
+        for node in G:
+            label_counts = Counter([node_to_label[neighbor] for neighbor in G[node]]
+                                   + [node_to_label[node]])
+            most_popular = max(label_counts.items(), key=lambda x: x[1])[0]
+            new_labels[node] = most_popular
+
+        # early exit condition
+        if (node_to_label == new_labels).all():
+            break
+        node_to_label = new_labels
+
+    edges_to_remove = filter(lambda edge: node_to_label[edge[0]] != node_to_label[edge[1]], G.edges)
+    return tuple(edges_to_remove)
 
 
 if __name__ == '__main__':
