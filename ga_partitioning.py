@@ -29,10 +29,10 @@ def main():
     #                            True, 1)  # it's like 4x faster with only one core
     optimizer = ga.GAOptimizer(ChakrabortySatoObjective(G),
                                NextChakrabortySatoGen(rand, G),
-                               new_chakraborty_sato_pop(rand, G, 20),
-                               True, 1)
+                               new_chakraborty_sato_pop(rand, G, 50),
+                               True, 5)
 
-    n_steps = 1000
+    n_steps = 20
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
     diversities = np.zeros(n_steps)
