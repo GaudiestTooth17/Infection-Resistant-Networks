@@ -5,6 +5,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from fileio import read_network_file
 from customtypes import Layout
+import label_partitioning
 RAND = np.random.default_rng()
 
 UpdateConnections = Callable[[np.ndarray, np.ndarray, int, np.ndarray], np.ndarray]
@@ -160,6 +161,31 @@ def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]]) -> np.ndar
     return sir0
 
 
+class FlickerBehavior:
+    def __init__(self, M: np.ndarray, n_labels: int, flicker_pattern: Tuple[bool, ...]) -> None:
+        """
+        Flickers inter-community edges according to flicker_pattern.
+
+        G: The original network
+        n_labels: How many labels to use for the label propogation algorithm that
+                  finds inter-community edges
+        flicker_pattern: True means that inter-community edges are on. False means they are off.
+                         The values will automatically cycle after they have all been used.
+        """
+        edges_to_flicker = label_partitioning.partition(nx.Graph(M), n_labels)
+        self._flicker_pattern = flicker_pattern
+        self._edges_on_M = np.copy(M)
+        self._edges_off_M = np.copy(M)
+        for u, v in edges_to_flicker:
+            self._edges_off_M[u, v] = 0
+            self._edges_off_M[v, u] = 0
+
+    def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
+        if self._flicker_pattern[time_step % len(self._flicker_pattern)]:
+            return self._edges_on_M
+        return self._edges_off_M
+
+
 if __name__ == '__main__':
     # M, layout = read_network_file('networks/annealed-medium-diameter.txt')
     # M, layout = read_network_file('networks/cavemen-10-10.txt')
@@ -174,5 +200,8 @@ if __name__ == '__main__':
     sir0[1, to_infect] = 1
     sir0[0, to_infect] = 0
 
-    simulate(M, sir0, disease, remove_dead_agents, 100, layout)
+    simulate(M, sir0, disease,
+            #  FlickerBehavior(M, 10, (True, False)),
+             no_update,
+             100, layout)
     input('Press <enter> to continue.')
