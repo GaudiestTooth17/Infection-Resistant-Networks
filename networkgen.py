@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from analyzer import visualize_graph
 from typing import List, Tuple, Dict
 import sys
 import math
@@ -37,8 +38,17 @@ def cgg_entry_point(argv):
 
 
 def social_circles_entry_point(argv):
-    agents = {Agent('green', 30): 350, Agent('blue', 40): 100, Agent('purple', 50): 50}
-    G, layout, _ = make_social_circles_network(agents, (500, 500))
+    if len(argv) < 2:
+        print(f'Usage: {argv[0]} <output name>')
+        return
+
+    agents = {Agent('green', 30): 70, Agent('blue', 40): 20, Agent('purple', 50): 10}
+    G, layout, _ = make_social_circles_network(agents, (200, 200))
+    plt.clf()
+    visualize_graph(G, layout, 'elitist-100-100-100', block=False)
+    keep = input('Keep? ')
+    if keep.lower() == 'n':
+        return social_circles_entry_point(argv)
     output_network(G, argv[1], layout)
 
 
@@ -165,4 +175,9 @@ def distance(x0, y0, x1, y1) -> float:
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    try:
+        main(sys.argv)
+    except KeyboardInterrupt:
+        print('\nGood bye.')
+    except EOFError:
+        print('\nGood bye.')
