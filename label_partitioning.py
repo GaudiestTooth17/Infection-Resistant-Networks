@@ -22,21 +22,22 @@ def main():
     M, layout = read_network_file(sys.argv[1])
     label_partitioned = nx.Graph(M)
 
-    n_labels = 10
+    n_labels = 3
     edges_to_remove = partition(label_partitioned, n_labels)
     label_partitioned.remove_edges_from(edges_to_remove)
-    visualize_graph(nx.to_numpy_array(label_partitioned), layout,
+    visualize_graph(label_partitioned, layout,
                     f'Label Partitioned\n{n_labels} Labels',
-                    block=False)
+                    block=True)
 
     G = nx.Graph(M)
     print('Running GN')
     for communities in girvan_newman(G):
-        H = girvan_newman_partition(G, communities)
-        plt.figure()
-        visualize_graph(nx.to_numpy_array(H), layout, 'Girvan Newman', block=False)
+        if len(communities) > 9:
+            H = girvan_newman_partition(G, communities)
+            plt.figure()
+            visualize_graph(H, layout, 'Girvan Newman', block=False)
         print(f'Finished iteration {len(communities)}')
-        if len(communities) > 5:
+        if len(communities) > 20:
             break
 
     input('Done')
@@ -44,10 +45,6 @@ def main():
 
 def girvan_newman_partition(G, communities) -> nx.Graph:
     G = nx.Graph(G)
-    for x in girvan_newman(G):
-        if len(x) > 3:
-            communities = x
-            break
 
     edges_to_keep = set()
     for u, v in G.edges:
@@ -84,4 +81,9 @@ def partition(G: nx.Graph, num_labels: int) -> Tuple[Tuple[int, int], ...]:
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('\nGood bye.')
+    except EOFError:
+        print('\nGood bye.')
