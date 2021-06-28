@@ -1,23 +1,24 @@
 #!/usr/bin/python3
 
-from analyzer import visualize_graph
+from analyzer import analyze_network, visualize_eigen_communities, visualize_girvan_newman_communities, visualize_graph
 from typing import List, Tuple, Dict
 import sys
 import math
 from itertools import product
-
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-
 from customtypes import Layout, NodeColors, Agent
 from fileio import output_network
+
+RAND = np.random.default_rng()
 
 
 # make a component-gate graph
 def main(argv):
     # cgg_entry_point(argv)
-    social_circles_entry_point(argv)
+    # social_circles_entry_point(argv)
+    connected_community_entry_point(argv)
 
 
 def cgg_entry_point(argv):
@@ -45,11 +46,31 @@ def social_circles_entry_point(argv):
     agents = {Agent('green', 30): 70, Agent('blue', 40): 20, Agent('purple', 50): 10}
     G, layout, _ = make_social_circles_network(agents, (200, 200))
     plt.clf()
-    visualize_graph(G, layout, 'elitist-100-100-100', block=False)
+    visualize_graph(G, layout, 'Social Circles', block=False)
     keep = input('Keep? ')
     if keep.lower() == 'n':
         return social_circles_entry_point(argv)
     output_network(G, argv[1], layout)
+
+
+def connected_community_entry_point(argv):
+    N_comm = 10
+    num_communities = 100
+    name = f'Connected Comm {num_communities} {N_comm}'
+    inner_degrees = np.round(RAND.poisson(10, N_comm))
+    if np.sum(inner_degrees) % 2 == 1:
+        inner_degrees[np.argmin(inner_degrees)] += 1
+    outer_degrees = np.round(RAND.poisson(4, num_communities))
+    if np.sum(outer_degrees) % 2 == 1:
+        outer_degrees[np.argmin(outer_degrees)] += 1
+    G = make_connected_community_network(inner_degrees, outer_degrees)
+    layout = nx.kamada_kawai_layout(G)
+    visualize_graph(G, layout, name, block=False)
+    plt.figure()
+    analyze_network(G, name)
+    if input('Save? ').lower() == 'y':
+        output_network(G, name, layout)
+    # input('Done.')
 
 
 def union_components(components: List[nx.Graph]) -> nx.Graph:

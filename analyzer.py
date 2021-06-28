@@ -119,20 +119,25 @@ def get_components(graph) -> Tuple[Set, ...]:
 
 # shows degree distribution, degree assortativity coefficient, clustering coefficient,
 # edge density
-def analyze_network(M, name) -> None:
-    G = nx.Graph(M)
+def analyze_network(G: nx.Graph, name) -> None:
+    M = nx.to_numpy_array(G)
     # dac = nx.degree_assortativity_coefficient(G)
     clustering_coefficients = nx.clustering(G)
     node_to_degree = make_node_to_degree(M)
 
     edge_density = calc_edge_density(M)
     print(f'Edge density: {edge_density}')
-    # diameter = nx.diameter(nx.Graph(M))
-    # print(f'Diameter: {diameter}')
+    if nx.is_connected(G):
+        diameter = nx.diameter(G)
+    else:
+        largest_component = max(nx.connected_components(G), key=len)
+        largest_subgraph = G.subgraph(largest_component)
+        diameter = nx.diameter(largest_subgraph)
+    print(f'Diameter: {diameter}')
     # print(f'Degree assortativity coefficient: {dac}')
     show_clustering_coefficent_dist(clustering_coefficients, dict(enumerate(node_to_degree)))   # type: ignore
-    components = get_components(G)
-    print(f'size of components: {[len(comp) for comp in components]}')
+    # components = get_components(G)
+    # print(f'size of components: {[len(comp) for comp in components]}')
     show_deg_dist_from_matrix(M, name, display=True, save=False)
     input('Press <enter> to continue.')
 
