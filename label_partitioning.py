@@ -1,10 +1,11 @@
 from typing import Tuple
 import networkx as nx
+from networkx.algorithms.community.centrality import girvan_newman
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
 from fileio import read_network_file
-from analyzer import COLORS, visualize_graph
+from analyzer import visualize_graph
 from collections import Counter
 
 
@@ -14,48 +15,48 @@ def main():
     It didn't do great on the elitist network, but perhaps with more time it could get better results.
     It was really crappy on Watts-Strogatz.
     """
-    if len(sys.argv) < 3:
-        print(f'Usage: {sys.argv[0]} <network> <num labels>')
+    if len(sys.argv) < 2:
+        print(f'Usage: {sys.argv[0]} <network>')
         return
 
     M, layout = read_network_file(sys.argv[1])
+    label_partitioned = nx.Graph(M)
+
+    n_labels = 10
+    edges_to_remove = partition(label_partitioned, n_labels)
+    label_partitioned.remove_edges_from(edges_to_remove)
+    visualize_graph(nx.to_numpy_array(label_partitioned), layout,
+                    f'Label Partitioned\n{n_labels} Labels',
+                    block=False)
+
     G = nx.Graph(M)
-
-    try:
-        labels = COLORS[:int(sys.argv[2])]
-    except ValueError:
-        print('provide an integer number of labels.')
-        exit(1)
-
-    rand = np.random.default_rng()
-    # randomly assign labels
-    nx.set_node_attributes(G, {node: rand.choice(labels) for node in G}, 'label')
-    node_to_label = nx.get_node_attributes(G, 'label')
-    nx.draw_networkx(G, with_labels=False, node_size=50, pos=layout,
-                     node_color=node_to_label.values())
-    plt.pause(1)
-
-    for step in range(100):
-        node_to_label = nx.get_node_attributes(G, 'label')
-        new_labels = {}
-        for node in G:
-            label_counts = Counter([node_to_label[neighbor] for neighbor in G[node]] + [node_to_label[node]])
-            most_popular = max(label_counts.items(), key=lambda x: x[1])[0]
-            new_labels[node] = most_popular
-
-        nx.set_node_attributes(G, new_labels, 'label')
-        plt.clf()
-        nx.draw_networkx(G, with_labels=False, node_size=50, pos=layout,
-                         node_color=new_labels.values())
-        plt.pause(.2)  # type: ignore
-        if node_to_label == new_labels:
-            print(f'Done. {step} steps.')
+    print('Running GN')
+    for communities in girvan_newman(G):
+        H = girvan_newman_partition(G, communities)
+        plt.figure()
+        visualize_graph(nx.to_numpy_array(H), layout, 'Girvan Newman', block=False)
+        print(f'Finished iteration {len(communities)}')
+        if len(communities) > 5:
             break
 
-    edges_to_remove = filter(lambda edge: node_to_label[edge[0]] != node_to_label[edge[1]], G.edges)
+    input('Done')
+
+
+def girvan_newman_partition(G, communities) -> nx.Graph:
+    G = nx.Graph(G)
+    for x in girvan_newman(G):
+        if len(x) > 3:
+            communities = x
+            break
+
+    edges_to_keep = set()
+    for u, v in G.edges:
+        for partition in communities:
+            if u in partition and v in partition:
+                edges_to_keep.add((u, v))
+    edges_to_remove = set(G.edges) - edges_to_keep
     G.remove_edges_from(edges_to_remove)
-    plt.clf()
-    visualize_graph(nx.to_numpy_array(G), layout, 'Final Version')
+    return G
 
 
 def partition(G: nx.Graph, num_labels: int) -> Tuple[Tuple[int, int], ...]:
