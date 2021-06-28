@@ -25,7 +25,7 @@ def main(argv: List[str]):
     M, layout = read_network_file(argv[1])
     name = get_network_name(argv[1])
     # analyze_network(M, name)
-    visualize_graph(M, layout, name, edge_width_func=rw_centrality, save=False)
+    visualize_graph(nx.Graph(M), layout, name, edge_width_func=rw_centrality, save=False)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
     # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
     # plot_edge_betweeness_centralities(nx.Graph(M), name)
@@ -170,10 +170,9 @@ def rw_centrality(G: nx.Graph) -> List[float]:
     return width
 
 
-def visualize_graph(M: np.ndarray, layout: Optional[Layout], name='', save=False,
+def visualize_graph(G: nx.Graph, layout: Optional[Layout], name='', save=False,
                     edge_width_func: Callable[[nx.Graph], List[float]] = all_same,
                     block=True) -> None:
-    G = nx.Graph(M)
     comps = tuple(nx.connected_components(G))
     node_color = colors_from_communities(comps)
     edge_width = edge_width_func(G)

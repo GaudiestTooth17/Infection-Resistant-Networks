@@ -47,7 +47,7 @@ def main():
         pbar.set_description('Cost: {:.3f}'.format(local_best[0]))
 
     # partitioned = objective.partition(global_best[1])
-    partitioned = nx.to_numpy_array(chakraborty_sato_partition(G, global_best[1]))
+    partitioned = chakraborty_sato_partition(G, global_best[1])
     print('Cost:', global_best[0])
 
     plt.title('Diversity')

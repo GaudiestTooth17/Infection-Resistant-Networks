@@ -58,7 +58,7 @@ def assign_colors(G: nx.Graph) -> List[str]:
     node_to_color = [(node, COLORS[i]) for i, component in enumerate(components)
                      for node in component]
     node_to_color.sort(key=lambda x: x[0])
-    return [color for _, color in node_to_color]
+    return [color for _, color in node_to_color]  # type: ignore
 
 
 def homogenous_step(G: nx.Graph, layout: Layout) -> None:
