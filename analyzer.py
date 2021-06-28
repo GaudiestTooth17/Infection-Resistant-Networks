@@ -247,7 +247,7 @@ def colors_from_communities(communities: Sequence[Sequence[int]]) -> List[str]:
               for i, community in enumerate(communities)
               for vertex in community]
     colors.sort(key=lambda x: x[1])
-    return [x[0] for x in colors]
+    return [x[0] for x in colors]  # type: ignore
 
 
 def make_partitioner(partitioning_vector: np.ndarray) -> Callable[[float], List[str]]:
@@ -272,12 +272,14 @@ def make_partitioner(partitioning_vector: np.ndarray) -> Callable[[float], List[
         while node < len(node_to_value)-1:
             if np.abs(node_to_value[node][1] - node_to_value[node+1][1]) >= community_cutoff:
                 community += 1
-            community_colors[node] = COLORS[community]
+            community_colors[node] = COLORS[community]  # type: ignore
             node += 1
         # assign the last node to a community
-        community_colors[node] = COLORS[community]\
-            if np.abs(node_to_value[node-1][1]-node_to_value[node][1]) < community_cutoff\
-            else COLORS[community+1]
+
+        if np.abs(node_to_value[node-1][1]-node_to_value[node][1]) < community_cutoff:
+            community_colors[node] = COLORS[community]  # type: ignore
+        else:
+            community_colors[node] = COLORS[community+1]  # type: ignore
         return community_colors
 
     return partitioner
