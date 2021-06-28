@@ -8,15 +8,15 @@ import matplotlib.pyplot as plt
 from typing import Dict, Sequence, Tuple
 import sys
 import itertools as it
-
+import label_partitioning
 from tqdm.std import tqdm
 from customtypes import Number
 from fileio import read_network_file
 
 
 def main():
-    if len(sys.argv) < 2:
-        print(f'Usage: {sys.argv[0]} <network>')
+    if len(sys.argv) < 3:
+        print(f'Usage: {sys.argv[0]} <network> <num components>')
         return
 
     M, layout = read_network_file(sys.argv[1])
@@ -27,12 +27,19 @@ def main():
     #                            NextEdgesToRm(rand),
     #                            new_to_rm_pop(len(G.edges), 20, rand),
     #                            True, 1)  # it's like 4x faster with only one core
-    optimizer = ga.GAOptimizer(ChakrabortySatoObjective(G),
-                               NextChakrabortySatoGen(rand, G),
-                               new_chakraborty_sato_pop(rand, G, 50),
-                               True, 5)
+    # optimizer = ga.GAOptimizer(ChakrabortySatoObjective(G),
+    #                            NextChakrabortySatoGen(rand, G),
+    #                            new_chakraborty_sato_pop(rand, G, 50),
+    #                            True, 5)
+    n_comps = int(sys.argv[2])
+    n_labels = n_comps
+    print(f'Searching for {n_comps} components.')
+    optimizer = ga.GAOptimizer(LabelObjective(G, n_comps),
+                               NextLabelGen(n_labels, rand),
+                               new_label_pop(rand, len(G), 50, n_labels),
+                               True, 2)
 
-    n_steps = 20
+    n_steps = 200
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
     diversities = np.zeros(n_steps)
@@ -47,13 +54,19 @@ def main():
         pbar.set_description('Cost: {:.3f}'.format(local_best[0]))
 
     # partitioned = objective.partition(global_best[1])
-    partitioned = chakraborty_sato_partition(G, global_best[1])
+    # partitioned = chakraborty_sato_partition(G, global_best[1])
+    to_remove = label_partitioning.partition(G, global_best[1])
+    partitioned = nx.Graph(G)
+    partitioned.remove_edges_from(to_remove)
     print('Cost:', global_best[0])
 
     plt.title('Diversity')
     plt.plot(diversities)
     plt.figure()
-    visualize_graph(partitioned, layout, 'Partitioned via CS GA')
+    plt.title('Cost')
+    plt.plot(costs)
+    plt.figure()
+    visualize_graph(partitioned, layout, 'Partitioned via Label GA')
 
 
 class PartitioningObjective:
@@ -194,5 +207,54 @@ def chakraborty_sato_partition(G: nx.Graph, encoding: np.ndarray) -> nx.Graph:
     return partitioned
 
 
+class LabelObjective:
+    def __init__(self, G: nx.Graph, num_communities: int) -> None:
+        """
+        An objective for finding good label partitions. The goal is to find a faster way
+        to partition than Girvan-Newman that still yields good results.
+        """
+        self._G = G
+        self._num_communities = num_communities
+
+    def __call__(self, encoding: np.ndarray) -> Number:
+        edges_to_remove = label_partitioning.partition(self._G, encoding)
+        partitioned = nx.Graph(self._G)
+        partitioned.remove_edges_from(edges_to_remove)
+        communities = tuple(nx.connected_components(partitioned))
+
+        cost = self._num_communities*2*np.abs(len(communities) - self._num_communities)\
+            + len(max(communities, key=len)) - len(min(communities, key=len))
+
+        return cost
+
+
+class NextLabelGen:
+    def __init__(self, num_labels: int, rand) -> None:
+        self._labels = tuple(range(num_labels))
+        self._rand = rand
+
+    def __call__(self, rated_pop: Sequence[Tuple[Number, np.ndarray]]) -> Tuple[np.ndarray, ...]:
+        couples = ga.roulette_wheel_cost_selection(rated_pop)
+        offspring = (ga.single_point_crossover(*couple) for couple in couples)
+        children = tuple(it.chain(*offspring))
+
+        for i, j in it.product(range(len(children)), range(len(children[0]))):
+            if self._rand.random() < .01:
+                children[i][j] = self._rand.choice(self._labels)
+
+        return children
+
+
+def new_label_pop(rand, N: int, pop_size: int, n_labels: int) -> Tuple[np.ndarray, ...]:
+    labels = range(n_labels)
+    population = tuple(rand.choice(labels, size=N) for _ in range(pop_size))
+    return population
+
+
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('\nGood bye.')
+    except EOFError:
+        print('\nGood bye.')
