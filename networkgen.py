@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from analyzer import visualize_graph
-from typing import List, Tuple, Dict
+from typing import List, Sequence, Tuple, Dict, Union
 import sys
 import math
 from itertools import product
@@ -172,6 +172,61 @@ def search_for_neighbors(grid, x, y):
 
 def distance(x0, y0, x1, y1) -> float:
     return math.sqrt((x0-x1)**2 + (y0-y1)**2)
+
+
+def make_configuration_network(degree_distribution: np.ndarray) -> np.ndarray:
+    """Create a random network with the provided degree distribution."""
+    degree_distribution = np.copy(degree_distribution)
+
+    N = degree_distribution.shape[0]
+    M = np.zeros((N, N), dtype=np.uint8)
+
+    while np.sum(degree_distribution > 0):
+        a = np.random.choice(np.where(degree_distribution > 0)[0])
+        degree_distribution[a] -= 1
+        b = np.random.choice(np.where(degree_distribution > 0)[0])
+        degree_distribution[b] -= 1
+
+        M[a, b] += 1
+        M[b, a] += 1
+
+    return M
+
+
+def make_connected_community_network(inner_degrees: np.ndarray,
+                                     outer_degrees: np.ndarray) -> nx.Graph:
+    """
+    Create a random network divided into randomly generated communities connected to each other.
+
+    The number of vertices in each community is determined by the length of inner_degrees.
+    Similarly, the number of communities is determined by the length of outer_degrees.
+
+    inner_degrees: the inner degree of each of the vertices in the communities.
+    outer_degrees: How many outgoing edges each of the communities has.
+    """
+    num_communities = len(outer_degrees)
+    community_size = len(inner_degrees)
+    N = community_size * num_communities
+    M = np.zeros((N, N), dtype=np.uint8)
+
+    for c in range(num_communities):
+        c_offset = c * community_size
+        cm = make_configuration_network(inner_degrees)
+        for n1 in range(community_size):
+            for n2 in range(community_size):
+                M[n1 + c_offset, n2 + c_offset] = cm[n1, n2]
+    
+    outer_m = make_configuration_network(outer_degrees)
+    for c1 in range(num_communities):
+        for c2 in range(c1, num_communities):
+            if outer_m[c1, c2] > 0:
+                for _ in range(int(outer_m[c1, c2])):
+                    n1 = c1 * community_size + np.random.randint(community_size)
+                    n2 = c2 * community_size + np.random.randint(community_size)
+                    M[n1, n2] = 1
+                    M[n2, n1] = 1
+
+    return nx.Graph(M)
 
 
 if __name__ == '__main__':
