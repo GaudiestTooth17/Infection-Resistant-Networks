@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from analyzer import visualize_graph
-from typing import List, Sequence, Tuple, Dict, Union
+from typing import List, Tuple, Dict
 import sys
 import math
 from itertools import product
