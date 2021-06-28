@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from genfuncs import identity, make_scaler, make_right_shift, differentiation, summation
 NUM_TO_TRANSFORMATION = dict(enumerate((identity, make_scaler(2),  make_right_shift(1),
                                         differentiation, summation)))
+RAND = np.random.default_rng()
 
 
 def main():
@@ -64,11 +65,11 @@ def next_transformation_gen(transforms: Tuple[Tuple[int, np.ndarray], ...])\
     return children
 
 
-def mutate(encodings: Tuple[np.ndarray, ...], prob: float, rand):
+def mutate(encodings: Tuple[np.ndarray, ...], prob: float):
     for i, j in it.product(range(len(encodings)), range(len(encodings[0]))):
-        if rand.random() < prob:
+        if RAND.random() < prob:
             # encodings[i][j] += np.random.choice((-1, 1))
-            encodings[i][j] = rand.integers(len(NUM_TO_TRANSFORMATION))
+            encodings[i][j] = RAND.integers(len(NUM_TO_TRANSFORMATION))
 
 
 def with_sa():
