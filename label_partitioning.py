@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Union, Tuple
 import networkx as nx
 from networkx.algorithms.community.centrality import girvan_newman
 import numpy as np
@@ -56,11 +56,20 @@ def girvan_newman_partition(G, communities) -> nx.Graph:
     return G
 
 
-def partition(G: nx.Graph, num_labels: int) -> Tuple[Tuple[int, int], ...]:
-    """Return the edges to remove in order to break G into communities."""
-    labels = tuple(range(num_labels))
-    rand = np.random.default_rng()
-    node_to_label = rand.choice(labels, size=len(G))
+def partition(G: nx.Graph, labels: Union[int, np.ndarray]) -> Tuple[Tuple[int, int], ...]:
+    """
+    Return the edges to remove in order to break G into communities.
+
+    G: Network to partition.
+    labels: Either the number of classes of labels to randomly assign to vertices,
+            or a premade array of labels to assign to the vertices.
+    """
+    if isinstance(labels, int):
+        available_labels = tuple(range(labels))
+        rand = np.random.default_rng()
+        node_to_label = rand.choice(available_labels, size=len(G))
+    else:
+        node_to_label = labels
 
     for _ in range(100):
         # do label propagation
