@@ -1,12 +1,13 @@
 from typing import Union, Tuple
 import networkx as nx
-from networkx.algorithms.community.centrality import girvan_newman
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
 from fileio import read_network_file
 from analyzer import visualize_graph
 from collections import Counter
+from tqdm import tqdm
+from multiprocessing import Pool
 
 
 def main():
@@ -19,15 +20,28 @@ def main():
         print(f'Usage: {sys.argv[0]} <network> <num labels>')
         return
 
-    M, layout = read_network_file(sys.argv[1])
-    label_partitioned = nx.Graph(M)
-
+    M, _ = read_network_file(sys.argv[1])
     n_labels = int(sys.argv[2])
-    edges_to_remove = partition(label_partitioned, n_labels)
-    label_partitioned.remove_edges_from(edges_to_remove)
-    visualize_graph(label_partitioned, layout,
-                    f'Label Partitioned\n{n_labels} Labels',
-                    block=True)
+
+    with Pool(10) as p:
+        stats = p.map(run_experiment, ((M, n_labels) for _ in range(100)), 10)
+    
+    n_modules, n_small_modules = zip(*stats)
+    plt.title('Number of Modules')
+    plt.hist(n_modules, bins=None)
+    plt.figure()
+    plt.title('Number of Small Modules')
+    plt.hist(n_small_modules, bins=None)
+    plt.show()
+
+
+def run_experiment(args) -> Tuple[int, int]:
+    M, n_labels = args
+    G = nx.Graph(M)
+    edges_to_remove = partition(G, n_labels)
+    G.remove_edges_from(edges_to_remove)
+    modules = tuple(nx.connected_components(G))
+    return len(modules), len(tuple(filter(lambda module: len(module) < 6, modules)))
 
 
 def girvan_newman_partition(G, communities) -> nx.Graph:
