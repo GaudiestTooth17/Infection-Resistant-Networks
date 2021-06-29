@@ -15,32 +15,19 @@ def main():
     It didn't do great on the elitist network, but perhaps with more time it could get better results.
     It was really crappy on Watts-Strogatz.
     """
-    if len(sys.argv) < 2:
-        print(f'Usage: {sys.argv[0]} <network>')
+    if len(sys.argv) < 3:
+        print(f'Usage: {sys.argv[0]} <network> <num labels>')
         return
 
     M, layout = read_network_file(sys.argv[1])
     label_partitioned = nx.Graph(M)
 
-    n_labels = 3
+    n_labels = int(sys.argv[2])
     edges_to_remove = partition(label_partitioned, n_labels)
     label_partitioned.remove_edges_from(edges_to_remove)
     visualize_graph(label_partitioned, layout,
                     f'Label Partitioned\n{n_labels} Labels',
                     block=True)
-
-    G = nx.Graph(M)
-    print('Running GN')
-    for communities in girvan_newman(G):
-        if len(communities) > 9:
-            H = girvan_newman_partition(G, communities)
-            plt.figure()
-            visualize_graph(H, layout, 'Girvan Newman', block=False)
-        print(f'Finished iteration {len(communities)}')
-        if len(communities) > 20:
-            break
-
-    input('Done')
 
 
 def girvan_newman_partition(G, communities) -> nx.Graph:
