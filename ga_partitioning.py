@@ -201,7 +201,8 @@ def chakraborty_sato_partition(G: nx.Graph, encoding: np.ndarray) -> nx.Graph:
         elif not v_registered:
             node_to_cluster[v] = node_to_cluster[u]
 
-    edges_to_remove = filter(lambda edge: node_to_cluster[edge[0]] != node_to_cluster[edge[1]], G.edges)
+    edges_to_remove = filter(lambda edge: node_to_cluster[edge[0]] != node_to_cluster[edge[1]],
+                             G.edges)
     partitioned = nx.Graph(G)
     partitioned.remove_edges_from(edges_to_remove)
     return partitioned

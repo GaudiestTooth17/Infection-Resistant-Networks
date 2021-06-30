@@ -3,7 +3,10 @@ import networkx as nx
 from typing import Sequence
 
 
-def degree_sequence_to_network(degrees: Sequence[int], vis_func, force_good_behavior: bool, rand) -> nx.Graph:
+def degree_sequence_to_network(degrees: Sequence[int],
+                               vis_func,
+                               force_good_behavior: bool,
+                               rand) -> nx.Graph:
     if sum(degrees) % 2 != 0:
         raise Exception('The sum of degrees must be even.')
 

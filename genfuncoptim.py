@@ -34,10 +34,11 @@ def with_ga():
     diversities = []
     costs = []
     pbar = tqdm(range(6000))
-    global_best = None
+    global_best: Tuple[Number, np.ndarray] = None  # type: ignore
     for _ in pbar:
         population_with_fitness = optimizer.step()
-        unique_genotypes = {tuple(genotype) for genotype in map(lambda x: x[1], population_with_fitness)}
+        unique_genotypes = {tuple(genotype)
+                            for genotype in map(lambda x: x[1], population_with_fitness)}
         diversities.append(len(unique_genotypes)/len(population_with_fitness))
         iteration_best = min(population_with_fitness, key=lambda x: x[0])
         costs.append(iteration_best[0])
@@ -47,8 +48,9 @@ def with_ga():
         if global_best[0] == 0:
             break
 
-    print('answer:', global_best[1]%len(NUM_TO_TRANSFORMATION))
-    print('sequence:', trans_inds_to_seq(global_best[1]%len(NUM_TO_TRANSFORMATION), base_sequence))
+    print('answer:', global_best[1] % len(NUM_TO_TRANSFORMATION))
+    print('sequence:', trans_inds_to_seq(global_best[1] % len(NUM_TO_TRANSFORMATION),
+                                         base_sequence))
     print('cost:', global_best[0])
     report_on_ga(costs, diversities)
 

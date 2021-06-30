@@ -21,7 +21,7 @@ def main():
                                True, 6)
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
-    global_best = None
+    global_best: Tuple[Number, np.ndarray] = None  # type: ignore
     for step in pbar:
         cost_to_encoding = optimizer.step()
         local_best = min(cost_to_encoding, key=lambda x: x[0])
@@ -43,7 +43,8 @@ def main():
     plt.hist(tuple(x[1] for x in G.degree), bins=None)
     plt.show(block=False)
     plt.figure()
-    visualize_graph(nx.adjacency_matrix(G), None, f'From Edge List\nCost: {global_best[0]}',  # type: ignore
+    visualize_graph(G, None,
+                    f'From Edge List\nCost: {global_best[0]}',
                     False, betw_centrality, False)
 
     input('Press <enter> to exit.')
@@ -51,7 +52,8 @@ def main():
 
 class PercolationResistanceObjective:
     """
-    This is very interesting because it actually works pretty darn well. It seem sto create resilient hairballs.
+    This is very interesting because it actually works pretty darn well.
+    It seems to create resilient hairballs.
     """
     def __init__(self, rand, edges_to_remove: int,
                  encoding_to_network: Callable[[np.ndarray], nx.Graph]):
@@ -74,7 +76,8 @@ class PercolationResistanceObjective:
 
 
 class ClusteringObjective:
-    def __init__(self, encoding_to_network: Callable[[np.ndarray], nx.Graph], diameter_weight: float):
+    def __init__(self, encoding_to_network: Callable[[np.ndarray], nx.Graph],
+                 diameter_weight: float):
         self._rand = np.random.default_rng()
         self._encoding_to_network = encoding_to_network
         self._diameter_weight = diameter_weight
@@ -82,7 +85,8 @@ class ClusteringObjective:
     def __call__(self, encoding) -> float:
         G = self._encoding_to_network(encoding)
         biggest_comp = G.subgraph(max(nx.connected_components(G), key=len))
-        return -nx.average_clustering(G) - self._diameter_weight * nx.diameter(biggest_comp)  # type: ignore
+        return -nx.average_clustering(G)\
+            - self._diameter_weight * nx.diameter(biggest_comp)  # type: ignore
 
 
 def component_objective(edge_list: np.ndarray) -> int:
@@ -130,7 +134,8 @@ def make_edge_list_neighbor() -> Callable[[np.ndarray], np.ndarray]:
         index0 = rand.integers(0, edge_list.shape[0])
         index1 = rand.integers(0, edge_list.shape[0])
 
-        # to eliminate self-loops check the value adjacent to index0 to make sure edge_list[index1] != that_value
+        # to eliminate self-loops check the value adjacent to index0
+        # to make sure edge_list[index1] != that_value
         offset = 1 if index0 % 2 == 0 else -1
         while edge_list[index0+offset] == edge_list[index1]:
             index1 = rand.integers(0, edge_list.shape[0])

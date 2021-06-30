@@ -29,7 +29,8 @@ class CommunityEdges:
     def __init__(self, M: np.ndarray, layout: Layout,
                  sqrt_num_communities, days_to_quarantine) -> None:
         """
-        sqrt_num_communities by sqrt_num_communities cells are created and nodes get placed in one of these
+        sqrt_num_communities by sqrt_num_communities cells are created and
+        nodes get placed in one of these
         :param M: Adjacency matrix
         :param layout: layout is used to partition the graph
         :param num_communities: The number of communities to split the graph into
@@ -54,7 +55,8 @@ class CommunityEdges:
 
         self._node_to_community: Dict[int, Tuple[int, int]] = node_to_community
         self._community_to_outgoing_edges = {community: outgoing_edges
-                                             for community, outgoing_edges in community_to_outgoing_edges.items()}
+                                             for community, outgoing_edges
+                                             in community_to_outgoing_edges.items()}
         self._M = np.copy(M)
         self.c_quarantine = np.zeros(sqrt_num_communities**2)
         self.days_to_quarantine = days_to_quarantine
@@ -81,7 +83,7 @@ class CommunityEdges:
             self.unquarantine_community_by_id(c)
 
         agents = np.where(agents)[0]
-        communities_to_quarantine = {self._node_to_community[agent] for agent in agents}  # type: ignore
+        communities_to_quarantine = {self._node_to_community[agent] for agent in agents}
         # print('q communities:', communities_to_quarantine)
 
         for c in communities_to_quarantine:

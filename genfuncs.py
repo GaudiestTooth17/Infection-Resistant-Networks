@@ -22,7 +22,7 @@ def make_right_shift(distance: int) -> Transformation:
 
 
 def differentiation(sequence: Iterable[Number]) -> Iterable[Number]:
-    dropped_and_indexed = it.chain(it.dropwhile(lambda ix: ix[0]==0, enumerate(sequence)))
+    dropped_and_indexed = it.chain(it.dropwhile(lambda ix: ix[0] == 0, enumerate(sequence)))
     return (i*x for i, x in dropped_and_indexed)
 
 

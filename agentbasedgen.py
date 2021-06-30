@@ -29,7 +29,8 @@ def main():
         layout = nx.kamada_kawai_layout(G)
 
     step = homogenous_step
-    # step = make_two_type_step(set(range(len(G.nodes)//10)), set(range(len(G.nodes)//10, len(G.nodes))))
+    # step = make_two_type_step(set(range(len(G.nodes)//10)),
+    #                           set(range(len(G.nodes)//10, len(G.nodes))))
     # step = make_time_based_step(N)
     node_size = 200
     for i in tqdm(range(150)):
@@ -143,7 +144,8 @@ def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int
             # if the agent has enough connections, look for ones to prune
             else:
                 # connections are invalid if they are to an agent that shares a common neighbor
-                invalid_connections = [a for a in neighbors if calc_prop_common_neighbors(G, agent, a) > 0]
+                invalid_connections = [a for a in neighbors
+                                       if calc_prop_common_neighbors(G, agent, a) > 0]
                 if len(invalid_connections) == 0:
                     invalid_connections = neighbors
                 to_remove = choice(invalid_connections)

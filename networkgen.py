@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from analyzer import analyze_network, visualize_eigen_communities, visualize_girvan_newman_communities, visualize_graph
+from analyzer import analyze_network, visualize_graph
 from typing import List, Tuple, Dict
 import sys
 import math
@@ -98,7 +98,8 @@ def make_complete_clique_gate_graph(num_big_components, big_component_size, gate
     # start numbering the nodes in the big componenets at the first int not used by the gates
     component_node_ids = (range(start, start+big_component_size)
                           for start in range(len(gate_node_ids)*gate_size,
-                                             len(gate_node_ids)*gate_size+num_big_components*big_component_size,
+                                             len(gate_node_ids)*gate_size
+                                             + num_big_components*big_component_size,
                                              big_component_size))
     big_comps = [nx.complete_graph(node_ids) for node_ids in component_node_ids]
 
@@ -112,7 +113,8 @@ def make_complete_clique_gate_graph(num_big_components, big_component_size, gate
             gate_nodes = list(gates[current_gate_ind].nodes())
             current_gate_ind += 1
             # Add edges to src_comp.
-            # The loop assumes that there are fewer or equal nodes in half the gate than in each component
+            # The loop assumes that there are fewer or equal nodes in half
+            # the gate than in each component
             src_nodes = list(src_comp.nodes())
             for i, node in enumerate(gate_nodes[:len(gate_nodes)//2]):
                 master_graph.add_edge(node, src_nodes[i])
@@ -236,7 +238,7 @@ def make_connected_community_network(inner_degrees: np.ndarray,
         for n1 in range(community_size):
             for n2 in range(community_size):
                 M[n1 + c_offset, n2 + c_offset] = cm[n1, n2]
-    
+
     outer_m = make_configuration_network(outer_degrees)
     for c1 in range(num_communities):
         for c2 in range(c1, num_communities):
