@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from typing import Dict, Sequence, Tuple
 import sys
 import itertools as it
-import label_partitioning
+import partitioning
 from tqdm.std import tqdm
 from customtypes import Number
 from fileio import read_network_file
@@ -55,7 +55,7 @@ def main():
 
     # partitioned = objective.partition(global_best[1])
     # partitioned = chakraborty_sato_partition(G, global_best[1])
-    to_remove = label_partitioning.partition(G, global_best[1])
+    to_remove = partitioning.label_partition(G, global_best[1])
     partitioned = nx.Graph(G)
     partitioned.remove_edges_from(to_remove)
     print('Cost:', global_best[0])
@@ -218,7 +218,7 @@ class LabelObjective:
         self._num_communities = num_communities
 
     def __call__(self, encoding: np.ndarray) -> Number:
-        edges_to_remove = label_partitioning.partition(self._G, encoding)
+        edges_to_remove = partitioning.label_partition(self._G, encoding)
         partitioned = nx.Graph(self._G)
         partitioned.remove_edges_from(edges_to_remove)
         communities = tuple(nx.connected_components(partitioned))

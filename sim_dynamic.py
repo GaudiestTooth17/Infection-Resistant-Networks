@@ -5,7 +5,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from fileio import get_network_name, read_network_file
 from customtypes import Layout
-import label_partitioning
+import partitioning
 from multiprocessing import Pool
 import time
 from tqdm import tqdm
@@ -228,7 +228,7 @@ class FlickerBehavior:
         flicker_pattern: True means that inter-community edges are on. False means they are off.
                          The values will automatically cycle after they have all been used.
         """
-        edges_to_flicker = label_partitioning.partition(nx.Graph(M), n_labels)
+        edges_to_flicker = partitioning.label_partition(nx.Graph(M), n_labels)
         self._flicker_pattern = flicker_pattern
         self._edges_on_M = np.copy(M)
         self._edges_off_M = np.copy(M)
