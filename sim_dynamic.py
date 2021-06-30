@@ -3,9 +3,12 @@ from dataclasses import dataclass
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-from fileio import read_network_file
+from fileio import get_network_name, read_network_file
 from customtypes import Layout
 import label_partitioning
+from multiprocessing import Pool
+import time
+from tqdm import tqdm
 RAND = np.random.default_rng()
 
 UpdateConnections = Callable[[np.ndarray, np.ndarray, int, np.ndarray], np.ndarray]
@@ -13,6 +16,58 @@ UpdateConnections = Callable[[np.ndarray, np.ndarray, int, np.ndarray], np.ndarr
 Update the dynamic matrix D.
 Parameters are D, M, current step, current sir array
 """
+
+
+def main():
+    start_time = time.time()
+    net_path = 'networks/student_interaction_friday.txt'
+    M, _ = read_network_file(net_path)
+    disease = Disease(4, .2)
+    sir0 = np.zeros((3, M.shape[0]), dtype=np.int32)
+    sir0[0] = 1
+    to_infect = RAND.choice(range(M.shape[0]))
+    sir0[1, to_infect] = 1
+    sir0[0, to_infect] = 0
+
+    # using a Pool works fine with no_update
+    # name = f'200 sims of {disease} on {get_network_name(net_path)} max_steps = 1000\n'\
+    #     'No Dynamic Behavior\nNumber of Susceptible Agents at Simulation End'
+    # print(name)
+    # with Pool(5) as p:
+    #     results = p.map(pool_friendly_simulate,
+    #                     ((M, 1, disease, no_update, 1000)
+    #                      for _ in range(200)),
+    #                     10)
+
+    # For some reason, I can't use a Pool with FlickerBehavior
+    name = f'200 sims of {disease} on {get_network_name(net_path)} max_steps = 1000\n'\
+        'Flicker Behavior - Number of Susceptible Agents at Simulation End'
+    results = [simulate(M,
+                        make_starting_sir(M.shape[0], 1),
+                        disease,
+                        FlickerBehavior(M, 10, (True, False)),
+                        1000,
+                        None)[-1]
+               for _ in tqdm(range(200))]
+    sim_to_susceptibles = np.array(tuple(np.sum(result[0]) for result in results))
+    max_sus = np.max(sim_to_susceptibles)
+    min_sus = np.min(sim_to_susceptibles)
+    avg_sus = np.average(sim_to_susceptibles)
+    med_sus = np.median(sim_to_susceptibles)
+    plt.hist(sim_to_susceptibles, bins=None)
+    plt.title(name)
+    plt.savefig(name, format='png')
+    print('Maximum of results:', max_sus)
+    print('Minimum of results:', min_sus)
+    print('Average of results:', avg_sus)
+    print('Median of results: ', med_sus)
+    print(f'Finished ({time.time()-start_time}).')
+
+
+def pool_friendly_simulate(args):
+    M, n_to_infect, disease, behavior, max_steps = args
+    sir0 = make_starting_sir(M.shape[0], n_to_infect)
+    return simulate(M, sir0, disease, behavior, max_steps, None)[-1]
 
 
 @dataclass
@@ -140,7 +195,8 @@ class Visualize:
                 if sir[state, node] > 0:
                     node_colors[node] = self._state_to_color[state]
         plt.clf()
-        nx.draw_networkx(G, pos=self._layout, with_labels=False, node_color=node_colors, node_size=50)
+        nx.draw_networkx(G, pos=self._layout, with_labels=False,
+                         node_color=node_colors, node_size=50)
         plt.pause(.2)  # type: ignore
 
 
@@ -149,7 +205,7 @@ def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]]) -> np.ndar
     Make an initial SIR.
 
     N: number of agents in the simulation.
-    to_infect: a tuple of agent id's or the number of agents to infect.
+    to_infect: A tuple of agent id's or the number of agents to infect.
                If it is just a number, the agents will be randomly selected.
     """
     if isinstance(to_infect, int):
@@ -187,21 +243,4 @@ class FlickerBehavior:
 
 
 if __name__ == '__main__':
-    # M, layout = read_network_file('networks/annealed-medium-diameter.txt')
-    # M, layout = read_network_file('networks/cavemen-10-10.txt')
-    M, layout = read_network_file('networks/elitist-500-500.txt')
-    # M, layout = read_network_file('networks/cgg-520.txt')
-    # M, layout = read_network_file('networks/barabasi-albert-500-3.txt')
-    # M, layout = read_network_file('networks/watts-strogatz-500-4-.1.txt')
-    disease = Disease(4, .2)
-    sir0 = np.zeros((3, M.shape[0]), dtype=np.int64)
-    sir0[0] = 1
-    to_infect = RAND.choice(range(M.shape[0]))
-    sir0[1, to_infect] = 1
-    sir0[0, to_infect] = 0
-
-    simulate(M, sir0, disease,
-            #  FlickerBehavior(M, 10, (True, False)),
-             no_update,
-             100, layout)
-    input('Press <enter> to continue.')
+    main()
