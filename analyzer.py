@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 import sys
 from itertools import takewhile
-from typing import Callable, Dict, Iterable, List, Sequence, Set, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Sequence, Set, Optional, Tuple, Union
 from customtypes import Layout, Number, CircularList
 from fileio import read_network_file, get_network_name
 RAND = np.random.default_rng()
@@ -177,7 +177,7 @@ def rw_centrality(G: nx.Graph) -> List[float]:
 
 def visualize_graph(G: nx.Graph, layout: Optional[Layout], name='', save=False,
                     edge_width_func: Callable[[nx.Graph], List[float]] = all_same,
-                    block=True) -> None:
+                    block=True, node_size: Union[int, Sequence[int]] = 50) -> None:
     comps = tuple(nx.connected_components(G))
     node_color = colors_from_communities(comps)
     edge_width = edge_width_func(G)
@@ -185,9 +185,9 @@ def visualize_graph(G: nx.Graph, layout: Optional[Layout], name='', save=False,
     # node_size = np.array(tuple(nx.betweenness_centrality(G).values()))
     # node_size = np.array(tuple(nx.eigenvector_centrality_numpy(G).values()))
     if layout is None:
-        nx.draw_kamada_kawai(G, node_size=50, node_color=node_color, width=edge_width)
+        nx.draw_kamada_kawai(G, node_size=node_size, node_color=node_color, width=edge_width)
     else:
-        nx.draw_networkx(G, pos=layout, node_size=50, node_color=node_color,
+        nx.draw_networkx(G, pos=layout, node_size=node_size, node_color=node_color,
                          width=edge_width, with_labels=False)
     if save:
         plt.savefig(f'vis-{name}.png', dpi=300, format='png')
