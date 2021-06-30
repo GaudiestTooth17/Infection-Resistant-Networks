@@ -77,7 +77,8 @@ def make_node_to_degree(M) -> List[int]:
     return node_to_degree
 
 
-def show_clustering_coefficent_dist(node_to_coefficient: Dict[int, float], node_to_degree: Dict[int, int]) -> None:
+def show_clustering_coefficent_dist(node_to_coefficient: Dict[int, float],
+                                    node_to_degree: Dict[int, int]) -> None:
     degree_to_avg_coefficient = {}
     for node, coefficient in node_to_coefficient.items():
         if node_to_degree[node] not in degree_to_avg_coefficient:
@@ -135,7 +136,8 @@ def analyze_network(G: nx.Graph, name) -> None:
         diameter = nx.diameter(largest_subgraph)
     print(f'Diameter: {diameter}')
     # print(f'Degree assortativity coefficient: {dac}')
-    show_clustering_coefficent_dist(clustering_coefficients, dict(enumerate(node_to_degree)))   # type: ignore
+    show_clustering_coefficent_dist(clustering_coefficients,  # type: ignore
+                                    dict(enumerate(node_to_degree)))
     # components = get_components(G)
     # print(f'size of components: {[len(comp) for comp in components]}')
     show_deg_dist_from_matrix(M, name, display=True, save=False)
@@ -325,6 +327,53 @@ def random_walk_centrality(G: nx.Graph, num_paths: int) -> Dict[Tuple[int, int],
             current = next
 
     return {edge: frequency/edges_crossed for edge, frequency in edge_to_times_crossed.items()}
+
+
+def make_meta_community_network(edges_removed: Tuple[Tuple[int, int], ...],
+                                partitioned_G: nx.Graph) -> Tuple[nx.Graph, Sequence[int]]:
+    """
+    Make a network where each node represents a partition in the original network
+    and each edge represents at least one edge going between the two partitions.
+    The nodes in the meta community network have the nodes in the communities
+    they represent associated with them as attributes with the tab 'communities'.
+    """
+    communities = dict(enumerate(nx.connected_components(partitioned_G)))
+    node_to_community = {}
+
+    def find_community(node):
+        if node in node_to_community:
+            return node_to_community[node]
+        for community_id, nodes in communities.items():
+            if node in nodes:
+                node_to_community[node] = community_id
+                return community_id
+        raise Exception(f'Cannot find {node}')
+
+    community_network: nx.Graph = nx.empty_graph(len(communities))
+    community_network.add_edges_from((find_community(u), find_community(v))
+                                     for u, v in edges_removed)
+    nx.set_node_attributes(community_network, communities, 'communities')
+    node_size = np.array([len(community) for community in communities.values()])
+    node_size = node_size / np.sum(node_size) * 1000
+    return community_network, node_size
+
+
+def degree_distributions(components: Iterable[Sequence[int]],
+                         G: nx.Graph) -> Sequence[Sequence[int]]:
+    """Return the degree distributions for each of the components in G."""
+    comm_degrees = []
+    for comm in components:
+        degrees = [G.degree[n] for n in comm]
+        comm_degrees.append(degrees)
+    return comm_degrees
+
+
+def make_meta_community_layout(meta_G: nx.Graph, layout: Layout) -> Layout:
+    """Make a layout for a meta community network based on the original network's layout."""
+    communities = nx.get_node_attributes(meta_G, 'communities')
+    layout = {node: np.average([layout[n] for n in communities[node]], axis=0)
+              for node in meta_G}
+    return layout
 
 
 if __name__ == '__main__':

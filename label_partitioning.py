@@ -3,36 +3,70 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-from fileio import read_network_file
-from analyzer import visualize_graph
+
+from fileio import read_network_file, get_network_name
+from analyzer import make_meta_community_layout, make_meta_community_network, visualize_graph
 from collections import Counter
-from tqdm import tqdm
-from multiprocessing import Pool
 
 
 def main():
     """
     Initial testing indicates that this is a REALLY good community detection algorithm!!
-    It didn't do great on the elitist network, but perhaps with more time it could get better results.
+    It didn't do great on the elitist network, but perhaps with more time it could
+    get better results.
+
     It was really crappy on Watts-Strogatz.
     """
     if len(sys.argv) < 3:
         print(f'Usage: {sys.argv[0]} <network> <num labels>')
         return
 
-    M, _ = read_network_file(sys.argv[1])
+    M, layout = read_network_file(sys.argv[1])
+    if layout is None:
+        raise Exception('Layout cannot be None.')
+    name = get_network_name(sys.argv[1])
     n_labels = int(sys.argv[2])
 
-    with Pool(10) as p:
-        stats = p.map(run_experiment, ((M, n_labels) for _ in range(100)), 10)
-    
-    n_modules, n_small_modules = zip(*stats)
-    plt.title('Number of Modules')
-    plt.hist(n_modules, bins=None)
+    G = nx.Graph(M)
+    to_remove = partition(G, n_labels)
+    G.remove_edges_from(to_remove)
+    communities = tuple(nx.connected_components(G))
+    # plt.hist(tuple(len(comm) for comm in communities), bins=None)
+    # plt.figure()
+    # plt.hist(tuple(len(comm) for comm in communities if len(comm) < 500), bins=None)
+    # plt.figure()
+    visualize_graph(G, layout, f'{name} partitioned with {n_labels} labels', block=False)
     plt.figure()
-    plt.title('Number of Small Modules')
-    plt.hist(n_small_modules, bins=None)
-    plt.show()
+    meta_community_network, node_size = make_meta_community_network(to_remove, G)
+    meta_layout = make_meta_community_layout(meta_community_network, layout)
+    visualize_graph(meta_community_network, meta_layout, f'{name} meta community',
+                    block=False, node_size=node_size)
+    meta_community_network.remove_edges_from(partition(meta_community_network, n_labels))
+    plt.figure()
+    visualize_graph(meta_community_network, meta_layout, f'{name} meta community partitioned',
+                    node_size=node_size, block=True)
+    plt.figure()
+    # comm_degrees = degree_distributions(sorted(communities, key=lambda x: -len(x))[:10], G)
+    # for i, d in enumerate(comm_degrees):
+    #     plt.hist(d, bins=None)
+    #     plt.title('{}, len: {}'.format(i, len(d)))
+    #     plt.show(block=False)
+    #     plt.figure()
+    # input()
+
+    # code for mass experiments
+    # start_time = time.time()
+    # with Pool(10) as p:
+    #     stats = p.map(run_experiment, ((M, n_labels) for _ in range(100)), 10)
+
+    # n_modules, n_small_modules = zip(*stats)
+    # print(f'Done ({time.time()-start_time}).')
+    # plt.title(f'Number of Modules ({n_labels} labels)')
+    # plt.hist(n_modules, bins=None)
+    # plt.figure()
+    # plt.title(f'Number of Small Modules ({n_labels} labels)')
+    # plt.hist(n_small_modules, bins=None)
+    # plt.show()
 
 
 def run_experiment(args) -> Tuple[int, int]:
