@@ -1,9 +1,10 @@
-from typing import Union, Tuple
+from itertools import takewhile
+from typing import Generator, Iterable, Union, Tuple
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-
+from networkx.algorithms.community import girvan_newman
 from fileio import read_network_file, get_network_name
 from analyzer import make_meta_community_layout, make_meta_community_network, visualize_graph
 from collections import Counter
@@ -28,9 +29,10 @@ def main():
     n_labels = int(sys.argv[2])
 
     G = nx.Graph(M)
-    to_remove = partition(G, n_labels)
+    # to_remove = label_partition(G, n_labels)
+    to_remove = girvan_newman_partition(G, n_labels)  # n_labels is actually n_communities
     G.remove_edges_from(to_remove)
-    communities = tuple(nx.connected_components(G))
+    # communities = tuple(nx.connected_components(G))
     # plt.hist(tuple(len(comm) for comm in communities), bins=None)
     # plt.figure()
     # plt.hist(tuple(len(comm) for comm in communities if len(comm) < 500), bins=None)
@@ -41,7 +43,7 @@ def main():
     meta_layout = make_meta_community_layout(meta_community_network, layout)
     visualize_graph(meta_community_network, meta_layout, f'{name} meta community',
                     block=False, node_size=node_size)
-    meta_community_network.remove_edges_from(partition(meta_community_network, n_labels))
+    meta_community_network.remove_edges_from(label_partition(meta_community_network, n_labels))
     plt.figure()
     visualize_graph(meta_community_network, meta_layout, f'{name} meta community partitioned',
                     node_size=node_size, block=True)
@@ -72,26 +74,25 @@ def main():
 def run_experiment(args) -> Tuple[int, int]:
     M, n_labels = args
     G = nx.Graph(M)
-    edges_to_remove = partition(G, n_labels)
+    edges_to_remove = label_partition(G, n_labels)
     G.remove_edges_from(edges_to_remove)
     modules = tuple(nx.connected_components(G))
     return len(modules), len(tuple(filter(lambda module: len(module) < 6, modules)))
 
 
-def girvan_newman_partition(G, communities) -> nx.Graph:
-    G = nx.Graph(G)
+def girvan_newman_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[int, int], ...]:
+    """Return the edges to remove in order to break G into communities."""
+    communities_generator: Iterable[Tuple[int, ...]] = girvan_newman(G)
+    communities = tuple(takewhile(lambda comm: len(comm) <= num_communities,
+                                  communities_generator))[-1]
+    edges_to_remove = tuple((u, v)
+                            for u, v in G.edges
+                            for partition in communities
+                            if u not in partition or v not in partition)
+    return edges_to_remove
 
-    edges_to_keep = set()
-    for u, v in G.edges:
-        for partition in communities:
-            if u in partition and v in partition:
-                edges_to_keep.add((u, v))
-    edges_to_remove = set(G.edges) - edges_to_keep
-    G.remove_edges_from(edges_to_remove)
-    return G
 
-
-def partition(G: nx.Graph, labels: Union[int, np.ndarray]) -> Tuple[Tuple[int, int], ...]:
+def label_partition(G: nx.Graph, labels: Union[int, np.ndarray]) -> Tuple[Tuple[int, int], ...]:
     """
     Return the edges to remove in order to break G into communities.
 
