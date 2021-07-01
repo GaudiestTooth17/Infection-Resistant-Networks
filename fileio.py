@@ -10,6 +10,9 @@ def write_network(G: nx.Graph,
                   layout: Layout,
                   communities: Communities) -> None:
     G = nx.Graph(G)
+    # sometimes non tuple types slip through the cracks
+    if not isinstance(layout[0], tuple):
+        layout = {node: (location[0], location[1]) for node, location in layout.items()}
 
     nx.set_node_attributes(G, layout, 'layout')
     nx.set_node_attributes(G, communities, 'community')
