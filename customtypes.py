@@ -21,66 +21,6 @@ class CircularList(Generic[T]):
         return self._list[i]
 
 
-class LazyVector:
-    def __init__(self, dim0: int) -> None:
-        """
-        A lazily evaluated replacement for a 1d ndarray. I doubt it is anywhere near as fast, and
-        it can't do as much, but for cases where most entries are 0, it could be useful.
-        """
-        self._dim0 = dim0
-        self._data: DefaultDict[int, int] = defaultdict(lambda: 0)
-
-    def __getitem__(self, i: int) -> int:
-        self._check_bounds(i)
-        return self._data[i]
-
-    def __setitem__(self, i: int, value: int) -> None:
-        self._check_bounds(i)
-        self._data[i] = value
-
-    def __len__(self) -> int:
-        return self._dim0
-
-    @property
-    def shape(self) -> Tuple[int]:
-        return (self._dim0,)
-
-    def _check_bounds(self, i: int) -> None:
-        if i < 0 or i >= self._dim0:
-            raise ValueError(f'{i} is out of bounds for LazyVector with length {self._dim0}.')
-
-
-class LazyMatrix:
-    def __init__(self, dim0: int, dim1: int) -> None:
-        """
-        A lazily evaluated replacement for a 2d ndarray. I doubt it is anywhere near as fast, and
-        it can't do as much, but for cases where most entries are 0, it could be useful.
-        """
-        self._dim0 = dim0
-        self._dim1 = dim1
-        self._data: DefaultDict[int, LazyVector] = defaultdict(lambda: LazyVector(self._dim1))
-
-    def __getitem__(self, item: Tuple[int, int]) -> int:
-        self._check_bounds(item)
-        return self._data[item[0]][item[1]]
-
-    def __setitem__(self, item: Tuple[int, int], value: int) -> None:
-        self._check_bounds(item)
-        self._data[item[0]][item[1]] = value
-
-    def __len__(self) -> int:
-        return self._dim0
-
-    @property
-    def shape(self) -> Tuple[int, int]:
-        return (self._dim0, self._dim1)
-
-    def _check_bounds(self, item: Tuple[int, int]) -> None:
-        if item[0] < 0 or item[0] >= self._dim0 or item[1] < 0 or item[1] >= self._dim1:
-            raise ValueError(f'{item} is out of bounds for LazyMatrix with shape'
-                             '({self._dim0}, {self._dim1}).')
-
-
 class CommunityEdges:
     """
     Takes a node in brackets and returns all the outgoing edges of the community
