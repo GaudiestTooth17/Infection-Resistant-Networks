@@ -11,7 +11,7 @@ import itertools as it
 import partitioning
 from tqdm.std import tqdm
 from customtypes import Number
-from fileio import read_network_file
+from fileio import old_read_network_file
 
 
 def main():
@@ -19,7 +19,7 @@ def main():
         print(f'Usage: {sys.argv[0]} <network> <num components>')
         return
 
-    M, layout = read_network_file(sys.argv[1])
+    M, layout = old_read_network_file(sys.argv[1])
     G = nx.Graph(M)
     rand = np.random.default_rng(0)
     # objective = PartitioningObjective(G)

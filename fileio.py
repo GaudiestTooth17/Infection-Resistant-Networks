@@ -1,12 +1,41 @@
 import networkx as nx
 import numpy as np
 from typing import Optional, Union, Callable, Tuple, Dict, Any
-from customtypes import Layout
+from customtypes import Layout, Communities
 import os.path as op
 
 
-def output_network(G: nx.Graph, network_name: str,
-                   layout_algorithm: Optional[Union[Callable, Layout]] = None):
+def write_network(G: nx.Graph,
+                  network_name: str,
+                  layout: Layout,
+                  communities: Communities) -> None:
+    G = nx.Graph(G)
+
+    nx.set_node_attributes(G, layout, 'layout')
+    nx.set_node_attributes(G, communities, 'community')
+
+    nx.write_gml(G, network_name+'.txt')
+
+
+def read_network(file_name: str) -> Tuple[nx.Graph, Optional[Layout], Optional[Communities]]:
+    G: nx.Graph = nx.read_gml(file_name, None)
+
+    layout = nx.get_node_attributes(G, 'layout')
+    if len(layout) != len(G):
+        layout = None
+
+    node_to_community = nx.get_node_attributes(G, 'community')
+    if len(node_to_community) != len(G):
+        node_to_community = None
+
+    # get rid of the extraneous information
+    G = nx.Graph(nx.to_numpy_array(G))
+
+    return G, layout, node_to_community
+
+
+def old_output_network(G: nx.Graph, network_name: str,
+                       layout_algorithm: Optional[Union[Callable, Layout]] = None):
     """
     Saves the network to a file using the typical representation
     """
@@ -42,7 +71,7 @@ def output_network(G: nx.Graph, network_name: str,
         f.write('\n')
 
 
-def read_network_file(file_name: str) -> Tuple[np.ndarray, Optional[Layout]]:
+def old_read_network_file(file_name: str) -> Tuple[np.ndarray, Optional[Layout]]:
     with open(file_name, 'r') as f:
         line = f.readline()
         shape = (int(line[:-1]), int(line[:-1]))

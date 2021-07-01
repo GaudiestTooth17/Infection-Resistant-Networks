@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from fileio import output_network, read_network_file, get_network_name
+from fileio import old_output_network, old_read_network_file, get_network_name
 import networkx as nx
 import sys
 import time
@@ -11,14 +11,14 @@ def main(argv):
         print(f'Usage {argv[0]} <network>')
         return
 
-    M, layout = read_network_file(argv[1])
+    M, layout = old_read_network_file(argv[1])
     name = get_network_name(argv[1])
 
     G = nx.Graph(M)
     start_time = time.time()
     # layout = nx.kamada_kawai_layout(G)
     layout = nx.spring_layout(G, iterations=50, pos=layout)
-    output_network(G, name+'-with-layout', layout)
+    old_output_network(G, name+'-with-layout', layout)
     print(f'Done ({time.time()-start_time}).')
 
 

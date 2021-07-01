@@ -9,7 +9,7 @@ import sys
 from itertools import takewhile
 from typing import Callable, Counter, Dict, Iterable, List, Sequence, Set, Optional, Tuple, Union
 from customtypes import Layout, Number, CircularList
-from fileio import read_network_file, get_network_name
+from fileio import old_read_network_file, get_network_name
 RAND = np.random.default_rng()
 
 
@@ -22,12 +22,12 @@ COLORS = CircularList(['blue', 'green', 'lightcoral', 'chocolate', 'darkred',
 def main(argv: List[str]):
     if len(argv) < 2:
         print(f'Usage: {argv[0]} <network>')
-    M, layout = read_network_file(argv[1])
+    M, _ = old_read_network_file(argv[1])
     name = get_network_name(argv[1])
-    # analyze_network(M, name)
+    analyze_network(nx.Graph(M), name)
     # visualize_graph(nx.Graph(M), layout, name, edge_width_func=all_same, save=False)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
-    visualize_girvan_newman_communities(nx.Graph(M), layout, name)
+    # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
     # plot_edge_betweeness_centralities(nx.Graph(M), name)
 
 
@@ -122,7 +122,7 @@ def get_components(graph) -> Tuple[Set, ...]:
 # edge density
 def analyze_network(G: nx.Graph, name) -> None:
     M = nx.to_numpy_array(G)
-    # dac = nx.degree_assortativity_coefficient(G)
+    dac = nx.degree_assortativity_coefficient(G)
     clustering_coefficients = nx.clustering(G)
     node_to_degree = make_node_to_degree(M)
 
@@ -135,12 +135,12 @@ def analyze_network(G: nx.Graph, name) -> None:
         largest_subgraph = G.subgraph(largest_component)
         diameter = nx.diameter(largest_subgraph)
     print(f'Diameter: {diameter}')
-    # print(f'Degree assortativity coefficient: {dac}')
+    print(f'Degree assortativity coefficient: {dac}')
     show_clustering_coefficent_dist(clustering_coefficients,  # type: ignore
                                     dict(enumerate(node_to_degree)))
     # components = get_components(G)
     # print(f'size of components: {[len(comp) for comp in components]}')
-    show_deg_dist_from_matrix(M, name, display=True, save=False)
+    show_deg_dist_from_matrix(M, name, display=False, save=True)
     input('Press <enter> to continue.')
 
 
@@ -179,9 +179,11 @@ def rw_centrality(G: nx.Graph) -> List[float]:
 
 def visualize_graph(G: nx.Graph, layout: Optional[Layout], name='', save=False,
                     edge_width_func: Callable[[nx.Graph], Sequence[float]] = all_same,
-                    block=True, node_size: Union[int, Sequence[int]] = 50) -> None:
+                    block=True, node_size: Union[int, Sequence[int]] = 50,
+                    node_color: Optional[Sequence[str]] = None) -> None:
     comps = tuple(nx.connected_components(G))
-    node_color = colors_from_communities(comps)
+    if node_color is None:
+        node_color = colors_from_communities(comps)
     edge_width = edge_width_func(G)
     plt.title(f'{name}\n{len(comps)} Components')
     # node_size = np.array(tuple(nx.betweenness_centrality(G).values()))

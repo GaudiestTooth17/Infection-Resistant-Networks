@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-from fileio import get_network_name, read_network_file
+from fileio import get_network_name, old_read_network_file
 from customtypes import Layout
 import partitioning
 from multiprocessing import Pool
@@ -21,7 +21,7 @@ Parameters are D, M, current step, current sir array
 def main():
     start_time = time.time()
     net_path = 'networks/student_interaction_friday.txt'
-    M, _ = read_network_file(net_path)
+    M, _ = old_read_network_file(net_path)
     disease = Disease(4, .2)
     sir0 = np.zeros((3, M.shape[0]), dtype=np.int32)
     sir0[0] = 1
@@ -40,12 +40,12 @@ def main():
     #                     10)
 
     # For some reason, I can't use a Pool with FlickerBehavior
-    name = f'200 sims of {disease} on {get_network_name(net_path)} max_steps = 1000\n'\
-        'Flicker Behavior - Number of Susceptible Agents at Simulation End'
+    name = f'200 sims of {disease} on {get_network_name(net_path)}\n'\
+        '1 3rd Flicker Behavior - Number of Susceptible Agents at Simulation End'
     results = [simulate(M,
                         make_starting_sir(M.shape[0], 1),
                         disease,
-                        FlickerBehavior(M, 10, (True, False)),
+                        FlickerBehavior(M, 10, (True, False, False)),
                         1000,
                         None)[-1]
                for _ in tqdm(range(200))]
@@ -56,7 +56,7 @@ def main():
     med_sus = np.median(sim_to_susceptibles)
     plt.hist(sim_to_susceptibles, bins=None)
     plt.title(name)
-    plt.savefig(name, format='png')
+    plt.savefig(name+'.png', format='png')
     print('Maximum of results:', max_sus)
     print('Minimum of results:', min_sus)
     print('Average of results:', avg_sus)

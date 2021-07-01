@@ -7,6 +7,7 @@ import numpy as np
 Agent = namedtuple('Agent', 'color reach')
 NodeColors = Union[List[str], List[Tuple[int, int, int]]]
 Layout = Dict[int, Tuple[float, float]]
+Communities = Dict[int, int]
 Number = Union[int, float]
 T = TypeVar('T')
 

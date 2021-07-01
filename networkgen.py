@@ -12,7 +12,7 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 from customtypes import Layout, NodeColors, Agent
-from fileio import output_network
+from fileio import old_output_network
 
 RAND = np.random.default_rng()
 
@@ -36,7 +36,7 @@ def cgg_entry_point(argv):
 
     graph = make_complete_clique_gate_graph(num_big_components, big_component_size, gate_size)
 
-    output_network(graph, name)
+    old_output_network(graph, name)
     nx.draw(graph, node_size=100)
     plt.show()
 
@@ -64,7 +64,7 @@ def social_circles_entry_point(argv):
     keep = input('Keep? ')
     if keep.lower() == 'n':
         return social_circles_entry_point(argv)
-    output_network(G, argv[1], layout)
+    old_output_network(G, argv[1], layout)
 
 
 def connected_community_entry_point(argv):
@@ -83,7 +83,7 @@ def connected_community_entry_point(argv):
     plt.figure()
     analyze_network(G, name)
     if input('Save? ').lower() == 'y':
-        output_network(G, name, layout)
+        old_output_network(G, name, layout)
     # input('Done.')
 
 

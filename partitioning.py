@@ -1,11 +1,12 @@
+from customtypes import Communities
 from itertools import takewhile
-from typing import Generator, Iterable, Union, Tuple
+from typing import Dict, Iterable, Union, Tuple
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
 from networkx.algorithms.community import girvan_newman
-from fileio import read_network_file, get_network_name
+from fileio import old_read_network_file, get_network_name
 from analyzer import make_meta_community_layout, make_meta_community_network, visualize_graph
 from collections import Counter
 
@@ -22,30 +23,31 @@ def main():
         print(f'Usage: {sys.argv[0]} <network> <num labels/partitions>')
         return
 
-    M, layout = read_network_file(sys.argv[1])
+    M, layout = old_read_network_file(sys.argv[1])
     if layout is None:
         raise Exception('Layout cannot be None.')
     name = get_network_name(sys.argv[1])
     n_labels = int(sys.argv[2])
 
     G = nx.Graph(M)
-    # to_remove = label_partition(G, n_labels)
-    to_remove = girvan_newman_partition(G, n_labels)  # n_labels is actually num_communities
+    to_remove = label_partition(G, n_labels)
+    # to_remove = girvan_newman_partition(G, n_labels)  # n_labels is actually num_communities
     G.remove_edges_from(to_remove)
     # communities = tuple(nx.connected_components(G))
     # plt.hist(tuple(len(comm) for comm in communities), bins=None)
     # plt.figure()
     # plt.hist(tuple(len(comm) for comm in communities if len(comm) < 500), bins=None)
     # plt.figure()
-    visualize_graph(G, layout, f'{name} partitioned with {n_labels} labels', block=False)
-    plt.figure()
+    # visualize_graph(G, layout, f'{name} partitioned with {n_labels} labels', block=False)
+    # plt.figure()
     meta_community_network, node_size, edge_width = make_meta_community_network(to_remove, G)
 
     def edge_width_func(G):
         return edge_width
 
     meta_layout = make_meta_community_layout(meta_community_network, layout)
-    visualize_graph(meta_community_network, meta_layout, f'{name} meta community',
+    visualize_graph(meta_community_network, meta_layout,
+                    f'{name} meta community\n{len(meta_community_network)} communities',
                     block=True, node_size=node_size, edge_width_func=edge_width_func)
     # meta_community_network.remove_edges_from(label_partition(meta_community_network, n_labels))
     # plt.figure()
@@ -130,6 +132,22 @@ def label_partition(G: nx.Graph, labels: Union[int, np.ndarray]) -> Tuple[Tuple[
 
     edges_to_remove = filter(lambda edge: node_to_label[edge[0]] != node_to_label[edge[1]], G.edges)
     return tuple(edges_to_remove)
+
+
+def intercommunity_edges_to_communities(G: nx.Graph,
+                                        interedges: Tuple[Tuple[int, int], ...]) -> Communities:
+    """
+    Return a dictionary of node to the ID of the community it belongs to.
+
+    interedges: The edges to remove in order to break up G along community lines.
+    """
+    H = nx.Graph(G)
+    H.remove_edges_from(interedges)
+    id_to_community: Dict[int, Tuple[int, ...]] = dict(enumerate(nx.connected_components(H)))
+    node_to_community = {node: comm_id
+                         for comm_id, comm in id_to_community.items()
+                         for node in comm}
+    return node_to_community
 
 
 if __name__ == '__main__':

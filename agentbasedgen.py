@@ -8,7 +8,7 @@ import sys
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from random import choice
-from fileio import read_network_file
+from fileio import old_read_network_file
 from analyzer import COLORS, calc_prop_common_neighbors
 
 
@@ -19,7 +19,7 @@ def main():
 
     N = int_or_none(sys.argv[1])
     if N is None:
-        M, layout = read_network_file(sys.argv[1])
+        M, layout = old_read_network_file(sys.argv[1])
         G = nx.Graph(M)
         N = len(G.nodes)
     else:
