@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 
+import time
+from scipy.sparse import dok_matrix
+from tqdm.std import tqdm
 from analyzer import analyze_network, visualize_graph
 from typing import List, Tuple, Dict
 import sys
@@ -8,7 +11,7 @@ from itertools import product
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-from customtypes import Layout, NodeColors, Agent
+from customtypes import Layout, LazyMatrix, NodeColors, Agent
 from fileio import output_network
 
 RAND = np.random.default_rng()
@@ -17,8 +20,8 @@ RAND = np.random.default_rng()
 # make a component-gate graph
 def main(argv):
     # cgg_entry_point(argv)
-    # social_circles_entry_point(argv)
-    connected_community_entry_point(argv)
+    social_circles_entry_point(argv)
+    # connected_community_entry_point(argv)
 
 
 def cgg_entry_point(argv):
@@ -43,10 +46,21 @@ def social_circles_entry_point(argv):
         print(f'Usage: {argv[0]} <output name>')
         return
 
-    agents = {Agent('green', 30): 70, Agent('blue', 40): 20, Agent('purple', 50): 10}
-    G, layout, _ = make_social_circles_network(agents, (200, 200))
+    num_agents = 10_000
+    num_purple = int(num_agents * .1)
+    num_blue = int(num_agents * .2)
+    num_green = num_agents - num_purple - num_blue
+    grid_dim = int(num_agents / .003)  # the denominator is the desired density
+
+    agents = {Agent('green', 30): num_green,
+              Agent('blue', 40): num_blue,
+              Agent('purple', 50): num_purple}
+    start_time = time.time()
+    G, layout, _ = make_social_circles_network(agents, (grid_dim, grid_dim), verbose=True)
+    print(f'Finished social circles network ({time.time() - start_time}s).')
     plt.clf()
     visualize_graph(G, layout, 'Social Circles', block=False)
+    plt.hist(tuple(G.degree[n] for n in G), bins=None)
     keep = input('Keep? ')
     if keep.lower() == 'n':
         return social_circles_entry_point(argv)
@@ -128,13 +142,18 @@ def make_complete_clique_gate_graph(num_big_components, big_component_size, gate
 
 def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
                                 grid_size: Tuple[int, int],
-                                force_connected=True) -> Tuple[nx.Graph, Layout, NodeColors]:
+                                force_connected=True,
+                                verbose=False) -> Tuple[nx.Graph, Layout, NodeColors]:
     # repeat the algorithm up to some maximum attempting to generate a connected network.
     max_tries = 100
     for attempt in range(max_tries):
         agents = sorted(agent_type_to_quantity.items(),
                         key=lambda x: x[0][1], reverse=True)
-        grid = np.zeros(grid_size, dtype='uint8')
+        try:
+            grid = np.zeros(grid_size, dtype='uint8')
+        except MemoryError:
+            print('Warning: Not enough memory. Switching to dok_matrix.', file=sys.stderr)
+            grid = dok_matrix(grid_size, dtype='uint8')
         num_nodes = sum(agent_type_to_quantity.values())
         M = np.zeros((num_nodes, num_nodes), dtype='uint8')
         # place the agents with the largest reach first
@@ -142,12 +161,20 @@ def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
         current_id = 0
         for agent, quantity in agents:
             new_agents = []
-            for _ in range(quantity):
+            if verbose:
+                print(f'Placing agents with reach {agent.reach}.')
+                range_quantity = tqdm(range(quantity))
+            else:
+                range_quantity = range(quantity)
+            for _ in range_quantity:
                 x, y = choose_empty_spot(grid)
                 grid[x, y] = agent.reach
                 new_agents.append((x, y))
                 loc_to_id[(x, y)] = current_id
                 current_id += 1
+            if verbose:
+                new_agents = tqdm(new_agents)
+                print(f'Connecting agents.')
             for x, y in new_agents:
                 neighbors = search_for_neighbors(grid, x, y)
                 for i, j in neighbors:
