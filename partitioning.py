@@ -19,7 +19,7 @@ def main():
     It was really crappy on Watts-Strogatz.
     """
     if len(sys.argv) < 3:
-        print(f'Usage: {sys.argv[0]} <network> <num labels>')
+        print(f'Usage: {sys.argv[0]} <network> <num labels/partitions>')
         return
 
     M, layout = read_network_file(sys.argv[1])
@@ -30,7 +30,7 @@ def main():
 
     G = nx.Graph(M)
     # to_remove = label_partition(G, n_labels)
-    to_remove = girvan_newman_partition(G, n_labels)  # n_labels is actually n_communities
+    to_remove = girvan_newman_partition(G, n_labels)  # n_labels is actually num_communities
     G.remove_edges_from(to_remove)
     # communities = tuple(nx.connected_components(G))
     # plt.hist(tuple(len(comm) for comm in communities), bins=None)
@@ -39,15 +39,19 @@ def main():
     # plt.figure()
     visualize_graph(G, layout, f'{name} partitioned with {n_labels} labels', block=False)
     plt.figure()
-    meta_community_network, node_size = make_meta_community_network(to_remove, G)
+    meta_community_network, node_size, edge_width = make_meta_community_network(to_remove, G)
+
+    def edge_width_func(G):
+        return edge_width
+
     meta_layout = make_meta_community_layout(meta_community_network, layout)
     visualize_graph(meta_community_network, meta_layout, f'{name} meta community',
-                    block=False, node_size=node_size)
-    meta_community_network.remove_edges_from(label_partition(meta_community_network, n_labels))
-    plt.figure()
-    visualize_graph(meta_community_network, meta_layout, f'{name} meta community partitioned',
-                    node_size=node_size, block=True)
-    plt.figure()
+                    block=True, node_size=node_size, edge_width_func=edge_width_func)
+    # meta_community_network.remove_edges_from(label_partition(meta_community_network, n_labels))
+    # plt.figure()
+    # visualize_graph(meta_community_network, meta_layout, f'{name} meta community partitioned',
+    #                 node_size=node_size, block=True)
+    # plt.figure()
     # comm_degrees = degree_distributions(sorted(communities, key=lambda x: -len(x))[:10], G)
     # for i, d in enumerate(comm_degrees):
     #     plt.hist(d, bins=None)
@@ -85,10 +89,13 @@ def girvan_newman_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[in
     communities_generator: Iterable[Tuple[int, ...]] = girvan_newman(G)
     communities = tuple(takewhile(lambda comm: len(comm) <= num_communities,
                                   communities_generator))[-1]
-    edges_to_remove = tuple((u, v)
-                            for u, v in G.edges
-                            for partition in communities
-                            if u not in partition or v not in partition)
+    id_to_community = dict(enumerate(communities))
+    node_to_community = {node: comm_id
+                         for comm_id, community in id_to_community.items()
+                         for node in community}
+    edges_to_remove = tuple(set((u, v)
+                                for u, v in G.edges
+                                if node_to_community[u] != node_to_community[v]))
     return edges_to_remove
 
 
