@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 import sys
 from itertools import takewhile
-from typing import Callable, Dict, Iterable, List, Sequence, Set, Optional, Tuple, Union
+from typing import Callable, Counter, Dict, Iterable, List, Sequence, Set, Optional, Tuple, Union
 from customtypes import Layout, Number, CircularList
 from fileio import read_network_file, get_network_name
 RAND = np.random.default_rng()
@@ -25,9 +25,9 @@ def main(argv: List[str]):
     M, layout = read_network_file(argv[1])
     name = get_network_name(argv[1])
     # analyze_network(M, name)
-    visualize_graph(nx.Graph(M), layout, name, edge_width_func=all_same, save=False)
+    # visualize_graph(nx.Graph(M), layout, name, edge_width_func=all_same, save=False)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
-    # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
+    visualize_girvan_newman_communities(nx.Graph(M), layout, name)
     # plot_edge_betweeness_centralities(nx.Graph(M), name)
 
 
@@ -178,7 +178,7 @@ def rw_centrality(G: nx.Graph) -> List[float]:
 
 
 def visualize_graph(G: nx.Graph, layout: Optional[Layout], name='', save=False,
-                    edge_width_func: Callable[[nx.Graph], List[float]] = all_same,
+                    edge_width_func: Callable[[nx.Graph], Sequence[float]] = all_same,
                     block=True, node_size: Union[int, Sequence[int]] = 50) -> None:
     comps = tuple(nx.connected_components(G))
     node_color = colors_from_communities(comps)
@@ -330,12 +330,18 @@ def random_walk_centrality(G: nx.Graph, num_paths: int) -> Dict[Tuple[int, int],
 
 
 def make_meta_community_network(edges_removed: Tuple[Tuple[int, int], ...],
-                                partitioned_G: nx.Graph) -> Tuple[nx.Graph, Sequence[int]]:
+                                partitioned_G: nx.Graph)\
+                                    -> Tuple[nx.Graph, Sequence[int], Sequence[float]]:
     """
     Make a network where each node represents a partition in the original network
     and each edge represents at least one edge going between the two partitions.
+
     The nodes in the meta community network have the nodes in the communities
     they represent associated with them as attributes with the tab 'communities'.
+    The edges have a weight associated with them proportional to the number of
+    edges that crossed between the partitions in the original network.
+
+    Returns the meta community network, suggested node_size, suggested edge_width
     """
     communities = dict(enumerate(nx.connected_components(partitioned_G)))
     node_to_community = {}
@@ -350,12 +356,16 @@ def make_meta_community_network(edges_removed: Tuple[Tuple[int, int], ...],
         raise Exception(f'Cannot find {node}')
 
     community_network: nx.Graph = nx.empty_graph(len(communities))
-    community_network.add_edges_from((find_community(u), find_community(v))
-                                     for u, v in edges_removed)
+    edge_to_weight = Counter((find_community(u), find_community(v)) for u, v in edges_removed)
+    community_network.add_edges_from(edge_to_weight.keys())
     nx.set_node_attributes(community_network, communities, 'communities')
+    nx.set_edge_attributes(community_network, edge_to_weight, 'weight')
+
     node_size = np.array([len(community) for community in communities.values()])
     node_size = node_size / np.sum(node_size) * 1000
-    return community_network, node_size
+    edge_width = np.array(tuple(edge_to_weight.values()))
+    edge_width = edge_width / np.sum(edge_width) * 20
+    return community_network, node_size, edge_width
 
 
 def degree_distributions(components: Iterable[Sequence[int]],
@@ -368,10 +378,10 @@ def degree_distributions(components: Iterable[Sequence[int]],
     return comm_degrees
 
 
-def make_meta_community_layout(meta_G: nx.Graph, layout: Layout) -> Layout:
+def make_meta_community_layout(meta_G: nx.Graph, original_layout: Layout) -> Layout:
     """Make a layout for a meta community network based on the original network's layout."""
     communities = nx.get_node_attributes(meta_G, 'communities')
-    layout = {node: np.average([layout[n] for n in communities[node]], axis=0)
+    layout = {node: np.average([original_layout[n] for n in communities[node]], axis=0)
               for node in meta_G}
     return layout
 
