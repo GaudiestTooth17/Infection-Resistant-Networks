@@ -11,7 +11,7 @@ from itertools import product
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-from customtypes import Layout, LazyMatrix, NodeColors, Agent
+from customtypes import Layout, NodeColors, Agent
 from fileio import output_network
 
 RAND = np.random.default_rng()
