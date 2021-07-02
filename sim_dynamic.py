@@ -73,15 +73,16 @@ class ExperimentResults:
 
 def main():
     start_time = time.time()
-    network_names = ('agent-generated-500',
-                     'annealed-agent-generated-500',
-                     'annealed-large-diameter',
-                     'annealed-medium-diameter',
-                     'annealed-short-diameter',
-                     'cgg-500',
-                     'watts-strogatz-500-4-.1',
-                     'elitist-500',
-                     'spatial-network')
+    # network_names = ('agent-generated-500',
+    #                  'annealed-agent-generated-500',
+    #                  'annealed-large-diameter',
+    #                  'annealed-medium-diameter',
+    #                  'annealed-short-diameter',
+    #                  'cgg-500',
+    #                  'watts-strogatz-500-4-.1',
+    #                  'elitist-500',
+    #                  'spatial-network')
+    network_names = ('connected-comm-50-10',)
     network_paths = ['networks/'+name+'.txt' for name in network_names]
     # verify that all the networks exist
     found_errors = False
