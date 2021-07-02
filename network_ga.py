@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import hcmioptim.ga as ga
-from analyzer import visualize_graph, betw_centrality
+from analyzer import visualize_network, betw_centrality
 from encoding_lib import edge_set_to_network, degree_sequence_to_network
 
 
@@ -43,9 +43,9 @@ def main():
     plt.hist(tuple(x[1] for x in G.degree), bins=None)
     plt.show(block=False)
     plt.figure()
-    visualize_graph(G, None,
-                    f'From Edge List\nCost: {global_best[0]}',
-                    False, betw_centrality, False)
+    visualize_network(G, None,
+                      f'From Edge List\nCost: {global_best[0]}',
+                      False, betw_centrality, False)
 
     input('Press <enter> to exit.')
 

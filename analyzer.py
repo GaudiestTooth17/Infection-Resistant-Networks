@@ -22,10 +22,10 @@ COLORS = CircularList(['blue', 'green', 'lightcoral', 'chocolate', 'darkred',
 def main(argv: List[str]):
     if len(argv) < 2:
         print(f'Usage: {argv[0]} <network>')
-    M, _ = old_read_network_file(argv[1])
+    M, layout = old_read_network_file(argv[1])
     name = get_network_name(argv[1])
-    analyze_network(nx.Graph(M), name)
-    # visualize_graph(nx.Graph(M), layout, name, edge_width_func=all_same, save=False)
+    # analyze_network(nx.Graph(M), name)
+    visualize_network(nx.Graph(M), layout, name, edge_width_func=all_same, save=True)
     # visualize_eigen_communities(nx.Graph(M), layout, name)
     # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
     # plot_edge_betweeness_centralities(nx.Graph(M), name)
@@ -177,10 +177,10 @@ def rw_centrality(G: nx.Graph) -> List[float]:
     return width
 
 
-def visualize_graph(G: nx.Graph, layout: Optional[Layout], name='', save=False,
-                    edge_width_func: Callable[[nx.Graph], Sequence[float]] = all_same,
-                    block=True, node_size: Union[int, Sequence[int]] = 50,
-                    node_color: Optional[Sequence[str]] = None) -> None:
+def visualize_network(G: nx.Graph, layout: Optional[Layout], name='', save=False,
+                      edge_width_func: Callable[[nx.Graph], Sequence[float]] = all_same,
+                      block=True, node_size: Union[int, Sequence[int]] = 50,
+                      node_color: Optional[Sequence[str]] = None) -> None:
     comps = tuple(nx.connected_components(G))
     if node_color is None:
         node_color = colors_from_communities(comps)

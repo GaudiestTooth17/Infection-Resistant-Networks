@@ -4,7 +4,7 @@ import sys
 from partitioning import (girvan_newman_partition, intercommunity_edges_to_communities,
                           label_partition)
 from fileio import old_read_network_file, get_network_name, write_network, read_network
-from analyzer import (visualize_graph, COLORS, make_meta_community_network,
+from analyzer import (visualize_network, COLORS, make_meta_community_network,
                       make_meta_community_layout)
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -53,12 +53,12 @@ def main():
 
     print(f'There are {len(meta_network)} communities.')
     node_color = [COLORS[i] for i in communities.values()]
-    visualize_graph(G, layout, new_name, node_color=node_color, block=False)  # type: ignore
+    visualize_network(G, layout, new_name, node_color=node_color, block=False)  # type: ignore
     plt.figure()
     plt.hist([len(comp) for comp in nx.connected_components(partitioned)], bins=None)
     plt.figure()
-    visualize_graph(meta_network, meta_layout, new_name+' meta community',
-                    node_size=meta_ns, edge_width_func=lambda G: meta_ew)
+    visualize_network(meta_network, meta_layout, new_name+' meta community',
+                      node_size=meta_ns, edge_width_func=lambda G: meta_ew)
 
 
 if __name__ == '__main__':

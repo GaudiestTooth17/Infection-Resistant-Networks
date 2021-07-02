@@ -3,7 +3,7 @@
 import time
 from scipy.sparse import dok_matrix
 from tqdm.std import tqdm
-from analyzer import analyze_network, visualize_graph
+from analyzer import analyze_network, visualize_network
 from typing import List, Tuple, Dict
 import sys
 import math
@@ -41,10 +41,10 @@ def cgg_entry_point(argv):
     print(f'Network has {len(G)} nodes.')
     print(type(layout[0]))
     write_network(G, name, layout, node_to_community)
-    visualize_graph(G, layout, name, block=False)
+    visualize_network(G, layout, name, block=False)
     plt.figure()
     G.remove_edges_from((u, v) for u, v in G.edges if node_to_community[u] != node_to_community[v])
-    visualize_graph(G, layout, name+' partitioned')
+    visualize_network(G, layout, name+' partitioned')
 
 
 def social_circles_entry_point(argv):
@@ -65,7 +65,7 @@ def social_circles_entry_point(argv):
     G, layout, _ = make_social_circles_network(agents, (grid_dim, grid_dim), verbose=True)
     print(f'Finished social circles network ({time.time() - start_time}s).')
     plt.clf()
-    visualize_graph(G, layout, 'Social Circles', block=False)
+    visualize_network(G, layout, 'Social Circles', block=False)
     plt.hist(tuple(G.degree[n] for n in G), bins=None)
     keep = input('Keep? ')
     if keep.lower() == 'n':
@@ -90,7 +90,7 @@ def connected_community_entry_point(argv):
         if nx.is_connected(G):
             break
     layout = nx.spring_layout(G, iterations=200)
-    visualize_graph(G, layout, name, block=False)
+    visualize_network(G, layout, name, block=False)
     # plt.figure()
     # analyze_network(G, name)
     if input('Save? ').lower() == 'y':

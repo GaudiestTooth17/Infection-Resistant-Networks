@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import sys
 from networkx.algorithms.community import girvan_newman
 from fileio import old_read_network_file, get_network_name
-from analyzer import make_meta_community_layout, make_meta_community_network, visualize_graph
+from analyzer import make_meta_community_layout, make_meta_community_network, visualize_network
 from collections import Counter
 
 
@@ -46,9 +46,9 @@ def main():
         return edge_width
 
     meta_layout = make_meta_community_layout(meta_community_network, layout)
-    visualize_graph(meta_community_network, meta_layout,
-                    f'{name} meta community\n{len(meta_community_network)} communities',
-                    block=True, node_size=node_size, edge_width_func=edge_width_func)
+    visualize_network(meta_community_network, meta_layout,
+                      f'{name} meta community\n{len(meta_community_network)} communities',
+                      block=True, node_size=node_size, edge_width_func=edge_width_func)
     # meta_community_network.remove_edges_from(label_partition(meta_community_network, n_labels))
     # plt.figure()
     # visualize_graph(meta_community_network, meta_layout, f'{name} meta community partitioned',

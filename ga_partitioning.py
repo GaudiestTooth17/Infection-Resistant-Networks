@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from analyzer import visualize_graph
+from analyzer import visualize_network
 from hcmioptim import ga
 import networkx as nx
 import numpy as np
@@ -66,7 +66,7 @@ def main():
     plt.title('Cost')
     plt.plot(costs)
     plt.figure()
-    visualize_graph(partitioned, layout, 'Partitioned via Label GA')
+    visualize_network(partitioned, layout, 'Partitioned via Label GA')
 
 
 class PartitioningObjective:
