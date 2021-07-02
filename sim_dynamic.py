@@ -79,7 +79,7 @@ def main():
                      'annealed-medium-diameter',
                      'annealed-short-diameter',
                      'cgg-500',
-                     'watts-strogatz-500',
+                     'watts-strogatz-500-4-.1',
                      'elitist-500',
                      'spatial-network')
     network_paths = ['networks/'+name+'.txt' for name in network_names]
