@@ -77,7 +77,6 @@ def connected_community_entry_point(argv):
     N_comm = 10
     num_communities = 50
     name = f'connected-comm-{num_communities}-{N_comm}'
-    done = False
     G = nx.Graph()
     node_to_community = {}
     for _ in range(100):
