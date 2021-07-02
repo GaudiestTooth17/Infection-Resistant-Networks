@@ -116,7 +116,8 @@ def label_partition(G: nx.Graph, labels: Union[int, np.ndarray]) -> Tuple[Tuple[
     else:
         node_to_label = labels
 
-    for _ in range(100):
+    max_steps = 1000
+    for step in range(max_steps):
         # do label propagation
         new_labels = np.zeros(len(G), dtype=np.int64)
         for node in G:
