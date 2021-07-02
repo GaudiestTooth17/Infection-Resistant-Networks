@@ -102,9 +102,12 @@ def main():
     with Pool(min(len(arguments), 10)) as p:
         expirement_results = p.map(run_experiments, arguments)
 
+    results_dir = 'experiment results'
+    if not os.path.exists(results_dir):
+        os.mkdir(results_dir)
     for result in expirement_results:
         if result is not None:
-            result.save('experiment results')
+            result.save(results_dir)
 
     print(f'Finished simulations ({time.time()-start_time}).')
 
