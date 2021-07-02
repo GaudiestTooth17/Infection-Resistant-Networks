@@ -67,7 +67,7 @@ class ExperimentResults:
                            f'Mean:{np.mean(results) : >15}\n\n']
 
         # save text entries
-        with open(os.path.join(path, f'{self.network_name}.txt')) as file:
+        with open(os.path.join(path, f'{self.network_name}.txt'), 'w') as file:
             file.writelines(file_lines)
 
 
@@ -330,11 +330,12 @@ def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig]]
         # Each entry is the sum of the number of entries in the final SIR where
         # the days in S are greater than 0. That is to say, the number of
         # susceptible agents at the end of the simulation.
-        num_sus = tuple(np.sum(np.where(simulate(M,
-                                                 make_starting_sir(N, 1),
-                                                 disease, behavior,
-                                                 sim_len,
-                                                 None)[-1][0] > 0)[0])
+        num_sus = tuple(np.sum(simulate(M,
+                                        make_starting_sir(N, 1),
+                                        disease,
+                                        behavior,
+                                        sim_len,
+                                        None)[-1][0] > 0)
                         for _ in range(num_sims))
         behavior_to_results[behavior.name] = num_sus
 
