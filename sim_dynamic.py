@@ -1,14 +1,14 @@
-from typing import Callable, List, Optional, Tuple, Union
+import time
+from typing import Callable, Collection, Dict, List, Optional, Sequence, Tuple, Union
 from dataclasses import dataclass
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-from fileio import get_network_name, old_read_network_file
+from fileio import get_network_name, read_network
 from customtypes import Layout
-import partitioning
 from multiprocessing import Pool
-import time
 from tqdm import tqdm
+import os
 RAND = np.random.default_rng()
 
 UpdateConnections = Callable[[np.ndarray, np.ndarray, int, np.ndarray], np.ndarray]
@@ -18,62 +18,101 @@ Parameters are D, M, current step, current sir array
 """
 
 
+@dataclass
+class Disease:
+    days_infectious: int
+    trans_prob: float
+
+
+@dataclass
+class ExperimentResults:
+    """
+    network_name
+    sims_per_behavior
+    behavior_to_num_sus: How many agents were still susceptible at the end of
+                         each simulation with the specified behavior.
+    """
+    network_name: str
+    sims_per_behavior: int
+    sim_len: int
+    proportion_flickering_edges: float
+    behavior_to_num_sus: Dict[str, Sequence[int]]
+
+    def save(self, directory: str) -> None:
+        """Save a histogram and a text file with analysis information in directory."""
+        path = os.path.join(directory, self.network_name)
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+        file_lines = [f'Name: {self.network_name}\n',
+                      f'Number of sims per behavior: {self.sims_per_behavior}\n',
+                      f'Simulation length: {self.sim_len}\n'
+                      f'Proportion of edges flickering: {self.proportion_flickering_edges:.4}\n\n']
+        for behavior_name, results in self.behavior_to_num_sus.items():
+            # create histogram
+            plt.figure()
+            title = f'{self.network_name} {behavior_name}\n'\
+                f'sims={self.sims_per_behavior} sim_len={self.sim_len}'
+            plt.title(title)
+            plt.xlabel('Number of Susceptible Agents')
+            plt.ylabel('Frequency')
+            plt.hist(results, bins=None)
+            plt.savefig(os.path.join(path, title+'.png'), format='png')
+
+            # create text entry
+            file_lines += [f'{behavior_name}\n',
+                           f'Min:{np.min(results) : >15}\n',
+                           f'Max:{np.max(results) : >15}\n',
+                           f'Median:{np.median(results) : >15}\n',
+                           f'Mean:{np.mean(results) : >15}\n\n']
+
+        # save text entries
+        with open(os.path.join(path, f'{self.network_name}.txt')) as file:
+            file.writelines(file_lines)
+
+
 def main():
     start_time = time.time()
-    net_path = 'networks/student_interaction_friday.txt'
-    M, _ = old_read_network_file(net_path)
-    disease = Disease(4, .2)
-    sir0 = np.zeros((3, M.shape[0]), dtype=np.int32)
-    sir0[0] = 1
-    to_infect = RAND.choice(range(M.shape[0]))
-    sir0[1, to_infect] = 1
-    sir0[0, to_infect] = 0
+    network_names = ('agent-generated-500',
+                     'annealed-agent-generated-500',
+                     'annealed-large-diameter',
+                     'annealed-medium-diameter',
+                     'annealed-short-diameter',
+                     'cgg-500',
+                     'watts-strogatz-500',
+                     'elitist-500',
+                     'spatial-network')
+    network_paths = ['networks/'+name+'.txt' for name in network_names]
+    # verify that all the networks exist
+    found_errors = False
+    for path in network_paths:
+        if not os.path.isfile(path):
+            print(f'{path} does not exist!')
+            found_errors = True
+    if found_errors:
+        print('Fix errors before continuing')
+        exit(1)
 
-    # using a Pool works fine with no_update
-    # name = f'200 sims of {disease} on {get_network_name(net_path)} max_steps = 1000\n'\
-    #     'No Dynamic Behavior\nNumber of Susceptible Agents at Simulation End'
-    # print(name)
-    # with Pool(5) as p:
-    #     results = p.map(pool_friendly_simulate,
-    #                     ((M, 1, disease, no_update, 1000)
-    #                      for _ in range(200)),
-    #                     10)
+    flicker_configurations = [FlickerConfig((True,), 'Static'),
+                              FlickerConfig((True, False), 'One Half Flicker'),
+                              FlickerConfig((True, False, False), 'One Third Flicker')]
+    arguments = [(path, 1000, 500, Disease(4, .2), flicker_configurations)
+                 for path in network_paths]
+    # use a maximum of 10 cores
+    with Pool(min(len(arguments), 10)) as p:
+        expirement_results = p.map(run_experiments, arguments)
 
-    # For some reason, I can't use a Pool with FlickerBehavior
-    name = f'200 sims of {disease} on {get_network_name(net_path)}\n'\
-        '1 3rd Flicker Behavior - Number of Susceptible Agents at Simulation End'
-    results = [simulate(M,
-                        make_starting_sir(M.shape[0], 1),
-                        disease,
-                        FlickerBehavior(M, 10, (True, False, False)),
-                        1000,
-                        None)[-1]
-               for _ in tqdm(range(200))]
-    sim_to_susceptibles = np.array(tuple(np.sum(result[0]) for result in results))
-    max_sus = np.max(sim_to_susceptibles)
-    min_sus = np.min(sim_to_susceptibles)
-    avg_sus = np.average(sim_to_susceptibles)
-    med_sus = np.median(sim_to_susceptibles)
-    plt.hist(sim_to_susceptibles, bins=None)
-    plt.title(name)
-    plt.savefig(name+'.png', format='png')
-    print('Maximum of results:', max_sus)
-    print('Minimum of results:', min_sus)
-    print('Average of results:', avg_sus)
-    print('Median of results: ', med_sus)
-    print(f'Finished ({time.time()-start_time}).')
+    for result in expirement_results:
+        if result is not None:
+            result.save('experiment results')
+
+    print(f'Finished simulations ({time.time()-start_time}).')
 
 
 def pool_friendly_simulate(args):
     M, n_to_infect, disease, behavior, max_steps = args
     sir0 = make_starting_sir(M.shape[0], n_to_infect)
     return simulate(M, sir0, disease, behavior, max_steps, None)[-1]
-
-
-@dataclass
-class Disease:
-    days_infectious: int
-    trans_prob: float
 
 
 def simulate(M: np.ndarray,
@@ -218,7 +257,10 @@ def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]]) -> np.ndar
 
 
 class FlickerBehavior:
-    def __init__(self, M: np.ndarray, n_labels: int, flicker_pattern: Tuple[bool, ...]) -> None:
+    def __init__(self, M: np.ndarray,
+                 edges_to_flicker: Collection[Tuple[int, int]],
+                 flicker_pattern: Tuple[bool, ...],
+                 name: Optional[str] = None) -> None:
         """
         Flickers inter-community edges according to flicker_pattern.
 
@@ -228,7 +270,6 @@ class FlickerBehavior:
         flicker_pattern: True means that inter-community edges are on. False means they are off.
                          The values will automatically cycle after they have all been used.
         """
-        edges_to_flicker = partitioning.label_partition(nx.Graph(M), n_labels)
         self._flicker_pattern = flicker_pattern
         self._edges_on_M = np.copy(M)
         self._edges_off_M = np.copy(M)
@@ -236,10 +277,66 @@ class FlickerBehavior:
             self._edges_off_M[u, v] = 0
             self._edges_off_M[v, u] = 0
 
+        self.name = name if name is not None else f'Flicker {flicker_pattern}'
+
     def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
         if self._flicker_pattern[time_step % len(self._flicker_pattern)]:
             return self._edges_on_M
         return self._edges_off_M
+
+
+class FlickerConfig:
+    def __init__(self, flicker_pattern: Tuple[bool, ...], name: str):
+        self._flicker_pattern = flicker_pattern
+        self._name = name
+
+    def make_flicker_behavior(self, M: np.ndarray,
+                              edges_to_flicker: Collection[Tuple[int, int]]) -> FlickerBehavior:
+        return FlickerBehavior(M, edges_to_flicker, self._flicker_pattern, self._name)
+
+
+def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig]])\
+        -> Optional[ExperimentResults]:
+    """
+    Run a batch of experiments and return a tuple containing the network's name,
+    number of flickering edges, and a mapping of behavior name to the final
+    amount of susceptible nodes. Return None on failure.
+
+    args: (path to the network,
+           number of sims to run for each behavior,
+           simulation length,
+           disease,
+           a sequence of configs for the flickers to use.)
+    """
+    network_path, num_sims, sim_len, disease, flicker_configs = args
+    G, layout, communities = read_network(network_path)
+    if layout is None:
+        print(f'{get_network_name(network_path)} has no layout.')
+        return None
+    if communities is None:
+        print(f'{get_network_name(network_path)} has no community data.')
+        return None
+    M = nx.to_numpy_array(G)
+    intercommunity_edges = {(u, v) for u, v in G.edges if communities[u] != communities[v]}
+    N = M.shape[0]
+
+    behavior_to_results: Dict[str, Sequence[int]] = {}
+    for config in flicker_configs:
+        behavior = config.make_flicker_behavior(M, intercommunity_edges)
+        # The tuple comprehension is pretty arcane, so here is an explanation.
+        # Each entry is the sum of the number of entries in the final SIR where
+        # the days in S are greater than 0. That is to say, the number of
+        # susceptible agents at the end of the simulation.
+        num_sus = tuple(np.sum(np.where(simulate(M,
+                                                 make_starting_sir(N, 1),
+                                                 disease, behavior,
+                                                 sim_len,
+                                                 None)[-1][0] > 0)[0])
+                        for _ in range(num_sims))
+        behavior_to_results[behavior.name] = num_sus
+
+    return ExperimentResults(get_network_name(network_path), num_sims, sim_len,
+                             len(intercommunity_edges)/len(G.edges), behavior_to_results)
 
 
 if __name__ == '__main__':
