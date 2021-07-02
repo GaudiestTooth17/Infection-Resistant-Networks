@@ -11,8 +11,8 @@ from itertools import product
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-from customtypes import Layout, NodeColors, Agent
-from fileio import old_output_network
+from customtypes import Communities, Layout, NodeColors, Agent
+from fileio import old_output_network, write_network
 
 RAND = np.random.default_rng()
 
@@ -20,13 +20,13 @@ RAND = np.random.default_rng()
 # make a component-gate graph
 def main(argv):
     # cgg_entry_point(argv)
-    social_circles_entry_point(argv)
-    # connected_community_entry_point(argv)
+    # social_circles_entry_point(argv)
+    connected_community_entry_point(argv)
 
 
 def cgg_entry_point(argv):
     if len(argv) < 4:
-        print(f'Usage: {argv[0]} <num-big-components> <big-component-size> <gate-size>')
+        print(f'Usage: {argv[0]} <num-big-components> <big-component-size> <gate-size> [name]')
         return
 
     num_big_components = int(argv[1])
@@ -34,11 +34,17 @@ def cgg_entry_point(argv):
     gate_size = int(argv[3])
     name = argv[4]
 
-    graph = make_complete_clique_gate_graph(num_big_components, big_component_size, gate_size)
-
-    old_output_network(graph, name)
-    nx.draw(graph, node_size=100)
-    plt.show()
+    G, node_to_community = make_complete_clique_gate_graph(num_big_components,
+                                                           big_component_size,
+                                                           gate_size)
+    layout = nx.kamada_kawai_layout(G)
+    print(f'Network has {len(G)} nodes.')
+    print(type(layout[0]))
+    write_network(G, name, layout, node_to_community)
+    visualize_graph(G, layout, name, block=False)
+    plt.figure()
+    G.remove_edges_from((u, v) for u, v in G.edges if node_to_community[u] != node_to_community[v])
+    visualize_graph(G, layout, name+' partitioned')
 
 
 def social_circles_entry_point(argv):
@@ -70,20 +76,20 @@ def social_circles_entry_point(argv):
 def connected_community_entry_point(argv):
     N_comm = 10
     num_communities = 100
-    name = f'Connected Comm {num_communities} {N_comm}'
+    name = f'connected-comm-{num_communities}-{N_comm}'
     inner_degrees = np.round(RAND.poisson(10, N_comm))
     if np.sum(inner_degrees) % 2 == 1:
         inner_degrees[np.argmin(inner_degrees)] += 1
     outer_degrees = np.round(RAND.poisson(4, num_communities))
     if np.sum(outer_degrees) % 2 == 1:
         outer_degrees[np.argmin(outer_degrees)] += 1
-    G = make_connected_community_network(inner_degrees, outer_degrees)
-    layout = nx.kamada_kawai_layout(G)
+    G, node_to_community = make_connected_community_network(inner_degrees, outer_degrees)
+    layout = nx.spring_layout(G, iterations=100)
     visualize_graph(G, layout, name, block=False)
-    plt.figure()
-    analyze_network(G, name)
+    # plt.figure()
+    # analyze_network(G, name)
     if input('Save? ').lower() == 'y':
-        old_output_network(G, name, layout)
+        write_network(G, name, layout, node_to_community)
     # input('Done.')
 
 
@@ -99,7 +105,9 @@ def union_components(components: List[nx.Graph]) -> nx.Graph:
     return master_graph
 
 
-def make_complete_clique_gate_graph(num_big_components, big_component_size, gate_size):
+def make_complete_clique_gate_graph(num_big_components: int,
+                                    big_component_size: int,
+                                    gate_size: int) -> Tuple[nx.Graph, Communities]:
     """
     A clique-gate graph is made up of several cliques that are psuedo nodes. The pseudo edges
     that connect them are smaller cliques (gates). Half the nodes in the gate have an edge into
@@ -117,7 +125,7 @@ def make_complete_clique_gate_graph(num_big_components, big_component_size, gate
                                              big_component_size))
     big_comps = [nx.complete_graph(node_ids) for node_ids in component_node_ids]
 
-    # union the disparate components
+    # put the disparate components into the same network
     master_graph = union_components(gates + big_comps)
 
     # insert gates in between components
@@ -137,7 +145,10 @@ def make_complete_clique_gate_graph(num_big_components, big_component_size, gate
             for i, node in enumerate(gate_nodes[len(gate_nodes)//2:]):
                 master_graph.add_edge(node, dest_nodes[i])
 
-    return master_graph
+    node_to_community_id = {node: comm_id
+                            for comm_id, sub_graph in enumerate(gates+big_comps)
+                            for node in sub_graph}
+    return master_graph, node_to_community_id
 
 
 def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
@@ -244,7 +255,7 @@ def make_configuration_network(degree_distribution: np.ndarray) -> np.ndarray:
 
 
 def make_connected_community_network(inner_degrees: np.ndarray,
-                                     outer_degrees: np.ndarray) -> nx.Graph:
+                                     outer_degrees: np.ndarray) -> Tuple[nx.Graph, Communities]:
     """
     Create a random network divided into randomly generated communities connected to each other.
 
@@ -258,13 +269,16 @@ def make_connected_community_network(inner_degrees: np.ndarray,
     community_size = len(inner_degrees)
     N = community_size * num_communities
     M = np.zeros((N, N), dtype=np.uint8)
+    node_to_community: Communities = {}
 
-    for c in range(num_communities):
-        c_offset = c * community_size
-        cm = make_configuration_network(inner_degrees)
+    for community_id in range(num_communities):
+        c_offset = community_id * community_size
+        comm_M = make_configuration_network(inner_degrees)
         for n1 in range(community_size):
             for n2 in range(community_size):
-                M[n1 + c_offset, n2 + c_offset] = cm[n1, n2]
+                M[n1 + c_offset, n2 + c_offset] = comm_M[n1, n2]
+                node_to_community[n1+c_offset] = community_id
+                node_to_community[n2+c_offset] = community_id
 
     outer_m = make_configuration_network(outer_degrees)
     for c1 in range(num_communities):
@@ -276,7 +290,7 @@ def make_connected_community_network(inner_degrees: np.ndarray,
                     M[n1, n2] = 1
                     M[n2, n1] = 1
 
-    return nx.Graph(M)
+    return nx.Graph(M), node_to_community
 
 
 if __name__ == '__main__':
