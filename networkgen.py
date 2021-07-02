@@ -75,16 +75,22 @@ def social_circles_entry_point(argv):
 
 def connected_community_entry_point(argv):
     N_comm = 10
-    num_communities = 100
+    num_communities = 50
     name = f'connected-comm-{num_communities}-{N_comm}'
-    inner_degrees = np.round(RAND.poisson(10, N_comm))
-    if np.sum(inner_degrees) % 2 == 1:
-        inner_degrees[np.argmin(inner_degrees)] += 1
-    outer_degrees = np.round(RAND.poisson(4, num_communities))
-    if np.sum(outer_degrees) % 2 == 1:
-        outer_degrees[np.argmin(outer_degrees)] += 1
-    G, node_to_community = make_connected_community_network(inner_degrees, outer_degrees)
-    layout = nx.spring_layout(G, iterations=100)
+    done = False
+    G = nx.Graph()
+    node_to_community = {}
+    for _ in range(100):
+        inner_degrees = np.round(RAND.poisson(10, N_comm))
+        if np.sum(inner_degrees) % 2 == 1:
+            inner_degrees[np.argmin(inner_degrees)] += 1
+        outer_degrees = np.round(RAND.poisson(4, num_communities))
+        if np.sum(outer_degrees) % 2 == 1:
+            outer_degrees[np.argmin(outer_degrees)] += 1
+        G, node_to_community = make_connected_community_network(inner_degrees, outer_degrees)
+        if nx.is_connected(G):
+            break
+    layout = nx.spring_layout(G, iterations=200)
     visualize_graph(G, layout, name, block=False)
     # plt.figure()
     # analyze_network(G, name)
