@@ -393,3 +393,5 @@ if __name__ == '__main__':
         main(sys.argv)
     except EOFError:
         print('\nGood-bye.')
+    except KeyboardInterrupt:
+        print('\nGood-bye.')
