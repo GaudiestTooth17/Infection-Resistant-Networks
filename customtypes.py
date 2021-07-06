@@ -1,6 +1,9 @@
-from typing import DefaultDict, List, Dict, Tuple, Union, Set, TypeVar, Generic
+from typing import List, Dict, Tuple, Union, Set, TypeVar, Generic, Sequence
 from collections import namedtuple, defaultdict
 import numpy as np
+import matplotlib.pyplot as plt
+import os
+from dataclasses import dataclass
 
 
 # color is a string and reach is a number
@@ -99,3 +102,50 @@ class CommunityEdges:
         Returns the outgoing edges of the community that agent belongs to.
         """
         return self._community_to_outgoing_edges[self._node_to_community[agent]]
+
+
+@dataclass
+class ExperimentResults:
+    """
+    network_name
+    sims_per_behavior
+    behavior_to_num_sus: How many agents were still susceptible at the end of
+                         each simulation with the specified behavior.
+    """
+    network_name: str
+    sims_per_behavior: int
+    sim_len: int
+    proportion_flickering_edges: float
+    behavior_to_num_sus: Dict[str, Sequence[int]]
+
+    def save(self, directory: str) -> None:
+        """Save a histogram and a text file with analysis information in directory."""
+        path = os.path.join(directory, self.network_name)
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+        file_lines = [f'Name: {self.network_name}\n',
+                      f'Number of sims per behavior: {self.sims_per_behavior}\n',
+                      f'Simulation length: {self.sim_len}\n'
+                      f'Proportion of edges flickering: {self.proportion_flickering_edges:.4}\n\n']
+        for behavior_name, results in self.behavior_to_num_sus.items():
+            # create histogram
+            plt.figure()
+            title = f'{self.network_name} {behavior_name}\n'\
+                f'sims={self.sims_per_behavior} sim_len={self.sim_len}'
+            plt.title(title)
+            plt.xlabel('Number of Susceptible Agents')
+            plt.ylabel('Frequency')
+            plt.hist(results, bins=None)
+            plt.savefig(os.path.join(path, title+'.png'), format='png')
+
+            # create text entry
+            file_lines += [f'{behavior_name}\n',
+                           f'Min:{np.min(results) : >15}\n',
+                           f'Max:{np.max(results) : >15}\n',
+                           f'Median:{np.median(results) : >15}\n',
+                           f'Mean:{np.mean(results) : >15}\n\n']
+
+        # save text entries
+        with open(os.path.join(path, f'{self.network_name}.txt'), 'w') as file:
+            file.writelines(file_lines)
