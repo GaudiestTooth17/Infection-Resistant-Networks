@@ -77,7 +77,7 @@ def connected_community_entry_point(argv):
     N_comm = 10
     num_communities = 50
     name = f'connected-comm-{num_communities}-{N_comm}'
-    G = nx.Graph()
+    G: nx.Graph = None  # type: ignore
     node_to_community = {}
     for _ in range(100):
         inner_degrees = np.round(RAND.poisson(10, N_comm))
@@ -261,7 +261,8 @@ def make_configuration_network(degree_distribution: np.ndarray, rand) -> np.ndar
 
 def make_connected_community_network(inner_degrees: np.ndarray,
                                      outer_degrees: np.ndarray,
-                                     rand=RAND) -> Tuple[nx.Graph, Communities]:
+                                     rand=RAND,
+                                     force_connected: bool = True) -> Tuple[nx.Graph, Communities]:
     """
     Create a random network divided into randomly generated communities connected to each other.
 
@@ -296,7 +297,10 @@ def make_connected_community_network(inner_degrees: np.ndarray,
                     M[n1, n2] = 1
                     M[n2, n1] = 1
 
-    return nx.Graph(M), node_to_community
+    G = nx.Graph(M)
+    if not force_connected or nx.is_connected(G):
+        return nx.Graph(M), node_to_community
+    return make_connected_community_network(inner_degrees, outer_degrees, rand, force_connected)
 
 
 if __name__ == '__main__':
