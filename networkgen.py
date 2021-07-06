@@ -3,7 +3,7 @@
 import time
 from scipy.sparse import dok_matrix
 from tqdm.std import tqdm
-from analyzer import analyze_network, visualize_network
+from analyzer import visualize_network
 from typing import List, Tuple, Dict
 import sys
 import math
@@ -190,7 +190,7 @@ def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
                 current_id += 1
             if verbose:
                 new_agents = tqdm(new_agents)
-                print(f'Connecting agents.')
+                print('Connecting agents.')
             for x, y in new_agents:
                 neighbors = search_for_neighbors(grid, x, y)
                 for i, j in neighbors:
@@ -240,7 +240,7 @@ def distance(x0, y0, x1, y1) -> float:
     return math.sqrt((x0-x1)**2 + (y0-y1)**2)
 
 
-def make_configuration_network(degree_distribution: np.ndarray) -> np.ndarray:
+def make_configuration_network(degree_distribution: np.ndarray, rand) -> np.ndarray:
     """Create a random network with the provided degree distribution."""
     degree_distribution = np.copy(degree_distribution)
 
@@ -248,9 +248,9 @@ def make_configuration_network(degree_distribution: np.ndarray) -> np.ndarray:
     M = np.zeros((N, N), dtype=np.uint8)
 
     while np.sum(degree_distribution > 0):
-        a = np.random.choice(np.where(degree_distribution > 0)[0])
+        a = rand.choice(np.where(degree_distribution > 0)[0])
         degree_distribution[a] -= 1
-        b = np.random.choice(np.where(degree_distribution > 0)[0])
+        b = rand.choice(np.where(degree_distribution > 0)[0])
         degree_distribution[b] -= 1
 
         M[a, b] += 1
@@ -260,7 +260,8 @@ def make_configuration_network(degree_distribution: np.ndarray) -> np.ndarray:
 
 
 def make_connected_community_network(inner_degrees: np.ndarray,
-                                     outer_degrees: np.ndarray) -> Tuple[nx.Graph, Communities]:
+                                     outer_degrees: np.ndarray,
+                                     rand=RAND) -> Tuple[nx.Graph, Communities]:
     """
     Create a random network divided into randomly generated communities connected to each other.
 
@@ -278,20 +279,20 @@ def make_connected_community_network(inner_degrees: np.ndarray,
 
     for community_id in range(num_communities):
         c_offset = community_id * community_size
-        comm_M = make_configuration_network(inner_degrees)
+        comm_M = make_configuration_network(inner_degrees, rand)
         for n1 in range(community_size):
             for n2 in range(community_size):
                 M[n1 + c_offset, n2 + c_offset] = comm_M[n1, n2]
                 node_to_community[n1+c_offset] = community_id
                 node_to_community[n2+c_offset] = community_id
 
-    outer_m = make_configuration_network(outer_degrees)
+    outer_m = make_configuration_network(outer_degrees, rand)
     for c1 in range(num_communities):
         for c2 in range(c1, num_communities):
             if outer_m[c1, c2] > 0:
                 for _ in range(int(outer_m[c1, c2])):
-                    n1 = c1 * community_size + np.random.randint(community_size)
-                    n2 = c2 * community_size + np.random.randint(community_size)
+                    n1 = c1 * community_size + rand.integers(community_size)
+                    n2 = c2 * community_size + rand.integers(community_size)
                     M[n1, n2] = 1
                     M[n2, n1] = 1
 
