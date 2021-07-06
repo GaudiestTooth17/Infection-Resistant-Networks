@@ -58,3 +58,17 @@ def network_to_edge_set(M: np.ndarray) -> np.ndarray:
             edge_set[edge_ind] = M[i, j]
             edge_ind += 1
     return edge_set
+
+
+def edge_list_to_network(edge_list: np.ndarray) -> nx.Graph:
+    """
+    edge_list is the concrete implementation of the thing created by a degree configuration.
+    If a node has degree n, that node's integer ID will appear n times in edge_list. Edges are
+    created by putting the values in groups of two starting at index 0 and proceeding to the end.
+    In this way, edge_list can be viewed as a List[Tuple[int, int]].
+    """
+    N = np.max(edge_list)
+    G = nx.empty_graph(N)
+    G.add_edges_from(((edge_list[i], edge_list[i+1])
+                      for i in range(0, len(edge_list), 2)))
+    return G

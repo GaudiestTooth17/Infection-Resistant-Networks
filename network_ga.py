@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import hcmioptim.ga as ga
 from analyzer import visualize_network, betw_centrality
-from encoding_lib import edge_set_to_network, degree_sequence_to_network
+from encoding_lib import edge_set_to_network, edge_list_to_network
 
 
 def main():
@@ -208,20 +208,6 @@ def new_edge_set_pop(size: int, N: int, rand) -> List[np.ndarray]:
     for edge_set in population:
         rand.shuffle(edge_set)
     return population
-
-
-def edge_list_to_network(edge_list: np.ndarray) -> nx.Graph:
-    """
-    edge_list is the concrete implementation of the thing created by a degree configuration.
-    If a node has degree n, that node's integer ID will appear n times in edge_list. Edges are
-    created by putting the values in groups of two starting at index 0 and proceeding to the end.
-    In this way, edge_list can be viewed as a List[Tuple[int, int]].
-    """
-    N = np.max(edge_list)
-    G = nx.empty_graph(N)
-    G.add_edges_from(((edge_list[i], edge_list[i+1])
-                      for i in range(0, len(edge_list), 2)))
-    return G
 
 
 def make_vis_func(visualize: bool) -> Callable[[nx.Graph, int, int], None]:
