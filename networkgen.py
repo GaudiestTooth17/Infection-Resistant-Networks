@@ -272,35 +272,39 @@ def make_connected_community_network(inner_degrees: np.ndarray,
     inner_degrees: the inner degree of each of the vertices in the communities.
     outer_degrees: How many outgoing edges each of the communities has.
     """
-    num_communities = len(outer_degrees)
-    community_size = len(inner_degrees)
-    N = community_size * num_communities
-    M = np.zeros((N, N), dtype=np.uint8)
-    node_to_community: Communities = {}
+    G = nx.empty_graph(2)
+    node_to_community = {}
+    while not nx.is_connected(G):
+        num_communities = len(outer_degrees)
+        community_size = len(inner_degrees)
+        N = community_size * num_communities
+        M = np.zeros((N, N), dtype=np.uint8)
+        node_to_community: Communities = {}
 
-    for community_id in range(num_communities):
-        c_offset = community_id * community_size
-        comm_M = make_configuration_network(inner_degrees, rand)
-        for n1 in range(community_size):
-            for n2 in range(community_size):
-                M[n1 + c_offset, n2 + c_offset] = comm_M[n1, n2]
-                node_to_community[n1+c_offset] = community_id
-                node_to_community[n2+c_offset] = community_id
+        for community_id in range(num_communities):
+            c_offset = community_id * community_size
+            comm_M = make_configuration_network(inner_degrees, rand)
+            for n1 in range(community_size):
+                for n2 in range(community_size):
+                    M[n1 + c_offset, n2 + c_offset] = comm_M[n1, n2]
+                    node_to_community[n1+c_offset] = community_id
+                    node_to_community[n2+c_offset] = community_id
 
-    outer_m = make_configuration_network(outer_degrees, rand)
-    for c1 in range(num_communities):
-        for c2 in range(c1, num_communities):
-            if outer_m[c1, c2] > 0:
-                for _ in range(int(outer_m[c1, c2])):
-                    n1 = c1 * community_size + rand.integers(community_size)
-                    n2 = c2 * community_size + rand.integers(community_size)
-                    M[n1, n2] = 1
-                    M[n2, n1] = 1
+        outer_m = make_configuration_network(outer_degrees, rand)
+        for c1 in range(num_communities):
+            for c2 in range(c1, num_communities):
+                if outer_m[c1, c2] > 0:
+                    for _ in range(int(outer_m[c1, c2])):
+                        n1 = c1 * community_size + rand.integers(community_size)
+                        n2 = c2 * community_size + rand.integers(community_size)
+                        M[n1, n2] = 1
+                        M[n2, n1] = 1
 
-    G = nx.Graph(M)
-    if not force_connected or nx.is_connected(G):
-        return nx.Graph(M), node_to_community
-    return make_connected_community_network(inner_degrees, outer_degrees, rand, force_connected)
+        G = nx.Graph(M)
+        if not force_connected:
+            return G, node_to_community
+
+    return G, node_to_community
 
 
 if __name__ == '__main__':
