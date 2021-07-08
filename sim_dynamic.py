@@ -8,7 +8,6 @@ from fileio import get_network_name, read_network
 from customtypes import Layout, ExperimentResults
 from multiprocessing import Pool
 import os
-from numba import njit
 RAND = np.random.default_rng()
 
 UpdateConnections = Callable[[np.ndarray, np.ndarray, int, np.ndarray], np.ndarray]
@@ -133,7 +132,6 @@ def simulate(M: np.ndarray,
     return sirs
 
 
-@njit
 def next_sir(old_sir: np.ndarray, M: np.ndarray, disease: Disease, rand) -> Tuple[np.ndarray, bool]:
     """
     Use the disease to make the next SIR matrix also returns whether or not the old one differs from
