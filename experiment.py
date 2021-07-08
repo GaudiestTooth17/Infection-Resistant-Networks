@@ -38,13 +38,18 @@ class MassDiseaseTestingResult:
             writer = csv.writer(file, dialect=csv.excel)
             writer.writerow(['Results'])
             writer.writerow(self.trial_to_results)
-            writer.writerow(['proportion flickering edges'])
+            writer.writerow(['Proportion Flickering Edges'])
             writer.writerow(self.trial_to_proportion_flickering_edges)
 
         plt.figure()
         plt.title(f'Results for {self.network_class}')
         plt.boxplot(self.trial_to_results, notch=False)
         plt.savefig(f'Results for {self.network_class}.png', format='png')
+
+        plt.figure()
+        plt.title(f'Proportion Flickering Edges for {self.network_class}')
+        plt.boxplot(self.trial_to_proportion_flickering_edges, notch=False)
+        plt.savefig(f'Proportion Flickering Edges for {self.network_class}', format='png')
 
 
 class ConnectedCommunityConfiguration(ABC):
