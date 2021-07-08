@@ -132,8 +132,7 @@ def run_agent_generated_trial(args: Tuple[Disease, abg.Behavior, int, Any]) -> T
     sims_per_trial = 150
 
     G = abg.make_agent_generated_network(N, agent_behavior)
-    # TODO: girvan_newman_partition takes too long. Find a faster way.
-    to_flicker = partitioning.girvan_newman_partition(G, 50)
+    to_flicker = partitioning.fluidc_partition(G, 50)
     proportion_flickering = len(to_flicker) / len(G.edges)
     M = nx.to_numpy_array(G)
 
@@ -191,7 +190,8 @@ def agent_generated_entry_point():
 
 
 def main():
-    poisson_entry_point()
+    # poisson_entry_point()
+    agent_generated_entry_point()
 
 
 if __name__ == '__main__':
