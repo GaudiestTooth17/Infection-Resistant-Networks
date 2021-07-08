@@ -13,6 +13,7 @@ Behavior = Callable[[nx.Graph], Tuple[nx.Graph, bool]]
 
 def make_agent_generated_network(starting_point: Union[int, nx.Graph], behavior: Behavior)\
         -> nx.Graph:
+    # TODO: add a check to make sure that G is connected once it is returned
     if isinstance(starting_point, int):
         G: nx.Graph = nx.empty_graph(starting_point)
     else:
