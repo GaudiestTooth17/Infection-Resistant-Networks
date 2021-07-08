@@ -3,8 +3,9 @@ from typing import Callable
 import numpy as np
 import networkx as nx
 import fileio as fio
-import time
 import os
+from tqdm import tqdm
+import csv
 
 
 def main():
@@ -19,16 +20,29 @@ def main():
             no_errors = False
     if not no_errors:
         return
+    decay_functions = (DecayFunction(.5), DecayFunction(1), DecayFunction(2))
 
-    for name, path in zip(networks, network_paths):
-        G, _, _ = fio.read_network(path)
-        start_time = time.time()
-        social_good_score = rate_social_good(G, decay_func0)
-        print(f'{name} score: {social_good_score:.2f} ({time.time()-start_time:.2f} s).')
+    with open('social-good.csv', 'w') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow([DecayFunction.function_desc] + [str(df.k) for df in decay_functions])
+
+        for name, path in tqdm(tuple(zip(networks, network_paths))):
+            scores = []
+            for decay_func in decay_functions:
+                G, _, _ = fio.read_network(path)
+                social_good_score = rate_social_good(G, decay_func)
+                scores.append(f'{social_good_score:.3f}')
+            writer.writerow([name] + scores)
 
 
-def decay_func0(distance: int) -> float:
-    return 1/distance
+class DecayFunction:
+    function_desc = '1/(distance^k)'
+
+    def __init__(self, k: Number):
+        self.k = k
+
+    def __call__(self, distance: int) -> float:
+        return 1/(distance**self.k)
 
 
 def rate_social_good(G: nx.Graph, decay_func: Callable[[int], Number]) -> float:
