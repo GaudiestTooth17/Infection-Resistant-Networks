@@ -25,16 +25,16 @@ class Disease:
 
 def main():
     start_time = time.time()
-    # network_names = ('agent-generated-500',
-    #                  'annealed-agent-generated-500',
-    #                  'annealed-large-diameter',
-    #                  'annealed-medium-diameter',
-    #                  'annealed-short-diameter',
-    #                  'cgg-500',
-    #                  'watts-strogatz-500-4-.1',
-    #                  'elitist-500',
-    #                  'spatial-network')
-    network_names = ('connected-comm-50-10',)
+    network_names = ('agent-generated-500',
+                     'annealed-agent-generated-500',
+                     'annealed-large-diameter',
+                     'annealed-medium-diameter',
+                     'annealed-short-diameter',
+                     'cgg-500',
+                     'watts-strogatz-500-4-.1',
+                     'elitist-500',
+                     'spatial-network',
+                     'connected-comm-50-10')
     network_paths = ['networks/'+name+'.txt' for name in network_names]
     # verify that all the networks exist
     found_errors = False
@@ -47,9 +47,11 @@ def main():
         exit(1)
 
     flicker_configurations = [FlickerConfig((True,), 'Static'),
+                              FlickerConfig((True, True, False), 'Two Thirds Flicker'),
                               FlickerConfig((True, False), 'One Half Flicker'),
                               FlickerConfig((True, False, False), 'One Third Flicker')]
-    arguments = [(path, 1000, 500, Disease(4, .2), flicker_configurations)
+    arguments = [(path, 1000, 500, Disease(4, .2), flicker_configurations,
+                  flicker_configurations[0].name)
                  for path in network_paths]
     # use a maximum of 10 cores
     with Pool(min(len(arguments), 10)) as p:
@@ -244,14 +246,14 @@ class FlickerBehavior:
 class FlickerConfig:
     def __init__(self, flicker_pattern: Tuple[bool, ...], name: str):
         self._flicker_pattern = flicker_pattern
-        self._name = name
+        self.name = name
 
     def make_flicker_behavior(self, M: np.ndarray,
                               edges_to_flicker: Collection[Tuple[int, int]]) -> FlickerBehavior:
-        return FlickerBehavior(M, edges_to_flicker, self._flicker_pattern, self._name)
+        return FlickerBehavior(M, edges_to_flicker, self._flicker_pattern, self.name)
 
 
-def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig]])\
+def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig], str])\
         -> Optional[ExperimentResults]:
     """
     Run a batch of experiments and return a tuple containing the network's name,
@@ -262,9 +264,10 @@ def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig]]
            number of sims to run for each behavior,
            simulation length,
            disease,
-           a sequence of configs for the flickers to use.)
+           a sequence of configs for the flickers to use,
+           the name of the baseline flicker to compare the other results to)
     """
-    network_path, num_sims, sim_len, disease, flicker_configs = args
+    network_path, num_sims, sim_len, disease, flicker_configs, baseline_flicker_name = args
     G, layout, communities = read_network(network_path)
     if layout is None:
         print(f'{get_network_name(network_path)} has no layout.')
@@ -293,7 +296,8 @@ def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig]]
         behavior_to_results[behavior.name] = num_sus
 
     return ExperimentResults(get_network_name(network_path), num_sims, sim_len,
-                             len(intercommunity_edges)/len(G.edges), behavior_to_results)
+                             len(intercommunity_edges)/len(G.edges), behavior_to_results,
+                             baseline_flicker_name)
 
 
 if __name__ == '__main__':

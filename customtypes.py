@@ -3,7 +3,7 @@ from collections import namedtuple, defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from dataclasses import dataclass
+from scipy.stats import wasserstein_distance
 
 
 # color is a string and reach is a number
@@ -104,48 +104,66 @@ class CommunityEdges:
         return self._community_to_outgoing_edges[self._node_to_community[agent]]
 
 
-@dataclass
 class ExperimentResults:
-    """
-    network_name
-    sims_per_behavior
-    behavior_to_num_sus: How many agents were still susceptible at the end of
-                         each simulation with the specified behavior.
-    """
-    network_name: str
-    sims_per_behavior: int
-    sim_len: int
-    proportion_flickering_edges: float
-    behavior_to_num_sus: Dict[str, Sequence[int]]
+    def __init__(self, network_name: str,
+                 sims_per_behavior: int,
+                 sim_len: int,
+                 proportion_flickering_edges: float,
+                 behavior_to_num_sus: Dict[str, Sequence[int]],
+                 baseline_behavior: str):
+        """
+        network_name
+        sims_per_behavior
+        behavior_to_num_sus: How many agents were still susceptible at the end of
+                            each simulation with the specified behavior.
+        baseline_behavior: The name of the behavior to computer the
+                        Wasserstein distance of the others against.
+        """
+        self.network_name = network_name
+        self.sims_per_behavior = sims_per_behavior
+        self.sim_len = sim_len
+        self.proportion_flickering_edges = proportion_flickering_edges
+        self.behavior_to_num_sus = behavior_to_num_sus
+        # Fail early if an incorrect name is supplied.
+        if baseline_behavior not in behavior_to_num_sus:
+            print(f'{baseline_behavior} is not in {list(behavior_to_num_sus.keys())}.'
+                  'Fix this before continuing.')
+            exit(1)
+        self.baseline_behavior = baseline_behavior
 
-    def save(self, directory: str) -> None:
+    def save(self, directory: str, with_histograms: bool = False) -> None:
         """Save a histogram and a text file with analysis information in directory."""
         path = os.path.join(directory, self.network_name)
         if not os.path.exists(path):
             os.mkdir(path)
 
+        # File Heading
         file_lines = [f'Name: {self.network_name}\n',
                       f'Number of sims per behavior: {self.sims_per_behavior}\n',
                       f'Simulation length: {self.sim_len}\n'
-                      f'Proportion of edges flickering: {self.proportion_flickering_edges:.4}\n\n']
+                      f'Proportion of edges flickering: {self.proportion_flickering_edges:.4f}\n\n']
+        baseline_distribution = self.behavior_to_num_sus[self.baseline_behavior]
         for behavior_name, results in self.behavior_to_num_sus.items():
-            # create histogram
-            plt.figure()
-            title = f'{self.network_name} {behavior_name}\n'\
-                f'sims={self.sims_per_behavior} sim_len={self.sim_len}'
-            plt.title(title)
-            plt.xlabel('Number of Susceptible Agents')
-            plt.ylabel('Frequency')
-            plt.hist(results, bins=None)
-            plt.savefig(os.path.join(path, title+'.png'), format='png')
+            # possibly save histograms
+            if with_histograms:
+                plt.figure()
+                title = f'{self.network_name} {behavior_name}\n'\
+                    f'sims={self.sims_per_behavior} sim_len={self.sim_len}'
+                plt.title(title)
+                plt.xlabel('Number of Susceptible Agents')
+                plt.ylabel('Frequency')
+                plt.hist(results, bins=None)
+                plt.savefig(os.path.join(path, title+'.png'), format='png')
 
-            # create text entry
+            # create a text entry for each behavior
             file_lines += [f'{behavior_name}\n',
-                           f'Min:{np.min(results) : >15}\n',
-                           f'Max:{np.max(results) : >15}\n',
-                           f'Median:{np.median(results) : >15}\n',
-                           f'Mean:{np.mean(results) : >15}\n\n']
+                           f'Min:{np.min(results) : >20}\n',
+                           f'Max:{np.max(results) : >20}\n',
+                           f'Median:{np.median(results) : >20}\n',
+                           f'Mean:{np.mean(results) : >20.3f}\n',
+                           f'EMD from {self.baseline_behavior}:'
+                           f'{wasserstein_distance(results, baseline_distribution) : >20.3f}\n\n']
 
         # save text entries
-        with open(os.path.join(path, f'{self.network_name}.txt'), 'w') as file:
+        with open(os.path.join(path, f'Report on {self.network_name}.txt'), 'w') as file:
             file.writelines(file_lines)
