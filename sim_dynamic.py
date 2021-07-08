@@ -34,7 +34,8 @@ def main():
                      'watts-strogatz-500-4-.1',
                      'elitist-500',
                      'spatial-network',
-                     'connected-comm-50-10')
+                     'connected-comm-50-10',
+                     'cavemen-50-10')
     network_paths = ['networks/'+name+'.txt' for name in network_names]
     # verify that all the networks exist
     found_errors = False
