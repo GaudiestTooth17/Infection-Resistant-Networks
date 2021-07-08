@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 from typing import Iterable, List, Callable, Optional, Sequence
 
-from customtypes import Layout
 import networkx as nx
 import numpy as np
 import sys
@@ -12,46 +11,14 @@ from fileio import old_read_network_file
 from analyzer import COLORS, calc_prop_common_neighbors
 
 
-def main():
-    if len(sys.argv) < 2:
-        print(f'Usage: {sys.argv[0]} <network or number of agents>')
-        return
-
-    N = int_or_none(sys.argv[1])
-    if N is None:
-        M, layout = old_read_network_file(sys.argv[1])
-        G = nx.Graph(M)
-        N = len(G.nodes)
-    else:
-        G = nx.empty_graph(N)
-        layout = None
-    if layout is None:
-        layout = nx.kamada_kawai_layout(G)
-
-    step = homogenous_step
-    # step = make_two_type_step(set(range(len(G.nodes)//10)),
-    #                           set(range(len(G.nodes)//10, len(G.nodes))))
-    # step = make_time_based_step(N)
-    node_size = 200
-    for i in tqdm(range(150)):
-        if i % 10 == 0:
-            layout = nx.kamada_kawai_layout(G)
-        plt.clf()
-        plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
-        nx.draw_networkx(G, pos=layout, node_size=node_size, node_color=assign_colors(G),
-                         with_labels=False)
-        plt.pause(.2)  # type: ignore
-        node_size = step(G, layout)
-    #     step(G, N)
-    #     if nx.is_connected(G):
-    #         print(f'Finished after {i+1} steps.')
-    #         break
-
-    # if nx.is_connected(G):
-    #     output_network(G, f'agent-generated-{N}')
-    # else:
-    #     print('Network was not connected!')
-    # input('Press "enter" to continue.')
+def make_agent_generated_network(N: int, behavior: Callable[[nx.Graph], nx.Graph]) -> nx.Graph:
+    old_G = nx.empty_graph(N)
+    G = nx.empty_graph(N)
+    for _ in range(150):
+        G, old_G = behavior(G), G
+        if G == old_G:
+            break
+    return G
 
 
 def assign_colors(G: nx.Graph) -> List[str]:
@@ -62,7 +29,7 @@ def assign_colors(G: nx.Graph) -> List[str]:
     return [color for _, color in node_to_color]  # type: ignore
 
 
-def homogenous_step(G: nx.Graph, layout: Layout) -> None:
+def homogenous_step(G: nx.Graph) -> None:
     """
     All agents behave the same, and that behave doesn't vary with time.
     The agents are trying to reach happy_number connections. If they are not connected
@@ -77,7 +44,7 @@ def homogenous_step(G: nx.Graph, layout: Layout) -> None:
         # connect to a new neighbor
         if len(neighbors) == 0:
             to_add = choice(tuple(G.nodes))
-            connect_agents(G, layout, agent, to_add)
+            connect_agents(G, agent, to_add)
         elif len(neighbors) < happy_number:
             neighbor_to_strength = {(neighbor, calc_prop_common_neighbors(G, agent, neighbor))
                                     for neighbor in neighbors}
@@ -87,7 +54,7 @@ def homogenous_step(G: nx.Graph, layout: Layout) -> None:
                 to_add = choice(tuple(new_neighbor_choices))
             else:
                 to_add = choice(tuple(G.nodes))
-            connect_agents(G, layout, agent, to_add)
+            connect_agents(G, agent, to_add)
         # disconnect from a neighbor
         elif len(neighbors) > happy_number:
             neighbor_to_strength = {(neighbor, calc_prop_common_neighbors(G, agent, neighbor))
@@ -97,14 +64,14 @@ def homogenous_step(G: nx.Graph, layout: Layout) -> None:
 
 
 def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int])\
-                       -> Callable[[nx.Graph, Layout], None]:
+                       -> Callable[[nx.Graph], None]:
     """
     agent_roles should contain two entries: 'bridge', 'normal'. The iterables
     associated with these keys should union to form the set of all nodes in G.
     normal agents will try to cluster around other agents.
     bridge agents will try to connect themselves to a few different clusters.
     """
-    def two_type_step(G: nx.Graph, layout: Layout) -> None:
+    def two_type_step(G: nx.Graph) -> None:
         normal_lb = 2  # lower bound
         normal_ub = 10  # upper bound
         bridge_happy_number = 2
@@ -115,7 +82,7 @@ def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int
             # connect to a new neighbor
             if len(neighbors) < normal_lb:
                 to_add = choice(tuple(G.nodes))
-                connect_agents(G, layout, agent, to_add)
+                connect_agents(G, agent, to_add)
             elif len(neighbors) < normal_ub:
                 neighbor_to_strength = {(neighbor, calc_prop_common_neighbors(G, agent, neighbor))
                                         for neighbor in neighbors}
@@ -125,7 +92,7 @@ def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int
                     to_add = choice(tuple(new_neighbor_choices))
                 else:
                     to_add = choice(tuple(G.nodes))
-                connect_agents(G, layout, agent, to_add)
+                connect_agents(G, agent, to_add)
             # disconnect from a neighbor
             elif len(neighbors) > normal_ub:
                 neighbor_to_strength = {(neighbor, calc_prop_common_neighbors(G, agent, neighbor))
@@ -140,7 +107,7 @@ def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int
             if len(neighbors) < bridge_happy_number:
                 choices = [a for a in G.nodes if (a not in bridge_agents) and (a not in neighbors)]
                 to_add = choice(choices)
-                connect_agents(G, layout, agent, to_add)
+                connect_agents(G, agent, to_add)
             # if the agent has enough connections, look for ones to prune
             else:
                 # connections are invalid if they are to an agent that shares a common neighbor
@@ -180,11 +147,11 @@ def make_time_based_step(N: int):
     agent_to_previous_neighbors = {n: set() for n in range(N)}
     steps_taken = 0
 
-    def unstable_behavior(G: nx.Graph, layout: Layout, agent: int, neighbors: Sequence[int]):
+    def unstable_behavior(G: nx.Graph, agent: int, neighbors: Sequence[int]):
         # add a neighbor if lonely
         if len(neighbors) < lower_bound:
             if len(neighbors) == 0:
-                connect_agents(G, layout, agent, choice(tuple(G.nodes)))
+                connect_agents(G, agent, choice(tuple(G.nodes)))
             else:
                 neighbor_to_strength = {(neighbor, calc_prop_common_neighbors(G, agent, neighbor))
                                         for neighbor in neighbors}
@@ -193,7 +160,7 @@ def make_time_based_step(N: int):
                 # These should be filtered out.
                 neighbor_choices = tuple(set(G[closest_neighbor]) - {agent})
                 to_add = choice(neighbor_choices if len(neighbor_choices) > 0 else tuple(G.nodes))
-                connect_agents(G, layout, agent, to_add)
+                connect_agents(G, agent, to_add)
         # remove a neighbor if overwhelmed
         elif len(neighbors) > upper_bound:
             neighbor_to_strength = {(neighbor, calc_prop_common_neighbors(G, agent, neighbor))
@@ -201,25 +168,25 @@ def make_time_based_step(N: int):
             farthest_neighbor = min(neighbor_to_strength, key=lambda x: x[1])[0]
             G.remove_edge(agent, farthest_neighbor)
 
-    def stable_behavior(G: nx.Graph, layout: Layout, agent: int, neighbors: Sequence[int]):
+    def stable_behavior(G: nx.Graph, agent: int, neighbors: Sequence[int]):
         if len(neighbors) < upper_bound - 1:
             neighbor_choices = [n for n in G.nodes
                                 if all((time_stable[n] > steps_to_stable,
                                         n not in neighbors,
                                         len(G[n]) < upper_bound - 1))]
             if len(neighbor_choices) > 0:
-                connect_agents(G, layout, agent, choice(neighbor_choices))
+                connect_agents(G, agent, choice(neighbor_choices))
 
-    def time_based_step(G: nx.Graph, layout: Layout) -> Iterable[int]:
+    def time_based_step(G: nx.Graph) -> Iterable[int]:
         agents = np.array(G.nodes)
         np.random.shuffle(agents)
         for agent in agents:
             neighbors = tuple(G[agent])
             # choose behavior
             if time_stable[agent] < steps_to_stable:
-                unstable_behavior(G, layout, agent, neighbors)
+                unstable_behavior(G, agent, neighbors)
             else:
-                stable_behavior(G, layout, agent, neighbors)
+                stable_behavior(G, agent, neighbors)
 
         # Update satisfaction. Agents are satisifed by having consistant neighbors
         for agent in agents:
@@ -239,23 +206,10 @@ def make_time_based_step(N: int):
     return time_based_step
 
 
-def connect_agents(G: nx.Graph, layout: Layout, u: int, v: int) -> None:
+def connect_agents(G: nx.Graph, u: int, v: int) -> None:
     """
-    Connect agents u and v in the network G. The layout may be updated depending
-    on whether or not that code is commented out. ;)
+    Connect agents u and v in the network G.
     """
-    # # if u has no neighbors, move u close to v
-    # if len(G[u]) == 0:
-    #     new_x, new_y = layout[v]
-    #     new_x += choice(np.linspace(-.01, .01, 10))
-    #     new_y += choice(np.linspace(-.01, .01, 10))
-    #     layout[u] = (new_x, new_y)
-    # # alternatively, if u has neighbors and v doesn't, move v close to u
-    # elif len(G[v]) == 0:
-    #     new_x, new_y = layout[u]
-    #     new_x += choice(np.linspace(-.01, .01, 10))
-    #     new_y += choice(np.linspace(-.01, .01, 10))
-    #     layout[v] = (new_x, new_y)
     G.add_edge(u, v)
 
 
@@ -264,6 +218,48 @@ def int_or_none(string: str) -> Optional[int]:
         return int(string)
     except ValueError:
         return None
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(f'Usage: {sys.argv[0]} <network or number of agents>')
+        return
+
+    N = int_or_none(sys.argv[1])
+    if N is None:
+        M, layout = old_read_network_file(sys.argv[1])
+        G = nx.Graph(M)
+        N = len(G.nodes)
+    else:
+        G = nx.empty_graph(N)
+        layout = None
+    if layout is None:
+        layout = nx.kamada_kawai_layout(G)
+
+    step = homogenous_step
+    # step = make_two_type_step(set(range(len(G.nodes)//10)),
+    #                           set(range(len(G.nodes)//10, len(G.nodes))))
+    # step = make_time_based_step(N)
+    node_size = 200
+    for i in tqdm(range(150)):
+        if i % 10 == 0:
+            layout = nx.kamada_kawai_layout(G)
+        plt.clf()
+        plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
+        nx.draw_networkx(G, pos=layout, node_size=node_size, node_color=assign_colors(G),
+                         with_labels=False)
+        plt.pause(.2)  # type: ignore
+        node_size = step(G)
+    #     step(G, N)
+    #     if nx.is_connected(G):
+    #         print(f'Finished after {i+1} steps.')
+    #         break
+
+    # if nx.is_connected(G):
+    #     output_network(G, f'agent-generated-{N}')
+    # else:
+    #     print('Network was not connected!')
+    # input('Press "enter" to continue.')
 
 
 if __name__ == '__main__':
