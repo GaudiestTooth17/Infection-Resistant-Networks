@@ -2,7 +2,7 @@
 This file is for running experiments and reporting on them.
 """
 from sim_dynamic import Disease, FlickerBehavior, make_starting_sir, simulate
-from customtypes import Number
+from customtypes import ExperimentResults, Number
 import numpy as np
 import networkx as nx
 from dataclasses import dataclass
@@ -11,10 +11,11 @@ import os
 import csv
 from abc import ABC, abstractmethod
 import networkgen
-from tqdm import tqdm
+import partitioning
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 import time
+import agentbasedgen as abg
 
 
 @dataclass
@@ -112,15 +113,39 @@ def run_poisson_trial(args: Tuple[PoissonConfiguration, Disease, Any]) -> Tuple[
     M = nx.to_numpy_array(G)
 
     behavior = FlickerBehavior(M, to_flicker, (True, False), "Probs don't change this")
-    avg_sus = np.mean([np.sum(simulate(M,
-                                       make_starting_sir(len(M), 1),
-                                       disease, behavior, sim_len, None)[-1][0] > 0)
+    avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
+                                       disease, behavior, sim_len, None, rand)[-1][0] > 0)
                        for _ in range(sims_per_trial)])
 
     return proportion_flickering, avg_sus
 
 
-def main():
+def run_agent_generated_trial(args: Tuple[Disease, abg.Behavior, int, Any]) -> Tuple[float, float]:
+    """
+    args: (disease to use in the simulation,
+           the behavior agents have when generating the network,
+           the number of agents in the network,
+           an instance of np.random.default_rng)
+    """
+    disease, agent_behavior, N, rand = args
+    sim_len = 200
+    sims_per_trial = 150
+
+    G = abg.make_agent_generated_network(N, agent_behavior)
+    # TODO: girvan_newman_partition takes too long. Find a faster way.
+    to_flicker = partitioning.girvan_newman_partition(G, 50)
+    proportion_flickering = len(to_flicker) / len(G.edges)
+    M = nx.to_numpy_array(G)
+
+    network_behavior = FlickerBehavior(M, to_flicker, (True, False), "Probs don't change this")
+    avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
+                                       disease, network_behavior, sim_len, None, rand)[-1][0] > 0)
+                       for _ in range(sims_per_trial)])
+
+    return proportion_flickering, avg_sus
+
+
+def poisson_entry_point():
     start_time = time.time()
     N_comm = 10  # agents per community
     num_communities = 50  # number of communities
@@ -130,15 +155,43 @@ def main():
                                          rand, 10, 10, num_communities, N_comm)
     disease = Disease(4, .2)
 
-    with Pool(10) as p:
+    with Pool(5) as p:
         results = p.map(run_poisson_trial, [(configuration, disease, rand)
                                             for _ in range(num_trials)],
-                        num_trials//10)
+                        num_trials//5)
     trial_to_flickering_edges, trial_to_avg_sus = zip(*results)
     experiment_results = MassDiseaseTestingResult(configuration.name, trial_to_avg_sus,
                                                   trial_to_flickering_edges)
     experiment_results.save('results')
     print(f'Finished ({time.time()-start_time} s).')
+
+
+def agent_generated_entry_point():
+    start_time = time.time()
+    num_trials = 1000
+    rand = np.random.default_rng(1337)
+    N = 500
+    lb_connection = 4
+    ub_connection = 6
+    steps_to_stability = 10
+    agent_behavior = abg.TimeBasedBehavior(N, lb_connection, ub_connection,
+                                           steps_to_stability, rand)
+    disease = Disease(4, .2)
+
+    with Pool(5) as p:
+        results = p.map(run_agent_generated_trial, [(disease, agent_behavior, N, rand)
+                                                    for _ in range(num_trials)],
+                        num_trials//5)
+    trial_to_flickering_edges, trial_to_avg_sus = zip(*results)
+    experiment_results = MassDiseaseTestingResult(f'Agentbased {N}-{lb_connection}-{ub_connection}'
+                                                  f'-{steps_to_stability}',
+                                                  trial_to_avg_sus, trial_to_flickering_edges)
+    experiment_results.save('results')
+    print(f'Finished ({time.time()-start_time} s).')
+
+
+def main():
+    poisson_entry_point()
 
 
 if __name__ == '__main__':

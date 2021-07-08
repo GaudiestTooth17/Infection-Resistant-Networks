@@ -79,7 +79,8 @@ def simulate(M: np.ndarray,
              disease: Disease,
              update_connections: UpdateConnections,
              max_steps: int,
-             layout: Optional[Layout]) -> List[np.ndarray]:
+             layout: Optional[Layout],
+             rand=RAND) -> List[np.ndarray]:
     """
     Simulate an infection on a dynamic network.
 
@@ -99,7 +100,6 @@ def simulate(M: np.ndarray,
     max_steps: The maximum number of steps to run the simulation for before returning.
     layout: If you want visualization, provide a layout to use. Pass None for no visualization.
     """
-    rand = RAND  # increase access speed by making a local reference
     sirs: List[np.ndarray] = [None] * max_steps  # type: ignore
     sirs[0] = np.copy(sir0)
     D = np.copy(M)

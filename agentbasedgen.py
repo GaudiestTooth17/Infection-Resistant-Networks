@@ -154,7 +154,6 @@ class TimeBasedBehavior:
         self._upper_bound = upper_bound
         self._steps_to_stable = steps_to_stable
         self._agent_to_previous_neighbors = {n: set() for n in range(N)}
-        self._N = N
         self._steps_taken = 0
         self._rand = rand
 
