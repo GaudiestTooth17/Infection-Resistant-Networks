@@ -3,12 +3,15 @@ from itertools import takewhile
 from typing import Dict, Iterable, Union, Tuple
 import networkx as nx
 import numpy as np
-import matplotlib.pyplot as plt
 import sys
-from networkx.algorithms.community import girvan_newman
-from fileio import old_read_network_file, get_network_name
-from analyzer import make_meta_community_layout, make_meta_community_network, visualize_network
+from networkx.algorithms.community import girvan_newman, asyn_fluidc
+from fileio import get_network_name, read_network
+from analyzer import (calc_prop_common_neighbors,
+                      make_meta_community_layout,
+                      make_meta_community_network,
+                      visualize_network)
 from collections import Counter
+import time
 
 
 def main():
@@ -23,16 +26,20 @@ def main():
         print(f'Usage: {sys.argv[0]} <network> <num labels/partitions>')
         return
 
-    M, layout = old_read_network_file(sys.argv[1])
+    M, layout, _ = read_network(sys.argv[1])
     if layout is None:
         raise Exception('Layout cannot be None.')
     name = get_network_name(sys.argv[1])
-    n_labels = int(sys.argv[2])
+    n_communities = int(sys.argv[2])
 
     G = nx.Graph(M)
-    to_remove = label_partition(G, n_labels)
-    # to_remove = girvan_newman_partition(G, n_labels)  # n_labels is actually num_communities
+    start_time = time.time()
+    # to_remove = label_partition(G, n_communities)  # n_communities is actually the n_labels
+    # to_remove = girvan_newman_partition(G, n_communities)
+    # to_remove = common_neighbor_partition(G, n_communities)
+    to_remove = fluidc_partition(G, n_communities)
     G.remove_edges_from(to_remove)
+    print(f'Partioned in {time.time()-start_time} seconds.')
     # communities = tuple(nx.connected_components(G))
     # plt.hist(tuple(len(comm) for comm in communities), bins=None)
     # plt.figure()
@@ -91,6 +98,37 @@ def girvan_newman_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[in
     communities_generator: Iterable[Tuple[int, ...]] = girvan_newman(G)
     communities = tuple(takewhile(lambda comm: len(comm) <= num_communities,
                                   communities_generator))[-1]
+    id_to_community = dict(enumerate(communities))
+    node_to_community = {node: comm_id
+                         for comm_id, community in id_to_community.items()
+                         for node in community}
+    edges_to_remove = tuple(set((u, v)
+                                for u, v in G.edges
+                                if node_to_community[u] != node_to_community[v]))
+    return edges_to_remove
+
+
+def common_neighbor_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[int, int], ...]:
+    """Return the edges to remove in order to break G into communities."""
+    def weakest_edge(G: nx.Graph) -> Tuple[int, int]:
+        return min(G.edges, key=lambda edge: calc_prop_common_neighbors(G, edge[0], edge[1]))
+
+    communities_generator = girvan_newman(G, most_valuable_edge=weakest_edge)
+    communities = tuple(takewhile(lambda comm: len(comm) <= num_communities,
+                                  communities_generator))[-1]
+    id_to_community = dict(enumerate(communities))
+    node_to_community = {node: comm_id
+                         for comm_id, community in id_to_community.items()
+                         for node in community}
+    edges_to_remove = tuple(set((u, v)
+                                for u, v in G.edges
+                                if node_to_community[u] != node_to_community[v]))
+    return edges_to_remove
+
+
+def fluidc_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[int, int], ...]:
+    """Return the edges to remove in order to break G into communities."""
+    communities = tuple(asyn_fluidc(G, num_communities))
     id_to_community = dict(enumerate(communities))
     node_to_community = {node: comm_id
                          for comm_id, community in id_to_community.items()
