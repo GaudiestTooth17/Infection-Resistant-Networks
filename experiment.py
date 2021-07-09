@@ -130,8 +130,10 @@ def run_agent_generated_trial(args: Tuple[Disease, abg.Behavior, int, Any]) -> T
     disease, agent_behavior, N, rand = args
     sim_len = 200
     sims_per_trial = 150
+    G = None
+    while G is None:
+        G = abg.make_agent_generated_network(N, agent_behavior)
 
-    G = abg.make_agent_generated_network(N, agent_behavior)
     to_flicker = partitioning.fluidc_partition(G, 50)
     proportion_flickering = len(to_flicker) / len(G.edges)
     M = nx.to_numpy_array(G)
@@ -147,17 +149,18 @@ def run_agent_generated_trial(args: Tuple[Disease, abg.Behavior, int, Any]) -> T
 def poisson_entry_point():
     start_time = time.time()
     N_comm = 10  # agents per community
-    num_communities = 50  # number of communities
+    num_comms = 50  # number of communities
     num_trials = 1000
     rand = np.random.default_rng(420)
-    configuration = PoissonConfiguration(f'Poisson: lam=10, {num_communities} comms, {N_comm} big',
-                                         rand, 10, 10, num_communities, N_comm)
+    lam = 5  # this is lambda for both the inner and outer degree distributions
+    configuration = PoissonConfiguration(f'Poisson: lam={lam}, {num_comms} comms, {N_comm} big',
+                                         rand, lam, lam, num_comms, N_comm)
     disease = Disease(4, .2)
 
-    with Pool(5) as p:
+    with Pool(3) as p:
         results = p.map(run_poisson_trial, [(configuration, disease, rand)
                                             for _ in range(num_trials)],
-                        num_trials//5)
+                        num_trials//3)
     trial_to_flickering_edges, trial_to_avg_sus = zip(*results)
     experiment_results = MassDiseaseTestingResult(configuration.name, trial_to_avg_sus,
                                                   trial_to_flickering_edges)
