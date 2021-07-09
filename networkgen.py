@@ -272,12 +272,12 @@ def make_connected_community_network(inner_degrees: np.ndarray,
     inner_degrees: the inner degree of each of the vertices in the communities.
     outer_degrees: How many outgoing edges each of the communities has.
     """
-    G = nx.Graph()
+    G: nx.Graph = nx.empty_graph(2)  # type: ignore
     node_to_community = {}
+    num_communities = len(outer_degrees)
+    community_size = len(inner_degrees)
+    N = community_size * num_communities
     while not nx.is_connected(G):
-        num_communities = len(outer_degrees)
-        community_size = len(inner_degrees)
-        N = community_size * num_communities
         M = np.zeros((N, N), dtype=np.uint8)
         node_to_community: Communities = {}
 
