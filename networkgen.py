@@ -4,7 +4,7 @@ import time
 from scipy.sparse import dok_matrix
 from tqdm.std import tqdm
 from analyzer import visualize_network
-from typing import List, Tuple, Dict
+from typing import List, Optional, Tuple, Dict
 import sys
 import math
 from itertools import product
@@ -62,7 +62,11 @@ def social_circles_entry_point(argv):
               Agent('blue', 40): num_blue,
               Agent('purple', 50): num_purple}
     start_time = time.time()
-    G, layout, _ = make_social_circles_network(agents, (grid_dim, grid_dim), verbose=True)
+    social_circles_result = make_social_circles_network(agents, (grid_dim, grid_dim), verbose=True)
+    if social_circles_result is None:
+        print('Generation failed.')
+        exit(1)
+    G, layout, _ = social_circles_result
     print(f'Finished social circles network ({time.time() - start_time}s).')
     plt.clf()
     visualize_network(G, layout, 'Social Circles', block=False)
@@ -158,10 +162,12 @@ def make_complete_clique_gate_graph(num_big_components: int,
 
 def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
                                 grid_size: Tuple[int, int],
-                                force_connected=True,
-                                verbose=False) -> Tuple[nx.Graph, Layout, NodeColors]:
-    # repeat the algorithm up to some maximum attempting to generate a connected network.
-    max_tries = 100
+                                force_connected: bool = True,
+                                verbose: bool = False,
+                                max_tries: int = 100,
+                                rand=RAND)\
+        -> Optional[Tuple[nx.Graph, Layout, NodeColors]]:
+    """Return a social circles network or None on timeout."""
     for attempt in range(max_tries):
         agents = sorted(agent_type_to_quantity.items(),
                         key=lambda x: x[0][1], reverse=True)
@@ -183,7 +189,7 @@ def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
             else:
                 range_quantity = range(quantity)
             for _ in range_quantity:
-                x, y = choose_empty_spot(grid)
+                x, y = choose_empty_spot(grid, rand)
                 grid[x, y] = agent.reach
                 new_agents.append((x, y))
                 loc_to_id[(x, y)] = current_id
@@ -205,19 +211,20 @@ def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
         G = nx.Graph(M)
         # return the generated network if it is connected or if we don't care
         if (not force_connected) or nx.is_connected(G):
-            print(f'Success after {attempt+1} tries.')
+            if verbose:
+                print(f'Success after {attempt+1} tries.')
             return G, layout, colors
-        else:
+        elif verbose:
             print(f'Finished {attempt+1} tries.')
 
-    # Abort execution on failure
-    exit(f'Failed to generate a connected network after {max_tries} tries.')
+    # return None to signal failure
+    return None
 
 
-def choose_empty_spot(grid):
-    x, y = np.random.randint(grid.shape[0]), np.random.randint(grid.shape[1])
+def choose_empty_spot(grid, rand) -> Tuple[int, int]:
+    x, y = rand.integers(grid.shape[0]), rand.integers(grid.shape[1])
     while grid[x, y] > 0:
-        x, y = np.random.randint(grid.shape[0]), np.random.randint(grid.shape[1])
+        x, y = rand.integers(grid.shape[0]), rand.integers(grid.shape[1])
     return x, y
 
 
