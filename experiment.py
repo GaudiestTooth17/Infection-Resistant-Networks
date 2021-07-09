@@ -7,7 +7,7 @@ from customtypes import Agent, Number
 import numpy as np
 import networkx as nx
 from dataclasses import dataclass
-from typing import Any, Dict, Sequence, Tuple
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, TypeVar
 import os
 import csv
 from abc import ABC, abstractmethod
@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 import time
 import agentbasedgen as abg
+T = TypeVar('T')
 
 
 @dataclass
@@ -136,11 +137,13 @@ class UniformConfiguration(ConnectedCommunityConfiguration):
 
 
 def run_connected_community_trial(args: Tuple[ConnectedCommunityConfiguration, Disease, Any])\
-        -> Tuple[float, float]:
+        -> Optional[Tuple[float, float]]:
     """
-    args: (PoissonConfiguration to use,
+    args: (ConnectedCommunityConfiguration to use,
            disease to use,
            default_rng instance)
+    return: (proportion of edges that flicker, the average number of remaining susceptible agents)
+            or None on failure.
     """
     sim_len = 200
     sims_per_trial = 150
@@ -148,8 +151,12 @@ def run_connected_community_trial(args: Tuple[ConnectedCommunityConfiguration, D
 
     inner_degrees = configuration.make_inner_degrees()
     outer_degrees = configuration.make_outer_degrees()
-    G, communities = networkgen.make_connected_community_network(inner_degrees, outer_degrees,
-                                                                 rand)
+    cc_results = networkgen.make_connected_community_network(inner_degrees, outer_degrees,
+                                                             rand)
+    # If a network couldn't be successfully generated, return None to signal the failure
+    if cc_results is None:
+        return None
+    G, communities = cc_results
     to_flicker = {(u, v) for u, v in G.edges if communities[u] != communities[v]}
     proportion_flickering = len(to_flicker) / len(G.edges)
     M = nx.to_numpy_array(G)
@@ -215,8 +222,7 @@ def run_social_circles_trial(args: Tuple[Dict[Agent, int],
 
 def poisson_entry_point():
     """Run experiments on connected community networks with a poisson degree distribution."""
-    print('Running poisson connected community experiements')
-    start_time = time.time()
+    print('Running poisson connected community experiments')
     N_comm = 10  # agents per community
     num_comms = 50  # number of communities
     num_trials = 1000
@@ -226,24 +232,13 @@ def poisson_entry_point():
                                          rand, lam, lam, num_comms, N_comm)
     disease = Disease(4, .2)
 
-    results = [run_connected_community_trial((configuration, disease, rand))
-               for _ in tqdm(range(num_trials))]
-
-    # with Pool(3) as p:
-    #     results = p.map(run_poisson_trial, [(configuration, disease, rand)
-    #                                         for _ in range(num_trials)],
-    #                     num_trials//3)
-    trial_to_flickering_edges, trial_to_avg_sus = zip(*results)
-    experiment_results = MassDiseaseTestingResult(configuration.name, trial_to_avg_sus,
-                                                  trial_to_flickering_edges)
-    experiment_results.save('results')
-    print(f'Finished ({time.time()-start_time} s).')
+    safe_run_trials(configuration.name, run_connected_community_trial,
+                    (configuration, disease, rand), num_trials)
 
 
 def uniform_entry_point():
     """Run experiments on connected community networks with a unifrom degree distribution."""
-    print('Running uniform connected community experiements')
-    start_time = time.time()
+    print('Running uniform connected community experiments')
     N_comm = 10  # agents per community
     num_comms = 50  # number of communities
     num_trials = 1000
@@ -253,14 +248,8 @@ def uniform_entry_point():
     configuration = UniformConfiguration(rand, inner_bounds, outer_bounds, N_comm, num_comms)
     disease = Disease(4, .2)
 
-    results = [run_connected_community_trial((configuration, disease, rand))
-               for _ in tqdm(range(num_trials))]
-
-    trial_to_flickering_edges, trial_to_avg_sus = zip(*results)
-    experiment_results = MassDiseaseTestingResult(configuration.name, trial_to_avg_sus,
-                                                  trial_to_flickering_edges)
-    experiment_results.save('results')
-    print(f'Finished ({time.time()-start_time} s).')
+    safe_run_trials(configuration.name, run_connected_community_trial,
+                    (configuration, disease, rand), num_trials)
 
 
 def agent_generated_entry_point():
@@ -276,21 +265,14 @@ def agent_generated_entry_point():
                                            steps_to_stability, rand)
     disease = Disease(4, .2)
 
-    with Pool(5) as p:
-        results = p.map(run_agent_generated_trial, [(disease, agent_behavior, N, rand)
-                                                    for _ in range(num_trials)],
-                        num_trials//5)
-    trial_to_flickering_edges, trial_to_avg_sus = zip(*results)
-    experiment_results = MassDiseaseTestingResult(f'Agentbased {N}-{lb_connection}-{ub_connection}'
-                                                  f'-{steps_to_stability}',
-                                                  trial_to_avg_sus, trial_to_flickering_edges)
-    experiment_results.save('results')
+    safe_run_trials(f'Agentbased {N}-{lb_connection}-{ub_connection}-{steps_to_stability}',
+                    run_agent_generated_trial, (disease, agent_behavior, N, rand), num_trials)
+
     print(f'Finished experiments with agent generated networks ({time.time()-start_time} s).')
 
 
 def social_circles_entry_point():
     print('Running social circles experiments.')
-    start_time = time.time()
     num_trials = 1000
     rand = np.random.default_rng(0xdeadbeef)
     N = 500
@@ -303,15 +285,32 @@ def social_circles_entry_point():
     grid_dim = (int(N/.003), int(N/.003))  # the denominator is the desired density
     disease = Disease(4, .2)
 
-    with Pool(5) as p:
-        results = p.map(run_social_circles_trial, [(agents, grid_dim, disease, rand)
-                                                   for _ in range(num_trials)],
-                        num_trials//5)
+    safe_run_trials(f'Social Circles (Elitist) {grid_dim} {N}', run_social_circles_trial,
+                    (agents, grid_dim, disease, rand), num_trials)
+
+
+def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, float]]],
+                    args: T, num_trials: int) -> None:
+    """Run trials until too many failures occur, exit if this happens."""
+    results = []
+    failures_since_last_success = 0
+    pbar = tqdm(total=num_trials)
+    while len(results) < num_trials:
+        if failures_since_last_success > 100:
+            print(f'Failure limit has been reached. {name} is not feasible.')
+            exit(1)
+
+        result = trial_func(args)
+        if result is None:
+            failures_since_last_success += 1
+        else:
+            results.append(result)
+            pbar.update()
+
     trial_to_flickering_edges, trial_to_avg_sus = zip(*results)
-    experiment_results = MassDiseaseTestingResult(f'Social Circles (Elitist) {grid_dim} {N}',
-                                                  trial_to_avg_sus, trial_to_flickering_edges)
+    experiment_results = MassDiseaseTestingResult(name, trial_to_avg_sus,
+                                                  trial_to_flickering_edges)
     experiment_results.save('results')
-    print(f'Finished experiments with elitist networks ({time.time()-start_time} s).')
 
 
 def main():
