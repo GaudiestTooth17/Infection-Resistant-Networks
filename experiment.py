@@ -198,14 +198,14 @@ def run_agent_generated_trial(args: Tuple[Disease, abg.Behavior, int, Any]) -> T
 def run_social_circles_trial(args: Tuple[Dict[Agent, int],
                                          Tuple[int, int],
                                          Disease,
-                                         Any]) -> Tuple[float, float]:
+                                         Any]) -> Optional[Tuple[float, float]]:
     agent_to_quantity, grid_dims, disease, rand = args
     sim_len = 200
     sims_per_trial = 150
 
-    sc_results = None
-    while sc_results is None:
-        sc_results = networkgen.make_social_circles_network(agent_to_quantity, grid_dims, rand=rand)
+    sc_results = networkgen.make_social_circles_network(agent_to_quantity, grid_dims, rand=rand)
+    if sc_results is None:
+        return None
     G, _, _ = sc_results
 
     to_flicker = partitioning.fluidc_partition(G, 25)
@@ -243,8 +243,8 @@ def uniform_entry_point():
     num_comms = 50  # number of communities
     num_trials = 1000
     rand = np.random.default_rng(0)
-    inner_bounds = (1, 9)
-    outer_bounds = (1, 4)
+    inner_bounds = (5, 9)
+    outer_bounds = (2, 5)
     configuration = UniformConfiguration(rand, inner_bounds, outer_bounds, N_comm, num_comms)
     disease = Disease(4, .2)
 
@@ -282,30 +282,35 @@ def social_circles_entry_point():
     agents = {Agent('green', 30): N_green,
               Agent('blue', 40): N_blue,
               Agent('purple', 50): N_purple}
-    grid_dim = (int(N/.003), int(N/.003))  # the denominator is the desired density
+    # grid_dim = (int(N/.005), int(N/.005))  # the denominator is the desired density
+    grid_dim = N, N
     disease = Disease(4, .2)
 
-    safe_run_trials(f'Social Circles (Elitist) {grid_dim} {N}', run_social_circles_trial,
+    safe_run_trials(f'Social Circles -- Elitist {grid_dim} {N}', run_social_circles_trial,
                     (agents, grid_dim, disease, rand), num_trials)
 
 
 def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, float]]],
-                    args: T, num_trials: int) -> None:
+                    args: T, num_trials: int, max_failures: int = 10) -> None:
     """Run trials until too many failures occur, exit if this happens."""
     results = []
     failures_since_last_success = 0
-    pbar = tqdm(total=num_trials)
+    pbar = tqdm(total=num_trials, desc=f'Failures: {failures_since_last_success}')
     while len(results) < num_trials:
-        if failures_since_last_success > 100:
+        if failures_since_last_success >= max_failures:
             print(f'Failure limit has been reached. {name} is not feasible.')
             exit(1)
 
         result = trial_func(args)
         if result is None:
             failures_since_last_success += 1
+            update_amount = 0
         else:
             results.append(result)
-            pbar.update()
+            failures_since_last_success = 0
+            update_amount = 1
+        pbar.set_description(f'Failures: {failures_since_last_success}')
+        pbar.update(update_amount)
 
     trial_to_flickering_edges, trial_to_avg_sus = zip(*results)
     experiment_results = MassDiseaseTestingResult(name, trial_to_avg_sus,
@@ -315,9 +320,9 @@ def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, f
 
 def main():
     # poisson_entry_point()
-    uniform_entry_point()
+    # uniform_entry_point()
     # agent_generated_entry_point()
-    # social_circles_entry_point()
+    social_circles_entry_point()
 
 
 if __name__ == '__main__':

@@ -165,7 +165,7 @@ def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
                                 grid_size: Tuple[int, int],
                                 force_connected: bool = True,
                                 verbose: bool = False,
-                                max_tries: int = 100,
+                                max_tries: int = 5,
                                 rand=RAND)\
         -> Optional[Tuple[nx.Graph, Layout, NodeColors]]:
     """Return a social circles network or None on timeout."""
