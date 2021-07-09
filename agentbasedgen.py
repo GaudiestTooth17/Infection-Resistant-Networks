@@ -11,13 +11,15 @@ from analyzer import COLORS, calc_prop_common_neighbors
 Behavior = Callable[[nx.Graph], Tuple[nx.Graph, bool]]
 
 
-def make_agent_generated_network(starting_point: Union[int, nx.Graph], behavior: Behavior)\
-        -> nx.Graph:
-    # TODO: add a check to make sure that G is connected once it is returned
-    if isinstance(starting_point, int):
-        G: nx.Graph = nx.empty_graph(starting_point)
-    else:
-        G = starting_point
+def make_agent_generated_network(starting_point: Union[int, nx.Graph],
+                                 behavior: Behavior,
+                                 force_connected: bool = True) -> nx.Graph:
+    def make_initial_network() -> nx.Graph:
+        if isinstance(starting_point, int):
+            return nx.empty_graph(starting_point)  # type: ignore
+        return starting_point
+
+    G = make_initial_network()
     for _ in range(150):
         G, finished = behavior(G)
         if finished:
@@ -154,7 +156,8 @@ class TimeBasedBehavior:
         self._lower_bound = lower_bound
         self._upper_bound = upper_bound
         self._steps_to_stable = steps_to_stable
-        self._agent_to_previous_neighbors = {n: set() for n in range(N)}
+        # agents are ints so, this is probably faster than a dict
+        self._agent_to_previous_neighbors = [set() for _ in range(N)]
         self._steps_taken = 0
         self._rand = rand
 
@@ -189,20 +192,20 @@ class TimeBasedBehavior:
                 connect_agents(G, agent, choice(neighbor_choices))
 
     def __call__(self, G: nx.Graph) -> Tuple[nx.Graph, bool]:
-        G = nx.Graph(G)
-        agents = np.array(G.nodes)
+        H: nx.Graph = nx.Graph(G)
+        agents = np.array(H.nodes)
         self._rand.shuffle(agents)
         for agent in agents:
-            neighbors = tuple(G[agent])
+            neighbors = tuple(H[agent])
             # choose behavior
             if self._time_stable[agent] < self._steps_to_stable:
-                self._unstable_behavior(G, agent, neighbors)
+                self._unstable_behavior(H, agent, neighbors)
             else:
-                self._stable_behavior(G, agent, neighbors)
+                self._stable_behavior(H, agent, neighbors)
 
         # Update satisfaction. Agents are satisifed by having consistant neighbors
         for agent in agents:
-            neighbors = set(G[agent])
+            neighbors = set(H[agent])
             if self._agent_to_previous_neighbors[agent] == neighbors:
                 self._time_stable[agent] += 1
             else:
@@ -210,7 +213,7 @@ class TimeBasedBehavior:
             self._agent_to_previous_neighbors[agent] = neighbors
 
         self._steps_taken += 1
-        return G, (self._time_stable > 0).all()
+        return H, (self._time_stable > 0).all() and nx.is_connected(H)  # type: ignore
 
 
 def connect_agents(G: nx.Graph, u: int, v: int) -> None:
@@ -238,7 +241,7 @@ def main():
         G = nx.Graph(M)
         N = len(G.nodes)
     else:
-        G = nx.empty_graph(N)
+        G: nx.Graph = nx.empty_graph(N)  # type: ignore
         layout = None
     if layout is None:
         layout = nx.kamada_kawai_layout(G)
