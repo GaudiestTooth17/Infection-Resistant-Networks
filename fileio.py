@@ -1,8 +1,11 @@
+import os
 import networkx as nx
 import numpy as np
-from typing import Optional, Union, Callable, Tuple, Dict, Any
+from typing import Optional, Sequence, Union, Callable, Tuple, Dict, Any
 from customtypes import Layout, Communities
 import os.path as op
+import sys
+NETWORK_DIR = 'networks'
 
 
 def write_network(G: nx.Graph,
@@ -21,7 +24,7 @@ def write_network(G: nx.Graph,
 
 
 def read_network(file_name: str) -> Tuple[nx.Graph, Optional[Layout], Optional[Communities]]:
-    G: nx.Graph = nx.read_gml(file_name, None)
+    G: nx.Graph = nx.read_gml(file_name, None)  # type: ignore
 
     layout = nx.get_node_attributes(G, 'layout')
     if len(layout) != len(G):
@@ -40,7 +43,7 @@ def read_network(file_name: str) -> Tuple[nx.Graph, Optional[Layout], Optional[C
 def old_output_network(G: nx.Graph, network_name: str,
                        layout_algorithm: Optional[Union[Callable, Layout]] = None):
     """
-    Saves the network to a file using the typical representation
+    Save the network to a file using the deprecated format.
     """
     with open(network_name+'.txt', 'w') as f:
         f.write(f'{len(G.nodes)}\n')
@@ -75,6 +78,7 @@ def old_output_network(G: nx.Graph, network_name: str,
 
 
 def old_read_network_file(file_name: str) -> Tuple[np.ndarray, Optional[Layout]]:
+    """Read a network in the deprecated format."""
     with open(file_name, 'r') as f:
         line = f.readline()
         shape = (int(line[:-1]), int(line[:-1]))
@@ -97,4 +101,21 @@ def old_read_network_file(file_name: str) -> Tuple[np.ndarray, Optional[Layout]]
 
 
 def get_network_name(path_string: str) -> str:
+    """Return only the name portion of the path to a network."""
     return '.'.join(op.basename(path_string).split('.')[:-1])
+
+
+def network_names_to_paths(network_names: Sequence[str]) -> Sequence[str]:
+    """Return the paths to the named networks. Report and exit if they cannot be found."""
+    network_paths = tuple(NETWORK_DIR+name+'.txt' for name in network_names)
+    error_free = True
+    for path in network_paths:
+        if not os.path.exists(path):
+            print(path, 'does not exist.', file=sys.stderr)
+            error_free = False
+
+    if not error_free:
+        print('Fix errors before continuing.', file=sys.stderr)
+        exit(1)
+
+    return network_paths
