@@ -24,7 +24,9 @@ def write_network(G: nx.Graph,
     nx.write_gml(G, network_name+'.txt')
 
 
-def read_network(file_name: str) -> Tuple[nx.Graph, Optional[Layout], Optional[Communities]]:
+def read_network(file_name: str,
+                 remove_self_loops: bool = True)\
+        -> Tuple[nx.Graph, Optional[Layout], Optional[Communities]]:
     G: nx.Graph = nx.read_gml(file_name, None)  # type: ignore
 
     layout = nx.get_node_attributes(G, 'layout')
@@ -37,6 +39,8 @@ def read_network(file_name: str) -> Tuple[nx.Graph, Optional[Layout], Optional[C
 
     # get rid of the extraneous information
     G = nx.Graph(nx.to_numpy_array(G))
+    if remove_self_loops:
+        G.remove_edges_from(nx.selfloop_edges(G))
 
     return G, layout, node_to_community
 
