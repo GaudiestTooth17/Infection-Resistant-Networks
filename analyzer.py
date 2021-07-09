@@ -43,12 +43,12 @@ def show_deg_dist_from_matrix(M: np.ndarray, title, *, color='b', display=False,
     :return: None
     """
 
-    graph = nx.from_numpy_matrix(M)
-    degree_sequence = sorted([d for n, d in graph.degree()], reverse=True)
+    G: nx.Graph = nx.from_numpy_matrix(M)  # type: ignore
+    degree_sequence = sorted([d for n, d in G.degree], reverse=True)  # type: ignore
     degreeCount = collections.Counter(degree_sequence)
     deg, cnt = zip(*degreeCount.items())
 
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     plt.bar(deg, cnt, width=0.80, color=color)
 
     plt.title(title)
@@ -156,7 +156,8 @@ def betw_centrality(G: nx.Graph) -> List[float]:
     Edge width depends on betweeness centrality.
     (higher centrality -> more width)
     """
-    return [5*betweenness for betweenness in nx.edge_betweenness_centrality(G).values()]
+    return [5*betweenness
+            for betweenness in nx.edge_betweenness_centrality(G).values()]  # type: ignore
 
 
 def common_neigh(G: nx.Graph) -> List[float]:
@@ -357,7 +358,7 @@ def make_meta_community_network(edges_removed: Tuple[Tuple[int, int], ...],
                 return community_id
         raise Exception(f'Cannot find {node}')
 
-    community_network: nx.Graph = nx.empty_graph(len(communities))
+    community_network: nx.Graph = nx.empty_graph(len(communities))  # type: ignore
     edge_to_weight = Counter((find_community(u), find_community(v)) for u, v in edges_removed)
     community_network.add_edges_from(edge_to_weight.keys())
     nx.set_node_attributes(community_network, communities, 'communities')
