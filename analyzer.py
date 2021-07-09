@@ -179,8 +179,8 @@ def rw_centrality(G: nx.Graph) -> List[float]:
 
 
 def visualize_network(G: nx.Graph, layout: Optional[Layout], name='', save=False,
-                      edge_width_func: Callable[[nx.Graph], Sequence[float]] = all_same,
-                      block=True, node_size: Union[int, Sequence[int]] = 50,
+                      edge_width_func: Callable[[nx.Graph], Sequence[Number]] = all_same,
+                      block=True, node_size: Union[Number, Sequence[Number]] = 50,
                       node_color: Optional[Sequence[str]] = None) -> None:
     comps = tuple(nx.connected_components(G))
     if node_color is None:
