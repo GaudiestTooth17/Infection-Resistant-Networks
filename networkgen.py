@@ -81,21 +81,22 @@ def connected_community_entry_point(argv):
     N_comm = 10
     num_communities = 50
     name = f'connected-comm-{num_communities}-{N_comm}'
-    G: nx.Graph = None  # type: ignore
-    node_to_community = {}
-    for _ in range(100):
-        inner_degrees = np.round(RAND.poisson(10, N_comm))
-        if np.sum(inner_degrees) % 2 == 1:
-            inner_degrees[np.argmin(inner_degrees)] += 1
-        outer_degrees = np.round(RAND.poisson(4, num_communities))
-        if np.sum(outer_degrees) % 2 == 1:
-            outer_degrees[np.argmin(outer_degrees)] += 1
-        G, node_to_community = make_connected_community_network(inner_degrees, outer_degrees)
-        if nx.is_connected(G):
-            break
+
+    inner_degrees = np.round(RAND.poisson(10, N_comm))
+    if np.sum(inner_degrees) % 2 == 1:
+        inner_degrees[np.argmin(inner_degrees)] += 1
+    outer_degrees = np.round(RAND.poisson(4, num_communities))
+    if np.sum(outer_degrees) % 2 == 1:
+        outer_degrees[np.argmin(outer_degrees)] += 1
+
+    cc_results = make_connected_community_network(inner_degrees, outer_degrees)
+    if cc_results is None:
+        print('Could not generate network.')
+        exit(1)
+    G, node_to_community = cc_results
+
     layout: Layout = nx.spring_layout(G, iterations=200)  # type: ignore
     visualize_network(G, layout, name, block=False)
-    # plt.figure()
     # analyze_network(G, name)
     if input('Save? ').lower() == 'y':
         write_network(G, name, layout, node_to_community)
@@ -269,7 +270,8 @@ def make_configuration_network(degree_distribution: np.ndarray, rand) -> np.ndar
 def make_connected_community_network(inner_degrees: np.ndarray,
                                      outer_degrees: np.ndarray,
                                      rand=RAND,
-                                     force_connected: bool = True) -> Tuple[nx.Graph, Communities]:
+                                     max_tries: int = 100)\
+        -> Optional[Tuple[nx.Graph, Communities]]:
     """
     Create a random network divided into randomly generated communities connected to each other.
 
@@ -278,13 +280,13 @@ def make_connected_community_network(inner_degrees: np.ndarray,
 
     inner_degrees: the inner degree of each of the vertices in the communities.
     outer_degrees: How many outgoing edges each of the communities has.
+    return: A network and dictionary of node to community or None on time out.
     """
-    G: nx.Graph = nx.empty_graph(2)  # type: ignore
     node_to_community = {}
     num_communities = len(outer_degrees)
     community_size = len(inner_degrees)
     N = community_size * num_communities
-    while not nx.is_connected(G):
+    for _ in range(max_tries):
         M = np.zeros((N, N), dtype=np.uint8)
         node_to_community: Communities = {}
 
@@ -308,10 +310,10 @@ def make_connected_community_network(inner_degrees: np.ndarray,
                         M[n2, n1] = 1
 
         G = nx.Graph(M)
-        if not force_connected:
+        if nx.is_connected(G):
             return G, node_to_community
 
-    return G, node_to_community
+    return None
 
 
 if __name__ == '__main__':
