@@ -89,7 +89,7 @@ def connected_community_entry_point(argv):
         G, node_to_community = make_connected_community_network(inner_degrees, outer_degrees)
         if nx.is_connected(G):
             break
-    layout = nx.spring_layout(G, iterations=200)
+    layout: Layout = nx.spring_layout(G, iterations=200)  # type: ignore
     visualize_network(G, layout, name, block=False)
     # plt.figure()
     # analyze_network(G, name)
@@ -131,22 +131,22 @@ def make_complete_clique_gate_graph(num_big_components: int,
     big_comps = [nx.complete_graph(node_ids) for node_ids in component_node_ids]
 
     # put the disparate components into the same network
-    master_graph = union_components(gates + big_comps)
+    master_graph = union_components(gates + big_comps)  # type: ignore
 
     # insert gates in between components
     current_gate_ind = 0
     for comp_ind, src_comp in enumerate(big_comps[:-1]):
         for dest_comp in big_comps[comp_ind+1:]:
-            gate_nodes = list(gates[current_gate_ind].nodes())
+            gate_nodes = list(gates[current_gate_ind].nodes())  # type: ignore
             current_gate_ind += 1
             # Add edges to src_comp.
             # The loop assumes that there are fewer or equal nodes in half
             # the gate than in each component
-            src_nodes = list(src_comp.nodes())
+            src_nodes = list(src_comp.nodes())  # type: ignore
             for i, node in enumerate(gate_nodes[:len(gate_nodes)//2]):
                 master_graph.add_edge(node, src_nodes[i])
             # add edges to dest_comp
-            dest_nodes = list(dest_comp.nodes())
+            dest_nodes = list(dest_comp.nodes())  # type: ignore
             for i, node in enumerate(gate_nodes[len(gate_nodes)//2:]):
                 master_graph.add_edge(node, dest_nodes[i])
 
@@ -272,7 +272,7 @@ def make_connected_community_network(inner_degrees: np.ndarray,
     inner_degrees: the inner degree of each of the vertices in the communities.
     outer_degrees: How many outgoing edges each of the communities has.
     """
-    G = nx.empty_graph(2)
+    G = nx.Graph()
     node_to_community = {}
     while not nx.is_connected(G):
         num_communities = len(outer_degrees)
