@@ -6,24 +6,29 @@ import sys
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from random import choice
-from fileio import old_read_network_file
+from fileio import old_read_network_file, read_network
 from analyzer import COLORS, calc_prop_common_neighbors
+import time
 Behavior = Callable[[nx.Graph], Tuple[nx.Graph, bool]]
 
 
 def make_agent_generated_network(starting_point: Union[int, nx.Graph],
                                  behavior: Behavior,
-                                 force_connected: bool = True) -> nx.Graph:
+                                 max_steps: int = 150) -> Optional[nx.Graph]:
+    """Use the provided behavior to make a network. Return None on timeout."""
     def make_initial_network() -> nx.Graph:
         if isinstance(starting_point, int):
             return nx.empty_graph(starting_point)  # type: ignore
         return starting_point
 
     G = make_initial_network()
-    for _ in range(150):
+    finished = False
+    steps_taken = 0
+    while not finished:
+        if steps_taken > max_steps:
+            return None
         G, finished = behavior(G)
-        if finished:
-            break
+        steps_taken += 1
     return G
 
 
@@ -237,7 +242,7 @@ def main():
 
     N = int_or_none(sys.argv[1])
     if N is None:
-        M, layout = old_read_network_file(sys.argv[1])
+        M, layout, _ = read_network(sys.argv[1])
         G = nx.Graph(M)
         N = len(G.nodes)
     else:
@@ -246,30 +251,14 @@ def main():
     if layout is None:
         layout = nx.kamada_kawai_layout(G)
 
-    step = homogenous_step
-    # step = make_two_type_step(set(range(len(G.nodes)//10)),
-    #                           set(range(len(G.nodes)//10, len(G.nodes))))
-    # step = make_time_based_step(N)
-    node_size = 200
-    for i in tqdm(range(150)):
-        if i % 10 == 0:
-            layout = nx.kamada_kawai_layout(G)
-        plt.clf()
-        plt.title(f'Step {i} |Components| == {len(tuple(nx.connected_components(G)))}')
-        nx.draw_networkx(G, pos=layout, node_size=node_size, node_color=assign_colors(G),
-                         with_labels=False)
-        plt.pause(.2)  # type: ignore
-        node_size = step(G)
-    #     step(G, N)
-    #     if nx.is_connected(G):
-    #         print(f'Finished after {i+1} steps.')
-    #         break
-
-    # if nx.is_connected(G):
-    #     output_network(G, f'agent-generated-{N}')
-    # else:
-    #     print('Network was not connected!')
-    # input('Press "enter" to continue.')
+    rand = np.random.default_rng()
+    for i in range(50):
+        start_time = time.time()
+        H = make_agent_generated_network(nx.Graph(G), TimeBasedBehavior(N, 4, 6, 15, rand))
+        if H is None:
+            print(f'Failure on iteration {i} ({time.time()-start_time:.2f} s).')
+        else:
+            print(f'Success on iteration {i} ({time.time()-start_time:.2f} s).')
 
 
 if __name__ == '__main__':
