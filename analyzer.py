@@ -198,6 +198,8 @@ def visualize_network(G: nx.Graph, layout: Optional[Layout], name='', save=False
         plt.savefig(f'vis-{name}.png', dpi=300, format='png')
     else:
         plt.show(block=block)
+        if not block:
+            plt.figure()
 
 
 def visualize_eigen_communities(G: nx.Graph, layout: Optional[Layout] = None, name='') -> None:
