@@ -5,6 +5,7 @@ from typing import Optional, Sequence, Union, Callable, Tuple, Dict, Any
 from customtypes import Layout, Communities
 import os.path as op
 import sys
+from colorama import Fore, Style
 NETWORK_DIR = 'networks'
 
 
@@ -107,15 +108,15 @@ def get_network_name(path_string: str) -> str:
 
 def network_names_to_paths(network_names: Sequence[str]) -> Sequence[str]:
     """Return the paths to the named networks. Report and exit if they cannot be found."""
-    network_paths = tuple(NETWORK_DIR+name+'.txt' for name in network_names)
+    network_paths = tuple(op.join(NETWORK_DIR, name+'.txt') for name in network_names)
     error_free = True
     for path in network_paths:
         if not os.path.exists(path):
-            print(path, 'does not exist.', file=sys.stderr)
+            print(Fore.RED+path, 'does not exist.', file=sys.stderr)
             error_free = False
 
     if not error_free:
-        print('Fix errors before continuing.', file=sys.stderr)
+        print('\nFix errors before continuing.'+Style.RESET_ALL, file=sys.stderr)
         exit(1)
 
     return network_paths
