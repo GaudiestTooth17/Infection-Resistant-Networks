@@ -5,9 +5,6 @@ import matplotlib.pyplot as plt
 import os
 from scipy.stats import wasserstein_distance
 
-
-# color is a string and reach is a number
-Agent = namedtuple('Agent', 'color reach')
 NodeColors = Union[List[str], List[Tuple[int, int, int]]]
 Layout = Dict[int, Tuple[float, float]]
 Communities = Dict[int, int]

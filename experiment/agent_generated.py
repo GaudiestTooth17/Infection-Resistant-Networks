@@ -1,5 +1,6 @@
+import networkgen
 from experiment.common import safe_run_trials
-import agentbasedgen as abg
+from networkgen import TimeBasedBehavior, AgentBehavior, make_agent_generated_network
 import time
 import numpy as np
 from sim_dynamic import Disease, FlickerBehavior, simulate, make_starting_sir
@@ -17,8 +18,8 @@ def agent_generated_entry_point():
     lb_connection = 4
     ub_connection = 6
     steps_to_stability = 20
-    agent_behavior = abg.TimeBasedBehavior(N, lb_connection, ub_connection,
-                                           steps_to_stability, rand)
+    agent_behavior = TimeBasedBehavior(N, lb_connection, ub_connection,
+                                       steps_to_stability, rand)
     disease = Disease(4, .2)
 
     safe_run_trials(f'Agentbased {N}-{lb_connection}-{ub_connection}-{steps_to_stability}',
@@ -27,7 +28,7 @@ def agent_generated_entry_point():
     print(f'Finished experiments with agent generated networks ({time.time()-start_time} s).')
 
 
-def run_agent_generated_trial(args: Tuple[Disease, abg.Behavior, int, Any]) -> Tuple[float, float]:
+def run_agent_generated_trial(args: Tuple[Disease, AgentBehavior, int, Any]) -> Tuple[float, float]:
     """
     args: (disease to use in the simulation,
            the behavior agents have when generating the network,
@@ -39,7 +40,7 @@ def run_agent_generated_trial(args: Tuple[Disease, abg.Behavior, int, Any]) -> T
     sims_per_trial = 150
     G = None
     while G is None:
-        G = abg.make_agent_generated_network(N, agent_behavior)
+        G = make_agent_generated_network(N, agent_behavior)
 
     to_flicker = partitioning.fluidc_partition(G, 50)
     proportion_flickering = len(to_flicker) / len(G.edges)

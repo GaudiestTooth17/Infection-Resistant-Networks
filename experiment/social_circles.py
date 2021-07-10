@@ -1,5 +1,4 @@
 from typing import Tuple, Dict, Any, Optional
-from customtypes import Agent
 from sim_dynamic import Disease, FlickerBehavior, make_starting_sir, simulate
 import networkgen
 import partitioning
@@ -8,7 +7,7 @@ import numpy as np
 from experiment.common import safe_run_trials
 
 
-def run_social_circles_trial(args: Tuple[Dict[Agent, int],
+def run_social_circles_trial(args: Tuple[Dict[networkgen.Agent, int],
                                          Tuple[int, int],
                                          Disease,
                                          Any]) -> Optional[Tuple[float, float]]:
@@ -41,9 +40,9 @@ def social_circles_entry_point():
     N_purple = int(N * .1)
     N_blue = int(N * .2)
     N_green = N - N_purple - N_blue
-    agents = {Agent('green', 30): N_green,
-              Agent('blue', 40): N_blue,
-              Agent('purple', 50): N_purple}
+    agents = {networkgen.Agent('green', 30): N_green,
+              networkgen.Agent('blue', 40): N_blue,
+              networkgen.Agent('purple', 50): N_purple}
     # grid_dim = (int(N/.005), int(N/.005))  # the denominator is the desired density
     grid_dim = N, N
     disease = Disease(4, .2)

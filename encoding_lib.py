@@ -11,7 +11,7 @@ def degree_sequence_to_network(degrees: Sequence[int],
         raise Exception('The sum of degrees must be even.')
 
     node_to_remaining_stubs = dict(enumerate(degrees))
-    G = nx.empty_graph(len(degrees))
+    G: nx.Graph = nx.empty_graph(len(degrees))  # type: ignore
     while sum(node_to_remaining_stubs.values()) > 0:
         available_nodes = tuple(filter(lambda u: node_to_remaining_stubs[u],
                                        node_to_remaining_stubs.keys()))
@@ -68,7 +68,7 @@ def edge_list_to_network(edge_list: np.ndarray) -> nx.Graph:
     In this way, edge_list can be viewed as a List[Tuple[int, int]].
     """
     N = np.max(edge_list)
-    G = nx.empty_graph(N)
+    G: nx.Graph = nx.empty_graph(N)  # type: ignore
     G.add_edges_from(((edge_list[i], edge_list[i+1])
                       for i in range(0, len(edge_list), 2)))
     return G

@@ -113,7 +113,8 @@ class HighBetweenessObjective:
         if not nx.is_connected(G):
             return len(G) + self._num_important_edges*2
 
-        edge_betwenesses = sorted(nx.edge_betweenness_centrality(G).values(), reverse=True)
+        edge_betwenesses = sorted(nx.edge_betweenness_centrality(G).values(),  # type: ignore
+                                  reverse=True)
         return -sum(edge_betwenesses[:self._num_important_edges])\
             - nx.diameter(G)*self._diameter_weight  # type: ignore
 

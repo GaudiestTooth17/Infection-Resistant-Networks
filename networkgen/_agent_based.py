@@ -3,17 +3,15 @@ from typing import Iterable, List, Callable, Optional, Sequence, Tuple, Union
 import networkx as nx
 import numpy as np
 import sys
-import matplotlib.pyplot as plt
-from tqdm import tqdm
 from random import choice
-from fileio import old_read_network_file, read_network
+from fileio import read_network
 from analyzer import COLORS, calc_prop_common_neighbors
 import time
-Behavior = Callable[[nx.Graph], Tuple[nx.Graph, bool]]
+AgentBehavior = Callable[[nx.Graph], Tuple[nx.Graph, bool]]
 
 
 def make_agent_generated_network(starting_point: Union[int, nx.Graph],
-                                 behavior: Behavior,
+                                 behavior: AgentBehavior,
                                  max_steps: int = 150) -> Optional[nx.Graph]:
     """Use the provided behavior to make a network. Return None on timeout."""
     def make_initial_network() -> nx.Graph:
@@ -235,7 +233,7 @@ def int_or_none(string: str) -> Optional[int]:
         return None
 
 
-def main():
+def agent_based_entry_point():
     if len(sys.argv) < 2:
         print(f'Usage: {sys.argv[0]} <network or number of agents>')
         return
@@ -263,7 +261,7 @@ def main():
 
 if __name__ == '__main__':
     try:
-        main()
+        agent_based_entry_point()
     except EOFError:
         print('Goodbye.')
     except KeyboardInterrupt:
