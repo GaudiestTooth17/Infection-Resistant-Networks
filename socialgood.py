@@ -25,14 +25,21 @@ def rate_social_good(G: nx.Graph, decay_func: TDecayFunc = DecayFunction(1)) -> 
     """
     Rate a network on how much social good it has.
     """
-    components: Tuple[Set[int], ...] = tuple(nx.connected_components(G))
+    # The algorithm gets messed up if it runs on a single node network
+    # and the correct answer is 0 anways
+    if len(G) == 1:
+        return 0
+
+    components = tuple(nx.connected_components(G))
     # Floyd-Warshall doesn't work on unconnected networks, so we have to run
     # this function on each component separately.
     if len(components) > 1:
         social_good = 0
         for component in components:
-            H = G.subgraph(component)
-            social_good += rate_social_good(H, decay_func)
+            weight = len(component) / len(G)
+            H = G.subgraph(component).copy()
+            nx.relabel_nodes(H, mapping={old: new for new, old in enumerate(H.nodes)}, copy=False)
+            social_good += rate_social_good(H, decay_func) * weight
         return social_good
 
     dist_matrix = nx.floyd_warshall_numpy(G)
