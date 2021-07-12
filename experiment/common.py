@@ -63,7 +63,7 @@ class ExperimentResult:
 
         plt.figure()
         plt.title(f'Social Good on\n{self.network_class}')
-        plt.boxplot(self.trial_to_proportion_flickering_edges, notch=False)
+        plt.boxplot(self.trial_to_social_good, notch=False)
         plt.savefig(os.path.join(directory,
                                  f'Social Good on {self.network_class}.png'),
                     format='png')
@@ -111,6 +111,5 @@ def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, f
     trial_to_flickering_edges, trial_to_avg_sus, trial_to_social_good = zip(*results)
     experiment_results = ExperimentResult(name, trial_to_avg_sus,
                                                   trial_to_flickering_edges, trial_to_social_good)
-    experiment_results.save_csv('results')
-    experiment_results.save_box_plots('results')
+    # experiment_results.save_box_plots('results')
     experiment_results.save_perc_sus_vs_social_good('results')
