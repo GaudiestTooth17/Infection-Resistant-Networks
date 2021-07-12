@@ -1,0 +1,5 @@
+{
+    "python.pythonPath": "/home/alex/miniconda3/envs/py3.9/bin/python",
+    "python.analysis.extraPaths": ["./experiment", "./networkgen"],
+    "python.linting.pycodestyleArgs": ["--disable", "E402"],
+}

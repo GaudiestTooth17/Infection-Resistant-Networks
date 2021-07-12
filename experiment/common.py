@@ -2,9 +2,11 @@ from typing import Callable, Optional, Tuple, TypeVar, Sequence
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
-from customtypes import Number
 import os
 import csv
+import sys
+sys.path.append('')
+from customtypes import Number
 T = TypeVar('T')
 
 

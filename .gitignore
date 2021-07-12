@@ -1,6 +1,5 @@
 __pycache__
 *.png
 configurationmodel.profile
-.vscode/
 sandbox.py
 *.csv

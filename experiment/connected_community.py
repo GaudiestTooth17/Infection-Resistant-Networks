@@ -1,4 +1,4 @@
-from experiment.common import safe_run_trials
+from common import safe_run_trials
 from sim_dynamic import Disease, simulate, FlickerBehavior, make_starting_sir
 import numpy as np
 from typing import Optional, Tuple, Any
@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from customtypes import Number
 import networkgen
 import networkx as nx
+from analyzer import COLORS, visualize_network
 
 
 def poisson_entry_point():
@@ -152,3 +153,28 @@ def run_connected_community_trial(args: Tuple[ConnectedCommunityConfiguration, D
                        for _ in range(sims_per_trial)])
 
     return proportion_flickering, avg_sus
+
+
+def visual_inspection():
+    N_comm = 10  # agents per community
+    num_comms = 50  # number of communities
+    rand = np.random.default_rng(0)
+    inner_bounds = (5, 9)
+    outer_bounds = (2, 5)
+    configuration = UniformConfiguration(rand, inner_bounds, outer_bounds, N_comm, num_comms)
+
+    for i in range(10):
+        inner_degrees = configuration.make_inner_degrees()
+        outer_degrees = configuration.make_outer_degrees()
+        cc_results = networkgen.make_connected_community_network(inner_degrees, outer_degrees, rand)
+        if cc_results is None:
+            print('Failure')
+            continue
+        G, communities = cc_results
+        node_color = [COLORS[community] for community in communities.values()]
+        visualize_network(G, None, name=str(i), block=False, node_color=node_color)  # type: ignore
+    input('Done')
+
+
+if __name__ == '__main__':
+    visual_inspection()
