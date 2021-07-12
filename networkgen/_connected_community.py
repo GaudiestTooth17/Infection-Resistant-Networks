@@ -77,6 +77,7 @@ def make_connected_community_network(inner_degrees: np.ndarray,
 
         G = nx.Graph(M)
         if nx.is_connected(G):
+            G.remove_edges_from(nx.selfloop_edges(G))
             return G, node_to_community
 
     return None
