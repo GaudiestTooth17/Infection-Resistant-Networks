@@ -21,7 +21,7 @@ class DecayFunction:
         return 1/(distance**self.k)
 
 
-def rate_social_good(G: nx.Graph, decay_func: TDecayFunc) -> float:
+def rate_social_good(G: nx.Graph, decay_func: TDecayFunc = DecayFunction(1)) -> float:
     """
     Rate a network on how much social good it has.
     """
