@@ -1,54 +1,95 @@
-from typing import Callable, Optional, Tuple, TypeVar, Sequence
+from typing import Callable, List, Optional, Tuple, TypeVar, Sequence
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from dataclasses import dataclass
 import os
 import csv
 import sys
 sys.path.append('')
-from customtypes import Number
+from customtypes import ExperimentResults, Number
 T = TypeVar('T')
 
 
-@dataclass
-class MassDiseaseTestingResult:
-    network_class: str
-    """A string describing what type of network the simulations were run on."""
-    trial_to_results: Sequence[Number]
-    """Each result is actually a collection of results from one instance of the  network class."""
-    trial_to_proportion_flickering_edges: Sequence[float]
-    """The trial should line up with the trial in trial_to_results."""
+class ExperimentResult:
+    def __init__(self, network_class: str,
+                 trial_to_perc_sus: Sequence[Number],
+                 trial_to_proportion_flickering_edges: Sequence[Number],
+                 trial_to_social_good: Sequence[Number]):
+        """
+        A class for aggregating and recording results of experiments.
 
-    def save(self, directory: str) -> None:
+        network_class: A string describing what type of network the simulations were run on.
+        trial_to_perc_sus: The percentage (or probably the average percentage)
+                           of agents that ended the experiment susceptible.
+        trial_to_proportion_flickering_edges: The trial should line up with the
+                                              trial in trial_to_results.
+        trial_to_social_good: The trial should line up with the trial in trial_to_results.
         """
-        Save a CSV with trials_to_results stored in rows, a blank row, and
-        trial_to_proportion_flickering_edges stored next in a single row.
+        self.network_class = network_class
+        self.trial_to_perc_sus = trial_to_perc_sus
+        self.trial_to_proportion_flickering_edges = trial_to_proportion_flickering_edges
+        self.trial_to_social_good = trial_to_social_good
+
+    def save_csv(self, directory: str) -> None:
         """
+        Save a CSV with the stored data.
+        """
+        self._create_directory(directory)
+
+        with open(os.path.join(directory, self.network_class+'.csv'), 'w', newline='') as file:
+            writer = csv.writer(file, dialect=csv.excel)
+            writer.writerow(['Percentage of Susceptible Agents'])
+            writer.writerow(self.trial_to_perc_sus)
+            writer.writerow(['Proportion Flickering Edges'])
+            writer.writerow(self.trial_to_proportion_flickering_edges)
+            writer.writerow(['Social Good'])
+            writer.writerow(self.trial_to_social_good)
+
+    def save_box_plots(self, directory: str) -> None:
+        self._create_directory(directory)
+
+        plt.figure()
+        plt.title(f'Percentage Suseptible for\n{self.network_class}')
+        plt.boxplot(self.trial_to_perc_sus, notch=False)
+        plt.savefig(os.path.join(directory,
+                                 f'Percentage Suseptible for {self.network_class}.png'),
+                    format='png')
+
+        plt.figure()
+        plt.title(f'Proportion Flickering Edges in\n{self.network_class}')
+        plt.boxplot(self.trial_to_proportion_flickering_edges, notch=False)
+        plt.savefig(os.path.join(directory,
+                                 f'Proportion Flickering Edges in {self.network_class}.png'),
+                    format='png')
+
+        plt.figure()
+        plt.title(f'Social Good on\n{self.network_class}')
+        plt.boxplot(self.trial_to_proportion_flickering_edges, notch=False)
+        plt.savefig(os.path.join(directory,
+                                 f'Social Good on {self.network_class}.png'),
+                    format='png')
+
+    def save_perc_sus_vs_social_good(self, directory: str) -> None:
+        self._create_directory(directory)
+
+        plt.figure()
+        plt.title(f'Resilience vs Social Good Trade-off Space\n{self.network_class}')
+        plt.xlabel('Percentage Susceptible')
+        plt.ylabel('Social Good')
+        plt.scatter(self.trial_to_perc_sus, self.trial_to_social_good)
+        plt.savefig(os.path.join(directory,
+                                 f'R vs SG Trade off Space for {self.network_class}.png'),
+                    format='png')
+
+    @staticmethod
+    def _create_directory(directory):
         if not os.path.exists(directory):
             os.mkdir(directory)
 
-        with open(self.network_class+'.csv', 'w', newline='') as file:
-            writer = csv.writer(file, dialect=csv.excel)
-            writer.writerow(['Results'])
-            writer.writerow(self.trial_to_results)
-            writer.writerow(['Proportion Flickering Edges'])
-            writer.writerow(self.trial_to_proportion_flickering_edges)
 
-        plt.figure()
-        plt.title(f'Results for {self.network_class}')
-        plt.boxplot(self.trial_to_results, notch=False)
-        plt.savefig(f'Results for {self.network_class}.png', format='png')
-
-        plt.figure()
-        plt.title(f'Proportion Flickering Edges for {self.network_class}')
-        plt.boxplot(self.trial_to_proportion_flickering_edges, notch=False)
-        plt.savefig(f'Proportion Flickering Edges for {self.network_class}', format='png')
-
-
-def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, float]]],
+def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, float, float]]],
                     args: T, num_trials: int, max_failures: int = 10) -> None:
     """Run trials until too many failures occur, exit if this happens."""
-    results = []
+    results: List[Tuple[float, float, float]] = []
     failures_since_last_success = 0
     pbar = tqdm(total=num_trials, desc=f'Failures: {failures_since_last_success}')
     while len(results) < num_trials:
@@ -67,7 +108,9 @@ def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, f
         pbar.set_description(f'Failures: {failures_since_last_success}')
         pbar.update(update_amount)
 
-    trial_to_flickering_edges, trial_to_avg_sus = zip(*results)
-    experiment_results = MassDiseaseTestingResult(name, trial_to_avg_sus,
-                                                  trial_to_flickering_edges)
-    experiment_results.save('results')
+    trial_to_flickering_edges, trial_to_avg_sus, trial_to_social_good = zip(*results)
+    experiment_results = ExperimentResult(name, trial_to_avg_sus,
+                                                  trial_to_flickering_edges, trial_to_social_good)
+    experiment_results.save_csv('results')
+    experiment_results.save_box_plots('results')
+    experiment_results.save_perc_sus_vs_social_good('results')

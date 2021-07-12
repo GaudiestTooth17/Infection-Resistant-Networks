@@ -7,6 +7,9 @@ from customtypes import Number
 import networkgen
 import networkx as nx
 from analyzer import COLORS, visualize_network
+import sys
+sys.path.append('')
+from socialgood import rate_social_good
 
 
 def poisson_entry_point():
@@ -30,7 +33,7 @@ def uniform_entry_point():
     print('Running uniform connected community experiments')
     N_comm = 10  # agents per community
     num_comms = 50  # number of communities
-    num_trials = 1000
+    num_trials = 100
     rand = np.random.default_rng(0)
     inner_bounds = (5, 9)
     outer_bounds = (2, 5)
@@ -95,7 +98,7 @@ class UniformConfiguration(ConnectedCommunityConfiguration):
         N_comm: The number of nodes in a community
         num_communities: The number of communities
         """
-        self._name = f'UniformConfig(ib={inner_bounds}, ob={outer_bounds}'\
+        self._name = f'UniformConfig(ib={inner_bounds}, ob={outer_bounds} '\
                      f'N_comm={N_comm}, num_comms = {num_communities})'
         self._rand = rand
         self._inner_bounds = inner_bounds
@@ -123,7 +126,7 @@ class UniformConfiguration(ConnectedCommunityConfiguration):
 
 
 def run_connected_community_trial(args: Tuple[ConnectedCommunityConfiguration, Disease, Any])\
-        -> Optional[Tuple[float, float]]:
+        -> Optional[Tuple[float, float, float]]:
     """
     args: (ConnectedCommunityConfiguration to use,
            disease to use,
@@ -145,14 +148,15 @@ def run_connected_community_trial(args: Tuple[ConnectedCommunityConfiguration, D
     G, communities = cc_results
     to_flicker = {(u, v) for u, v in G.edges if communities[u] != communities[v]}
     proportion_flickering = len(to_flicker) / len(G.edges)
+    social_good = rate_social_good(G)
     M = nx.to_numpy_array(G)
 
     behavior = FlickerBehavior(M, to_flicker, (True, False), "Probs don't change this")
     avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
                                        disease, behavior, sim_len, None, rand)[-1][0] > 0)
-                       for _ in range(sims_per_trial)])
+                       for _ in range(sims_per_trial)]) / len(M)
 
-    return proportion_flickering, avg_sus
+    return proportion_flickering, avg_sus, social_good
 
 
 def visual_inspection():
@@ -177,4 +181,4 @@ def visual_inspection():
 
 
 if __name__ == '__main__':
-    visual_inspection()
+    uniform_entry_point()
