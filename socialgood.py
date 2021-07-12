@@ -1,5 +1,5 @@
 from customtypes import Number
-from typing import Callable, Sequence
+from typing import Callable, Sequence, Set, Tuple
 import numpy as np
 import networkx as nx
 import fileio as fio
@@ -25,6 +25,16 @@ def rate_social_good(G: nx.Graph, decay_func: TDecayFunc = DecayFunction(1)) -> 
     """
     Rate a network on how much social good it has.
     """
+    components: Tuple[Set[int], ...] = tuple(nx.connected_components(G))
+    # Floyd-Warshall doesn't work on unconnected networks, so we have to run
+    # this function on each component separately.
+    if len(components) > 1:
+        social_good = 0
+        for component in components:
+            H = G.subgraph(component)
+            social_good += rate_social_good(H, decay_func)
+        return social_good
+
     dist_matrix = nx.floyd_warshall_numpy(G)
 
     def calc_score(u: int, v: int) -> float:
