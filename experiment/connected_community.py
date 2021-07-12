@@ -17,11 +17,10 @@ def poisson_entry_point():
     print('Running poisson connected community experiments')
     N_comm = 10  # agents per community
     num_comms = 50  # number of communities
-    num_trials = 1000
+    num_trials = 100
     rand = np.random.default_rng(420)
     lam = 8  # this is lambda for both the inner and outer degree distributions
-    configuration = PoissonConfiguration(f'Poisson: lam={lam}, {num_comms} comms, {N_comm} big',
-                                         rand, lam, lam, num_comms, N_comm)
+    configuration = PoissonConfiguration(rand, lam, lam, num_comms, N_comm)
     disease = Disease(4, .2)
 
     safe_run_trials(configuration.name, run_connected_community_trial,
@@ -36,8 +35,9 @@ def uniform_entry_point():
     num_trials = 100
     rand = np.random.default_rng(0)
     inner_bounds = (5, 9)
-    outer_bounds = (2, 5)
+    outer_bounds = (5, 9)
     configuration = UniformConfiguration(rand, inner_bounds, outer_bounds, N_comm, num_comms)
+    print(configuration.name)
     disease = Disease(4, .2)
 
     safe_run_trials(configuration.name, run_connected_community_trial,
@@ -60,9 +60,10 @@ class ConnectedCommunityConfiguration(ABC):
 
 
 class PoissonConfiguration(ConnectedCommunityConfiguration):
-    def __init__(self, name: str, rand, inner_lam: Number, outer_lam: Number,
+    def __init__(self, rand, inner_lam: Number, outer_lam: Number,
                  N_comm: int, num_communities: int) -> None:
-        self._name = name
+        self._name = f'PoissonConfig(il={inner_lam}, ol={outer_lam} '\
+                     f'N_comm={N_comm}, num_comms = {num_communities})'
         self._inner_lam = inner_lam
         self._outer_lam = outer_lam
         self._rand = rand
@@ -93,13 +94,13 @@ class UniformConfiguration(ConnectedCommunityConfiguration):
         """
         An object that stores the configuration for a connected community network.
 
-        inner_bounds: The (lower, upper) bounds for the intracommunity degree distribution
-        outer_bounds: The (lower, upper) bounds for the intercommunity degree distribution
+        inner_bounds: The [lower, upper) bounds for the intracommunity degree distribution
+        outer_bounds: The [lower, upper) bounds for the intercommunity degree distribution
         N_comm: The number of nodes in a community
         num_communities: The number of communities
         """
         self._name = f'UniformConfig(ib={inner_bounds}, ob={outer_bounds} '\
-                     f'N_comm={N_comm}, num_comms = {num_communities})'
+                     f'N_comm={N_comm}, num_comms={num_communities})'
         self._rand = rand
         self._inner_bounds = inner_bounds
         self._outer_bounds = outer_bounds
@@ -160,11 +161,11 @@ def run_connected_community_trial(args: Tuple[ConnectedCommunityConfiguration, D
 
 
 def visual_inspection():
-    N_comm = 10  # agents per community
-    num_comms = 50  # number of communities
+    N_comm = 25  # agents per community
+    num_comms = 20  # number of communities
     rand = np.random.default_rng(0)
-    inner_bounds = (5, 9)
-    outer_bounds = (2, 5)
+    inner_bounds = (10, 16)
+    outer_bounds = (5, 11)
     configuration = UniformConfiguration(rand, inner_bounds, outer_bounds, N_comm, num_comms)
 
     for i in range(10):
@@ -181,4 +182,11 @@ def visual_inspection():
 
 
 if __name__ == '__main__':
-    uniform_entry_point()
+    try:
+        uniform_entry_point()
+        # poisson_entry_point()
+        # visual_inspection()
+    except KeyboardInterrupt:
+        print('\nGood bye.')
+    except EOFError:
+        print('\nGood bye.')
