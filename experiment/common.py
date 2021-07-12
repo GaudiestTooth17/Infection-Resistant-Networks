@@ -68,13 +68,18 @@ class ExperimentResult:
                                  f'Social Good on {self.network_class}.png'),
                     format='png')
 
-    def save_perc_sus_vs_social_good(self, directory: str) -> None:
+    def save_perc_sus_vs_social_good(self, directory: str,
+                                     *, static_x: bool = True, static_y: bool = True) -> None:
         self._create_directory(directory)
 
         plt.figure()
         plt.title(f'Resilience vs Social Good Trade-off Space\n{self.network_class}')
         plt.xlabel('Percentage Susceptible')
         plt.ylabel('Social Good')
+        if static_x:
+            plt.xlim(0, 1)
+        if static_y:
+            plt.ylim(0, 1)
         plt.scatter(self.trial_to_perc_sus, self.trial_to_social_good)
         plt.savefig(os.path.join(directory,
                                  f'R vs SG Trade off Space for {self.network_class}.png'),
