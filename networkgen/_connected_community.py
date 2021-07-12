@@ -36,7 +36,8 @@ def connected_community_entry_point():
 def make_connected_community_network(inner_degrees: np.ndarray,
                                      outer_degrees: np.ndarray,
                                      rand=RAND,
-                                     max_tries: int = 100)\
+                                     max_tries: int = 100,
+                                     none_on_disconnected: bool = False)\
         -> Optional[Tuple[nx.Graph, Communities]]:
     """
     Create a random network divided into randomly generated communities connected to each other.
@@ -76,7 +77,7 @@ def make_connected_community_network(inner_degrees: np.ndarray,
                         M[n2, n1] = 1
 
         G = nx.Graph(M)
-        if nx.is_connected(G):
+        if (not none_on_disconnected) or nx.is_connected(G):
             G.remove_edges_from(nx.selfloop_edges(G))
             return G, node_to_community
 
