@@ -15,7 +15,7 @@ import sys
 RAND = np.random.default_rng()
 
 
-@dataclass
+@dataclass(unsafe_hash=True, frozen=True)
 class Agent:
     color: Union[str, Tuple[int, int, int]]
     reach: Number
@@ -54,7 +54,7 @@ def social_circles_entry_point():
 
 def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
                                 grid_size: Tuple[int, int],
-                                force_connected: bool = True,
+                                none_on_disconnected: bool = False,
                                 verbose: bool = False,
                                 max_tries: int = 5,
                                 rand=RAND)\
@@ -103,7 +103,7 @@ def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
                   for (x, y), id_ in loc_to_id.items()}
         G = nx.Graph(M)
         # return the generated network if it is connected or if we don't care
-        if (not force_connected) or nx.is_connected(G):
+        if (not none_on_disconnected) or nx.is_connected(G):
             if verbose:
                 print(f'Success after {attempt+1} tries.')
             return G, layout, colors
