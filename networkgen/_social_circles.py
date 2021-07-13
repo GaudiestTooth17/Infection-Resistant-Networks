@@ -1,17 +1,16 @@
+import sys
+sys.path.append('')
 from typing import Union, Tuple, Dict, Optional
 from dataclasses import dataclass
 from customtypes import Number, Layout, NodeColors
-import matplotlib.pyplot as plt
 import time
 from analyzer import visualize_network
 from scipy.sparse import dok_matrix
 import numpy as np
 import networkx as nx
-from fileio import write_network
 from partitioning import intercommunity_edges_to_communities, fluidc_partition
 from tqdm import tqdm
 import itertools as it
-import sys
 RAND = np.random.default_rng()
 
 
@@ -22,34 +21,38 @@ class Agent:
 
 
 def social_circles_entry_point():
-    if len(sys.argv) < 2:
-        print(f'Usage: {sys.argv[0]} <output name>')
-        return
-
-    num_agents = 10_000
+    # if len(sys.argv) < 2:
+    #     print(f'Usage: {sys.argv[0]} <output name>')
+    #     return
+    rand = np.random.default_rng(0)
+    num_agents = 250
     num_purple = int(num_agents * .1)
     num_blue = int(num_agents * .2)
     num_green = num_agents - num_purple - num_blue
-    grid_dim = int(num_agents / .003)  # the denominator is the desired density
+    grid_dim = int(num_agents+100)  # the denominator is the desired density
+    print(f'Density = {num_agents/(grid_dim**2)}')
 
     agents = {Agent('green', 30): num_green,
               Agent('blue', 40): num_blue,
               Agent('purple', 50): num_purple}
-    start_time = time.time()
-    social_circles_result = make_social_circles_network(agents, (grid_dim, grid_dim), verbose=True)
-    if social_circles_result is None:
-        print('Generation failed.')
-        exit(1)
-    G, layout, _ = social_circles_result
-    print(f'Finished social circles network ({time.time() - start_time}s).')
-    plt.clf()
-    visualize_network(G, layout, 'Social Circles', block=False)
-    plt.hist(tuple(G.degree[n] for n in G), bins=None)
-    keep = input('Keep? ')
-    if keep.lower() == 'n':
-        return social_circles_entry_point()
-    communities = intercommunity_edges_to_communities(G, fluidc_partition(G, len(G)//20))
-    write_network(G, sys.argv[1], layout, communities)
+    for _ in range(100):
+        start_time = time.time()
+        social_circles_result = make_social_circles_network(agents, (grid_dim, grid_dim),
+                                                            verbose=False, rand=rand)
+        if social_circles_result is None:
+            print('Generation failed.')
+            exit(1)
+        G, layout, _ = social_circles_result
+        print(f'Finished social circles network ({time.time() - start_time}s).')
+        visualize_network(G, layout, 'Social Circles', block=False)
+        num_communities = len(G) // 20
+        print(f'Aiming for {num_communities} communities.')
+        to_remove = fluidc_partition(G, num_communities)
+        # somehow this frequently splits G into more components than I request
+        G.remove_edges_from(to_remove)
+        print(f'G has {nx.number_connected_components(G)} connected components.')
+        visualize_network(G, layout, 'Partitioned')
+        print('\n\n')
 
 
 def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
@@ -138,3 +141,7 @@ def search_for_neighbors(grid, x, y):
 
 def distance(x0, y0, x1, y1) -> float:
     return np.sqrt((x0-x1)**2 + (y0-y1)**2)
+
+
+if __name__ == '__main__':
+    social_circles_entry_point()

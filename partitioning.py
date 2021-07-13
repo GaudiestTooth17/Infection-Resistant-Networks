@@ -1,6 +1,6 @@
 from customtypes import Communities
 from itertools import takewhile
-from typing import Dict, Iterable, Union, Tuple
+from typing import Dict, Iterable, Sequence, Union, Tuple
 import networkx as nx
 import numpy as np
 import sys
@@ -12,6 +12,7 @@ from analyzer import (calc_prop_common_neighbors,
                       visualize_network)
 from collections import Counter
 import time
+import itertools as it
 
 
 def main():
@@ -34,54 +35,6 @@ def main():
 
     G = nx.Graph(M)
     start_time = time.time()
-    # to_remove = label_partition(G, n_communities)  # n_communities is actually the n_labels
-    # to_remove = girvan_newman_partition(G, n_communities)
-    # to_remove = common_neighbor_partition(G, n_communities)
-    to_remove = fluidc_partition(G, n_communities)
-    G.remove_edges_from(to_remove)
-    print(f'Partioned in {time.time()-start_time} seconds.')
-    # communities = tuple(nx.connected_components(G))
-    # plt.hist(tuple(len(comm) for comm in communities), bins=None)
-    # plt.figure()
-    # plt.hist(tuple(len(comm) for comm in communities if len(comm) < 500), bins=None)
-    # plt.figure()
-    # visualize_graph(G, layout, f'{name} partitioned with {n_labels} labels', block=False)
-    # plt.figure()
-    meta_community_network, node_size, edge_width = make_meta_community_network(to_remove, G)
-
-    def edge_width_func(G):
-        return edge_width
-
-    meta_layout = make_meta_community_layout(meta_community_network, layout)
-    visualize_network(meta_community_network, meta_layout,
-                      f'{name} meta community\n{len(meta_community_network)} communities',
-                      block=True, node_size=node_size, edge_width_func=edge_width_func)
-    # meta_community_network.remove_edges_from(label_partition(meta_community_network, n_labels))
-    # plt.figure()
-    # visualize_graph(meta_community_network, meta_layout, f'{name} meta community partitioned',
-    #                 node_size=node_size, block=True)
-    # plt.figure()
-    # comm_degrees = degree_distributions(sorted(communities, key=lambda x: -len(x))[:10], G)
-    # for i, d in enumerate(comm_degrees):
-    #     plt.hist(d, bins=None)
-    #     plt.title('{}, len: {}'.format(i, len(d)))
-    #     plt.show(block=False)
-    #     plt.figure()
-    # input()
-
-    # code for mass experiments
-    # start_time = time.time()
-    # with Pool(10) as p:
-    #     stats = p.map(run_experiment, ((M, n_labels) for _ in range(100)), 10)
-
-    # n_modules, n_small_modules = zip(*stats)
-    # print(f'Done ({time.time()-start_time}).')
-    # plt.title(f'Number of Modules ({n_labels} labels)')
-    # plt.hist(n_modules, bins=None)
-    # plt.figure()
-    # plt.title(f'Number of Small Modules ({n_labels} labels)')
-    # plt.hist(n_small_modules, bins=None)
-    # plt.show()
 
 
 def run_experiment(args) -> Tuple[int, int]:
@@ -134,21 +87,21 @@ def fluidc_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[int, int]
     deterministically attached by 1 edge to the largest component for the sake
     of the algorithm. The original network will not be mutated.
     """
-    components = tuple(tuple(comp) for comp in nx.connected_components(G))
-    # Add edges that are (hopefully) weak to let the algorithm run
-    # TODO: the problem with this approach is that small components could very easily get overrun
-    # by a larger component. It will take something a little more sophisticated to solve the issue
-    # satisfactorily.
+    # list of all the components sorted by length with the largest coming first
+    components = sorted((tuple(comp) for comp in nx.connected_components(G)),
+                        key=len, reverse=True)
+    # It's possible that the network is already divided up
+    if len(components) >= num_communities:
+        return ()
+    # handle the case where the network is unconnected
     if len(components) > 1:
-        G = G.copy()
-        largest = max(components, key=len)
-        endpoints = sorted(largest)[:len(components)]  # this will crash if there are too many cmp's
-        for i, component in enumerate(components):
-            if component == largest:
-                continue
-            G.add_edge(min(component), endpoints[i])
+        comp_to_num_communities = _calc_num_communities_per_component(components, num_communities)
+        unflattened_edges_to_remove = (fluidc_partition(G.subgraph(comp), num_comms)
+                                       for comp, num_comms in comp_to_num_communities.items())
+        return tuple(it.chain(*unflattened_edges_to_remove))
 
-    communities = tuple(asyn_fluidc(G, num_communities))
+    # handle the case where the network is connected
+    communities = tuple(asyn_fluidc(G, num_communities, seed=0))
     id_to_community = dict(enumerate(communities))
     node_to_community = {node: comm_id
                          for comm_id, community in id_to_community.items()
@@ -156,7 +109,47 @@ def fluidc_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[int, int]
     edges_to_remove = tuple(set((u, v)
                                 for u, v in G.edges
                                 if node_to_community[u] != node_to_community[v]))
+    H = G.copy()
+    H.remove_edges_from(edges_to_remove)
+    # This gets triggered, so the error has to be nearish by
+    # In one inspection, it looked like all the components but one were in tact, except one that had
+    # gotten split
+    ncc = nx.number_connected_components(H)
+    if ncc != num_communities:
+           print(f'G divided incorrectly! Expected {num_communities} Got {ncc}')
+           import pdb; pdb.set_trace()
     return edges_to_remove
+
+
+def _calc_num_communities_per_component(components: Sequence[Sequence[int]],
+                                        num_communities: int) -> Dict[Sequence[int], int]:
+    """
+    Assign each component to be divided into some number of communities with the
+    goal of make the communities as equally sized as possible across the entire
+    network.
+    """
+    component_sizes = np.array(tuple(len(comp) for comp in components))
+    relative_sizes = component_sizes / np.sum(component_sizes)
+    comp_to_num_communities: np.ndarray = num_communities * relative_sizes
+    comp_to_num_communities = np.where(comp_to_num_communities < 1, 1, comp_to_num_communities)
+    comp_to_num_communities = np.round(comp_to_num_communities)
+
+    error = num_communities - np.sum(comp_to_num_communities)
+    error_sign = np.sign(error)
+    while error != 0:
+        possible_comp_to_num_communities = comp_to_num_communities - error_sign
+        possible_comp_to_num_communities = np.where(comp_to_num_communities < 1,
+                                                    1, possible_comp_to_num_communities)
+        possible_new_comm_sizes = component_sizes / possible_comp_to_num_communities
+        index_to_change = np.argmax(possible_new_comm_sizes)
+        comp_to_num_communities[index_to_change] += error_sign
+
+        error -= error_sign
+
+    component_to_n_comms = {comp: int(n_comms) for comp, n_comms in zip(components, comp_to_num_communities)}
+    print(f'Got {sum(component_to_n_comms.values())} communities.')
+    # print(np.array(tuple(component_to_n_comms.values())))
+    return component_to_n_comms
 
 
 def label_partition(G: nx.Graph, labels: Union[int, np.ndarray]) -> Tuple[Tuple[int, int], ...]:
