@@ -198,7 +198,7 @@ class Visualize:
         plt.pause(.2)  # type: ignore
 
 
-def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]]) -> np.ndarray:
+def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rand=RAND) -> np.ndarray:
     """
     Make an initial SIR.
 
@@ -207,7 +207,7 @@ def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]]) -> np.ndar
                If it is just a number, the agents will be randomly selected.
     """
     if isinstance(to_infect, int):
-        to_infect = RAND.choice(N, size=to_infect)
+        to_infect = rand.choice(N, size=to_infect)
     sir0 = np.zeros((3, N), dtype=np.int64)
     sir0[0] = 1
     sir0[1, to_infect] = 1
