@@ -127,7 +127,27 @@ def common_neighbor_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[
 
 
 def fluidc_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[int, int], ...]:
-    """Return the edges to remove in order to break G into communities."""
+    """
+    Return the edges to remove in order to break G into communities.
+
+    If the network is disconnected, the smaller components will all be
+    deterministically attached by 1 edge to the largest component for the sake
+    of the algorithm. The original network will not be mutated.
+    """
+    components = tuple(tuple(comp) for comp in nx.connected_components(G))
+    # Add edges that are (hopefully) weak to let the algorithm run
+    # TODO: the problem with this approach is that small components could very easily get overrun
+    # by a larger component. It will take something a little more sophisticated to solve the issue
+    # satisfactorily.
+    if len(components) > 1:
+        G = G.copy()
+        largest = max(components, key=len)
+        endpoints = sorted(largest)[:len(components)]  # this will crash if there are too many cmp's
+        for i, component in enumerate(components):
+            if component == largest:
+                continue
+            G.add_edge(min(component), endpoints[i])
+
     communities = tuple(asyn_fluidc(G, num_communities))
     id_to_community = dict(enumerate(communities))
     node_to_community = {node: comm_id
