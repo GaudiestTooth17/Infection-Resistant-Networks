@@ -2,7 +2,7 @@ from common import safe_run_trials
 from networkgen import TimeBasedBehavior, AgentBehavior, make_agent_generated_network
 import time
 import numpy as np
-from sim_dynamic import Disease, FlickerBehavior, simulate, make_starting_sir
+from sim_dynamic import Disease, PatternFlickerBehavior, simulate, make_starting_sir
 from typing import Optional, Tuple, Any
 import partitioning
 import networkx as nx
@@ -45,7 +45,7 @@ def run_agent_generated_trial(args: Tuple[Disease, AgentBehavior, int, Any])\
     social_good = rate_social_good(G)
     M = nx.to_numpy_array(G)
 
-    network_behavior = FlickerBehavior(M, to_flicker, (True, False), "Probs don't change this")
+    network_behavior = PatternFlickerBehavior(M, to_flicker, (True, False), "Probs don't change this")
     avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
                                        disease, network_behavior, sim_len, None, rand)[-1][0] > 0)
                        for _ in range(sims_per_trial)]) / len(M)
