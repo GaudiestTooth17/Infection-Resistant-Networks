@@ -117,13 +117,14 @@ def main():
             outer_degrees = np.round(RAND.poisson(j, 10))
             if np.sum(outer_degrees) % 2 == 1:
                 outer_degrees[np.argmin(outer_degrees)] += 1
-            graph, _ = cc.make_connected_community_network(inner_degrees, outer_degrees, RAND)
+            graph, _ = cc.make_connected_community_network(inner_degrees, outer_degrees,
+                                                           RAND)  # type: ignore
             social_goods.append(rate_social_good(graph))
         avg_social_good = sum(social_goods) / len(social_goods)
         avg_social_goods.append(avg_social_good)
 
     print(avg_social_goods)
-    plt.hist(avg_social_goods)
+    plt.hist(avg_social_goods, bins=None)
     plt.show()
     # nx.draw(graph)
     # plt.show()
