@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import csv
 from analyzer import visualize_network
+from networkgen import _connected_community as cc
+import networkx as nx
+from matplotlib import pyplot as plt
 TDecayFunc = Callable[[int], Number]
 
 
@@ -38,7 +41,7 @@ def rate_social_good(G: nx.Graph, decay_func: TDecayFunc = DecayFunction(1)) -> 
         for component in components:
             weight = len(component) / len(G)
             H = G.subgraph(component).copy()
-            nx.relabel_nodes(H, mapping={old: new for new, old in enumerate(H.nodes)}, copy=False)
+            H = nx.relabel_nodes(H, mapping={old: new for new, old in enumerate(H.nodes)}, copy=True)
             social_good += rate_social_good(H, decay_func) * weight
         return social_good
 
@@ -93,12 +96,37 @@ def visualize_social_good(networks: Sequence[str], network_paths: Sequence[str])
 
 
 def main():
-    networks = ('cavemen-50-10', 'elitist-500', 'agent-generated-500',
-                'annealed-agent-generated-500', 'barabasi-albert-500-3', 'cgg-500',
-                'connected-comm-50-10', 'spatial-network', 'watts-strogatz-500-4-.1')
-    network_paths = fio.network_names_to_paths(networks)
-    visualize_social_good(networks, network_paths)
+    # networks = ('cavemen-50-10', 'elitist-500', 'agent-generated-500',
+    #             'annealed-agent-generated-500', 'barabasi-albert-500-3', 'cgg-500',
+    #             'connected-comm-50-10', 'spatial-network', 'watts-strogatz-500-4-.1')
+    # network_paths = fio.network_names_to_paths(networks)
+    # visualize_social_good(networks, network_paths)
 
+    RAND = np.random.default_rng()
+
+    avg_social_goods = []
+    for i in range(20):
+        # for j in range(20):
+        j = 4
+        social_goods = []
+        print('i:', i)
+        for _ in range(1000):
+            inner_degrees = np.round(RAND.poisson(i, 20))
+            if np.sum(inner_degrees) % 2 == 1:
+                inner_degrees[np.argmin(inner_degrees)] += 1
+            outer_degrees = np.round(RAND.poisson(j, 10))
+            if np.sum(outer_degrees) % 2 == 1:
+                outer_degrees[np.argmin(outer_degrees)] += 1
+            graph, _ = cc.make_connected_community_network(inner_degrees, outer_degrees, RAND)
+            social_goods.append(rate_social_good(graph))
+        avg_social_good = sum(social_goods) / len(social_goods)
+        avg_social_goods.append(avg_social_good)
+
+    print(avg_social_goods)
+    plt.hist(avg_social_goods)
+    plt.show()
+    # nx.draw(graph)
+    # plt.show()
 
 if __name__ == '__main__':
     try:
