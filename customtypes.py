@@ -8,6 +8,7 @@ from scipy.stats import wasserstein_distance
 NodeColors = Union[List[str], List[Tuple[int, int, int]]]
 Layout = Dict[int, Tuple[float, float]]
 Communities = Dict[int, int]
+"""node ID to community ID"""
 Number = Union[int, float]
 T = TypeVar('T')
 
