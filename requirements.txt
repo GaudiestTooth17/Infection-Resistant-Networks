@@ -4,3 +4,4 @@ matplotlib
 numpy
 tqdm
 scipy
+colorama
