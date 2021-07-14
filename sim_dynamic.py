@@ -198,7 +198,7 @@ class Visualize:
         plt.pause(.2)  # type: ignore
 
 
-def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]]) -> np.ndarray:
+def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rand=RAND) -> np.ndarray:
     """
     Make an initial SIR.
 
@@ -207,7 +207,7 @@ def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]]) -> np.ndar
                If it is just a number, the agents will be randomly selected.
     """
     if isinstance(to_infect, int):
-        to_infect = RAND.choice(N, size=to_infect)
+        to_infect = rand.choice(N, size=to_infect)
     sir0 = np.zeros((3, N), dtype=np.int64)
     sir0[0] = 1
     sir0[1, to_infect] = 1
@@ -215,7 +215,7 @@ def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]]) -> np.ndar
     return sir0
 
 
-class FlickerBehavior:
+class PatternFlickerBehavior:
     def __init__(self, M: np.ndarray,
                  edges_to_flicker: Collection[Tuple[int, int]],
                  flicker_pattern: Tuple[bool, ...],
@@ -223,9 +223,8 @@ class FlickerBehavior:
         """
         Flickers inter-community edges according to flicker_pattern.
 
-        G: The original network
-        n_labels: How many labels to use for the label propogation algorithm that
-                  finds inter-community edges
+        M: The original network
+        edges_to_flicker: The edges of the network that will be toggled.
         flicker_pattern: True means that inter-community edges are on. False means they are off.
                          The values will automatically cycle after they have all been used.
         """
@@ -244,14 +243,45 @@ class FlickerBehavior:
         return self._edges_off_M
 
 
+class RandomFlickerBehavior:
+    def __init__(self, M: np.ndarray,
+                 edges_to_flicker: Collection[Tuple[int, int]],
+                 flicker_probability: float,
+                 name: Optional[str] = None,
+                 rand=RAND) -> None:
+        """
+        Flickers inter-community edges according to flicker_pattern.
+
+        M: The original network
+        edges_to_flicker: The edges of the network that will be toggled.
+        flicker_probability: The probability that ALL of the edges will be present at a step.
+                             To be extra clear, the edges are either all present or all absent.
+        """
+        self._flicker_probability = flicker_probability
+        
+        self._edges_on_M = np.copy(M)
+        self._edges_off_M = np.copy(M)
+        for u, v in edges_to_flicker:
+            self._edges_off_M[u, v] = 0
+            self._edges_off_M[v, u] = 0
+
+        self._rand = rand
+        self.name = name if name is not None else f'Flicker {flicker_probability}'
+
+    def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
+        if self._rand.random() < self._flicker_probability:
+            return self._edges_on_M
+        return self._edges_off_M
+
+
 class FlickerConfig:
     def __init__(self, flicker_pattern: Tuple[bool, ...], name: str):
         self._flicker_pattern = flicker_pattern
         self.name = name
 
     def make_flicker_behavior(self, M: np.ndarray,
-                              edges_to_flicker: Collection[Tuple[int, int]]) -> FlickerBehavior:
-        return FlickerBehavior(M, edges_to_flicker, self._flicker_pattern, self.name)
+                              edges_to_flicker: Collection[Tuple[int, int]]) -> PatternFlickerBehavior:
+        return PatternFlickerBehavior(M, edges_to_flicker, self._flicker_pattern, self.name)
 
 
 def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig], str])\
