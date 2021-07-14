@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 import sys
 from networkx.algorithms.community import girvan_newman, asyn_fluidc
-from fileio import get_network_name, read_network
+from fileio import get_network_name, read_network, write_network
 from analyzer import (calc_prop_common_neighbors,
                       make_meta_community_layout,
                       make_meta_community_network,
@@ -35,6 +35,24 @@ def main():
 
     G = nx.Graph(M)
     start_time = time.time()
+
+
+def fluidc_test():
+    N = 500
+    networks = (nx.erdos_renyi_graph(N, .01) for _ in range(100))
+    n_comms = N // 20
+    for G in networks:
+        starting_ncc = nx.number_connected_components(G)
+        print(f'Network has {starting_ncc} components.')
+        if starting_ncc >= n_comms:
+            continue
+        to_remove = fluidc_partition(G, n_comms)
+        G.remove_edges_from(to_remove)
+        ncc = nx.number_connected_components(G)
+        if ncc != n_comms:
+            name = input(f'Network has {ncc} communities. Name? ')
+            write_network(G, name, nx.kamada_kawai_layout(G),
+                          intercommunity_edges_to_communities(G, to_remove))
 
 
 def run_experiment(args) -> Tuple[int, int]:
@@ -204,7 +222,8 @@ def intercommunity_edges_to_communities(G: nx.Graph,
 
 if __name__ == '__main__':
     try:
-        main()
+        # main()
+        fluidc_test()
     except KeyboardInterrupt:
         print('\nGood bye.')
     except EOFError:
