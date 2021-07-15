@@ -99,7 +99,7 @@ class IRNObjective:
                                            self._disease, flicker_behavior, self._sim_len,
                                            None, self._rand)[-1][0] > 0)
                            for _ in range(self._n_sims)]) / len(M)
-        cost = avg_sus-rate_social_good(M)
+        cost = 2-avg_sus-rate_social_good(M)
         return cost
 
 

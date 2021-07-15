@@ -5,7 +5,7 @@ import os
 import csv
 import sys
 sys.path.append('')
-from customtypes import ExperimentResults, Number
+from customtypes import Number
 T = TypeVar('T')
 
 
