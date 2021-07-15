@@ -116,6 +116,7 @@ def fluidc_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[int, int]
         H = G.copy()
         H.remove_edges_from(edges_to_remove)
         n_connected_comps = nx.number_connected_components(H)
+        iters += 1
 
     return edges_to_remove  # type: ignore
 
