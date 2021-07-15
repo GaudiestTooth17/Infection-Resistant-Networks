@@ -33,7 +33,7 @@ def run_social_circles_trial(args: Tuple[Dict[networkgen.Agent, int],
                                               "Probs don't change this")
     avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
                                        disease, network_behavior, sim_len, None, rand)[-1][0] > 0)
-                       for _ in range(sims_per_trial)])
+                       for _ in range(sims_per_trial)]) / len(G)
 
     return proportion_flickering, avg_sus, social_good_score
 

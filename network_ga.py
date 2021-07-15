@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 import itertools as it
+from partitioning import fluidc_partition
+from sim_dynamic import Disease, PatternFlickerBehavior, make_starting_sir, simulate
+from socialgood import rate_social_good
 from customtypes import Number
 from typing import Callable, List, Sequence, Tuple
 import networkx as nx
@@ -7,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import hcmioptim.ga as ga
-from analyzer import visualize_network, betw_centrality
+from analyzer import all_same, visualize_network, betw_centrality
 from encoding_lib import edge_set_to_network, edge_list_to_network
 
 
@@ -15,10 +18,14 @@ def main():
     n_steps = 1000
     N = 100
     rand = np.random.default_rng()
-    optimizer = ga.GAOptimizer(PercolationResistanceObjective(rand, 10, edge_set_to_network),
+    # optimizer = ga.GAOptimizer(PercolationResistanceObjective(rand, 10, edge_set_to_network),
+    #                            NextNetworkGenEdgeSet(rand),
+    #                            new_edge_set_pop(20, N, rand),
+    #                            True, 6)
+    optimizer = ga.GAOptimizer(IRNObjective(edge_set_to_network, rand),
                                NextNetworkGenEdgeSet(rand),
                                new_edge_set_pop(20, N, rand),
-                               True, 6)
+                               True, 1)
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
     global_best: Tuple[Number, np.ndarray] = None  # type: ignore
@@ -45,7 +52,7 @@ def main():
     plt.figure()
     visualize_network(G, None,
                       f'From Edge List\nCost: {global_best[0]}',
-                      False, betw_centrality, False)
+                      False, all_same, False)
 
     input('Press <enter> to exit.')
 
@@ -73,6 +80,27 @@ class PercolationResistanceObjective:
         N = len(G)
         E = (N**2-N)//2
         return np.sum(n_components)/len(n_components) + 2*len(G.edges)/E
+
+
+class IRNObjective:
+    def __init__(self, encoding_to_network: Callable[[np.ndarray], nx.Graph], rand) -> None:
+        self._enc_to_G = encoding_to_network
+        self._rand = rand
+        self._disease = Disease(4, .2)
+        self._sim_len = 100
+        self._n_sims = 100
+
+    def __call__(self, encoding: np.ndarray) -> float:
+        G = self._enc_to_G(encoding)
+        M = nx.to_numpy_array(G)
+        to_flicker = fluidc_partition(G, len(G)//20)
+        flicker_behavior = PatternFlickerBehavior(M, to_flicker, (True, False), '')
+        avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
+                                           self._disease, flicker_behavior, self._sim_len,
+                                           None, self._rand)[-1][0] > 0)
+                           for _ in range(self._n_sims)]) / len(M)
+        cost = avg_sus-rate_social_good(M)
+        return cost
 
 
 class ClusteringObjective:
