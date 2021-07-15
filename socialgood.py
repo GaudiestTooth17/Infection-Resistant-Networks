@@ -25,7 +25,7 @@ class DecayFunction(Generic[T]):
         return 1/(distance**self.k)  # type: ignore
 
 
-def get_distance_matrix(matrix: np.ndarray, inf_value=np.inf) -> np.ndarray:
+def get_distance_matrix(matrix: np.ndarray) -> np.ndarray:
     """
     Returns the distance matrix of a given matrix with infinity value given.
 
@@ -33,22 +33,20 @@ def get_distance_matrix(matrix: np.ndarray, inf_value=np.inf) -> np.ndarray:
     """
 
     num_nodes = len(matrix)
-    INF = num_nodes + num_nodes
     m = np.copy(matrix)
     dm = np.copy(matrix)
-    dm[dm < 1] = INF
+    dm[dm < 1] = np.inf
     x = np.copy(matrix)
 
     for d in range(num_nodes):
         x = x @ m
         # For every new path we know that the distance is d + 2 since
         #  d starts at 0 and we already have everything of distance 1.
-        dm[np.logical_and(dm == INF, x != 0)] = d + 2
+        dm[np.logical_and(dm == np.inf, x != 0)] = d + 2
 
     # Sets the given infinity value before return.
-    dm[dm == INF] = inf_value
     for n in range(num_nodes):
-        dm[n, n] = inf_value
+        dm[n, n] = np.inf
     return dm
 
 
@@ -64,7 +62,7 @@ def rate_social_good(G: nx.Graph, decay_func: TDecayFunc = DecayFunction(1)) -> 
     dist_matrix = get_distance_matrix(nx.to_numpy_array(G))
 
     social_good_scores = decay_func(dist_matrix)
-    social_good_scores[social_good_scores < 0] = 0
+    social_good_scores[social_good_scores == np.inf] = 0
     return np.sum(social_good_scores) / (len(G)*(len(G)-1))
 
 
@@ -119,12 +117,12 @@ def main():
     RAND = np.random.default_rng()
 
     avg_social_goods = []
-    for i in range(10):
+    for i in range(20):
         # for j in range(20):
         j = 4
         social_goods = []
         print('i:', i)
-        for n in range(50):
+        for n in range(10):
             inner_degrees = np.round(RAND.poisson(i, 20))
             if np.sum(inner_degrees) % 2 == 1:
                 inner_degrees[np.argmin(inner_degrees)] += 1
@@ -144,8 +142,8 @@ def main():
         # plt.title(f'{i}: min = {min(social_goods)}, max = {max(social_goods)}')
         # plt.hist(social_goods)
         # plt.figure()
-
-    print(avg_social_goods)
+    np.set_printoptions(precision=4)
+    print(np.array(avg_social_goods))
     # plt.title(f'avg_social_goods: min = {min(avg_social_goods)}, max = {max(avg_social_goods)}')
     # plt.hist(avg_social_goods)
     # plt.show()
