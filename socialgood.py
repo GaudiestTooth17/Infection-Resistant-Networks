@@ -1,5 +1,5 @@
 from customtypes import Number
-from typing import Callable, Sequence, Set, Tuple
+from typing import Callable, Generic, Sequence, Tuple, TypeVar
 import numpy as np
 import networkx as nx
 import fileio as fio
@@ -10,52 +10,66 @@ from analyzer import visualize_network
 from networkgen import _connected_community as cc
 import networkx as nx
 from matplotlib import pyplot as plt
-TDecayFunc = Callable[[int], Number]
+T = TypeVar('T', Number, np.ndarray)
+TDecayFunc = Callable[[T], T]
 
 
-class DecayFunction:
+class DecayFunction(Generic[T]):
     function_desc = '1/(distance^k)'
 
     def __init__(self, k: Number):
         """Return a social good value based on how far away two nodes are."""
         self.k = k
 
-    def __call__(self, distance: int) -> float:
-        return 1/(distance**self.k)
+    def __call__(self, distance: T) -> T:
+        return 1/(distance**self.k)  # type: ignore
+
+
+def get_distance_matrix(matrix: np.ndarray, inf_value=np.inf) -> np.ndarray:
+    """
+    Returns the distance matrix of a given matrix with infinity value given.
+
+    The default infinity value is np.inf.
+    """
+
+    num_nodes = len(matrix)
+    INF = num_nodes + num_nodes
+    m = np.copy(matrix)
+    dm = np.copy(matrix)
+    dm[dm < 1] = INF
+    x = np.copy(matrix)
+
+    for d in range(num_nodes):
+        x = x @ m
+        # For every new path we know that the distance is d + 2 since
+        #  d starts at 0 and we already have everything of distance 1.
+        dm[np.logical_and(dm == INF, x != 0)] = d + 2
+
+    # Sets the given infinity value before return.
+    dm[dm == INF] = inf_value
+    for n in range(num_nodes):
+        dm[n, n] = inf_value
+    return dm
 
 
 def rate_social_good(G: nx.Graph, decay_func: TDecayFunc = DecayFunction(1)) -> float:
     """
     Rate a network on how much social good it has.
     """
-    # The algorithm gets messed up if it runs on a single node network
-    # and the correct answer is 0 anways
-    if len(G) == 1:
+
+    # If there is only 1 node, the score is 0.
+    if len(G.nodes) == 1:
         return 0
 
-    components = tuple(nx.connected_components(G))
-    # Floyd-Warshall doesn't work on unconnected networks, so we have to run
-    # this function on each component separately.
-    if len(components) > 1:
-        social_good = 0
-        for component in components:
-            weight = len(component) / len(G)
-            H = G.subgraph(component).copy()
-            H = nx.relabel_nodes(H, mapping={old: new for new, old in enumerate(H.nodes)}, copy=True)
-            social_good += rate_social_good(H, decay_func) * weight
-        return social_good
+    dist_matrix = get_distance_matrix(nx.to_numpy_array(G))
 
-    dist_matrix = nx.floyd_warshall_numpy(G)
-
-    def calc_score(u: int, v: int) -> float:
-        return 0 if u == v else decay_func(dist_matrix[u][v])
-
-    social_good_scores = tuple(tuple(calc_score(u, v) for v in G.nodes) for u in G.nodes)
+    social_good_scores = decay_func(dist_matrix)
+    social_good_scores[social_good_scores < 0] = 0
     return np.sum(social_good_scores) / (len(G)*(len(G)-1))
 
 
 def node_size_from_social_good(G: nx.Graph, decay_func: TDecayFunc) -> Sequence[Number]:
-    dist_matrix = nx.floyd_warshall_numpy(G)
+    dist_matrix = get_distance_matrix(nx.to_numpy_array(G))
 
     def calc_score(u: int, v: int) -> float:
         return 0 if u == v else decay_func(dist_matrix[u][v])
@@ -105,12 +119,12 @@ def main():
     RAND = np.random.default_rng()
 
     avg_social_goods = []
-    for i in range(20):
+    for i in range(10):
         # for j in range(20):
         j = 4
         social_goods = []
         print('i:', i)
-        for _ in range(1000):
+        for n in range(50):
             inner_degrees = np.round(RAND.poisson(i, 20))
             if np.sum(inner_degrees) % 2 == 1:
                 inner_degrees[np.argmin(inner_degrees)] += 1
@@ -119,13 +133,22 @@ def main():
                 outer_degrees[np.argmin(outer_degrees)] += 1
             graph, _ = cc.make_connected_community_network(inner_degrees, outer_degrees,
                                                            RAND)  # type: ignore
+            # if n == 0:
+            #     nx.draw(graph)
+            #     plt.show()
             social_goods.append(rate_social_good(graph))
         avg_social_good = sum(social_goods) / len(social_goods)
         avg_social_goods.append(avg_social_good)
+        # if i == 1:
+        # print('min:', min(social_goods), 'max:', max(social_goods), 'avg:', avg_social_good)
+        # plt.title(f'{i}: min = {min(social_goods)}, max = {max(social_goods)}')
+        # plt.hist(social_goods)
+        # plt.figure()
 
     print(avg_social_goods)
-    plt.hist(avg_social_goods, bins=None)
-    plt.show()
+    # plt.title(f'avg_social_goods: min = {min(avg_social_goods)}, max = {max(avg_social_goods)}')
+    # plt.hist(avg_social_goods)
+    # plt.show()
     # nx.draw(graph)
     # plt.show()
 
