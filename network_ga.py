@@ -1,8 +1,9 @@
 #!/usr/bin/python3
+from fileio import write_network
 import itertools as it
 from partitioning import fluidc_partition
 from sim_dynamic import Disease, PatternFlickerBehavior, make_starting_sir, simulate
-from socialgood import rate_social_good
+from socialgood import DecayFunction, rate_social_good
 from customtypes import Number
 from typing import Callable, List, Sequence, Tuple
 import networkx as nx
@@ -12,6 +13,7 @@ from tqdm import tqdm
 import hcmioptim.ga as ga
 from analyzer import all_same, visualize_network, betw_centrality
 from encoding_lib import edge_set_to_network, edge_list_to_network
+import partitioning as part
 
 
 def main():
@@ -22,8 +24,10 @@ def main():
     #                            NextNetworkGenEdgeSet(rand),
     #                            new_edge_set_pop(20, N, rand),
     #                            True, 6)
+    # TODO: Run with remember_cost=False. That might help get more accurate results.
+    # It'll also take longer to run.
     optimizer = ga.GAOptimizer(IRNObjective(edge_set_to_network, rand),
-                               NextNetworkGenEdgeSet(rand),
+                               NextNetworkGenEdgeSet(rand, .0001),
                                new_edge_set_pop(20, N, rand),
                                True, 6)
     pbar = tqdm(range(n_steps))
@@ -50,11 +54,16 @@ def main():
     plt.hist(tuple(x[1] for x in G.degree), bins=None)
     plt.show(block=False)
     plt.figure()
-    visualize_network(G, None,
+    layout = nx.kamada_kawai_layout(G)
+    visualize_network(G, layout,
                       f'From Edge List\nCost: {global_best[0]}',
                       False, all_same, False)
 
-    input('Press <enter> to exit.')
+    if input('Save? ')[0].lower() == 'y':
+        name = input('Name? ')
+        communities = part.intercommunity_edges_to_communities(G,
+                                                               part.fluidc_partition(G, len(G)//20))
+        write_network(G, name, layout, communities)
 
 
 class PercolationResistanceObjective:
@@ -89,6 +98,7 @@ class IRNObjective:
         self._disease = Disease(4, .2)
         self._sim_len = 100
         self._n_sims = 100
+        self._decay_func = DecayFunction(.5)
 
     def __call__(self, encoding: np.ndarray) -> float:
         G = self._enc_to_G(encoding)
@@ -99,7 +109,7 @@ class IRNObjective:
                                            self._disease, flicker_behavior, self._sim_len,
                                            None, self._rand)[-1][0] > 0)
                            for _ in range(self._n_sims)]) / len(M)
-        cost = 2-avg_sus-rate_social_good(M)
+        cost = 2-avg_sus-rate_social_good(M, self._decay_func)
         return cost
 
 
@@ -195,8 +205,9 @@ class NextNetworkGenEdgeList:
 
 
 class NextNetworkGenEdgeSet:
-    def __init__(self, rand) -> None:
+    def __init__(self, rand, mutation_prob: float) -> None:
         self._rand = rand
+        self._mutation_prob = mutation_prob
 
     def __call__(self, rated_pop: Sequence[Tuple[Number, np.ndarray]]) -> Tuple[np.ndarray, ...]:
         couples = ga.roulette_wheel_cost_selection(rated_pop)
@@ -204,7 +215,7 @@ class NextNetworkGenEdgeSet:
         children = tuple(child for pair in offspring for child in pair)
 
         for i, j in it.product(range(len(children)), range(len(children[0]))):
-            if self._rand.random() < .0001:
+            if self._rand.random() < self._mutation_prob:
                 children[i][j] = 1 - children[i][j]
 
         return children
