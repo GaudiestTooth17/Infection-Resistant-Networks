@@ -6,7 +6,7 @@ import numpy as np
 import sys
 from networkx.algorithms.community import girvan_newman, asyn_fluidc
 from fileio import get_network_name, read_network, write_network
-from analyzer import (calc_prop_common_neighbors,
+from analyzer import (COLORS, calc_prop_common_neighbors,
                       make_meta_community_layout,
                       make_meta_community_network,
                       visualize_network)
@@ -35,24 +35,6 @@ def main():
 
     G = nx.Graph(M)
     start_time = time.time()
-
-
-def fluidc_test():
-    N = 500
-    networks = (nx.erdos_renyi_graph(N, .01) for _ in range(100))
-    n_comms = N // 20
-    for G in networks:
-        starting_ncc = nx.number_connected_components(G)
-        print(f'Network has {starting_ncc} components.')
-        if starting_ncc >= n_comms:
-            continue
-        to_remove = fluidc_partition(G, n_comms)
-        G.remove_edges_from(to_remove)
-        ncc = nx.number_connected_components(G)
-        if ncc != n_comms:
-            name = input(f'Network has {ncc} communities. Name? ')
-            write_network(G, name, nx.kamada_kawai_layout(G),
-                          intercommunity_edges_to_communities(G, to_remove))
 
 
 def run_experiment(args) -> Tuple[int, int]:
@@ -101,9 +83,10 @@ def fluidc_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[int, int]
     """
     Return the edges to remove in order to break G into communities.
 
-    If the network is disconnected, the smaller components will all be
-    deterministically attached by 1 edge to the largest component for the sake
-    of the algorithm. The original network will not be mutated.
+    If the network has more components than num_communities, the empty tuple is
+    immediately returned. If the network has multiple components, but fewer than
+    num_communities, the function will make an informed decision about how many
+    communities each component should have.
     """
     # list of all the components sorted by length with the largest coming first
     components = sorted((tuple(comp) for comp in nx.connected_components(G)),
@@ -119,24 +102,25 @@ def fluidc_partition(G: nx.Graph, num_communities: int) -> Tuple[Tuple[int, int]
         return tuple(it.chain(*unflattened_edges_to_remove))
 
     # handle the case where the network is connected
-    communities = tuple(asyn_fluidc(G, num_communities, seed=0))
-    id_to_community = dict(enumerate(communities))
-    node_to_community = {node: comm_id
-                         for comm_id, community in id_to_community.items()
-                         for node in community}
-    edges_to_remove = tuple(set((u, v)
-                                for u, v in G.edges
-                                if node_to_community[u] != node_to_community[v]))
-    H = G.copy()
-    H.remove_edges_from(edges_to_remove)
-    # This gets triggered, so the error has to be nearish by
-    # In one inspection, it looked like all the components but one were in tact, except one that had
-    # gotten split
-    ncc = nx.number_connected_components(H)
-    if ncc != num_communities:
-           print(f'G divided incorrectly! Expected {num_communities} Got {ncc}')
-           import pdb; pdb.set_trace()
-    return edges_to_remove
+    # Contrary to the claims made in the paper, Fluid Communities is not
+    # guaranteed to yield a certain number of communities. This loop makes sure
+    # that the correct number gets returned. It usually runs quickly.
+    n_connected_comps = np.nan
+    iters = 0
+    while n_connected_comps != num_communities:
+        communities = tuple(asyn_fluidc(G, num_communities, seed=iters))
+        id_to_community = dict(enumerate(communities))
+        node_to_community = {node: comm_id
+                             for comm_id, community in id_to_community.items()
+                             for node in community}
+        edges_to_remove = tuple(set((u, v)
+                                    for u, v in G.edges
+                                    if node_to_community[u] != node_to_community[v]))
+        H = G.copy()
+        H.remove_edges_from(edges_to_remove)
+        n_connected_comps = nx.number_connected_components(H)
+
+    return edges_to_remove  # type: ignore
 
 
 def _calc_num_communities_per_component(components: Sequence[Sequence[int]],
@@ -222,8 +206,7 @@ def intercommunity_edges_to_communities(G: nx.Graph,
 
 if __name__ == '__main__':
     try:
-        # main()
-        fluidc_test()
+        main()
     except KeyboardInterrupt:
         print('\nGood bye.')
     except EOFError:
