@@ -30,18 +30,21 @@ def poisson_entry_point():
 def uniform_entry_point():
     """Run experiments on connected community networks with a unifrom degree distribution."""
     print('Running uniform connected community experiments')
-    N_comm = 10  # agents per community
-    num_comms = 50  # number of communities
-    num_trials = 100
-    rand = np.random.default_rng(0)
-    inner_bounds = (5, 9)
-    outer_bounds = (5, 9)
-    configuration = UniformConfiguration(rand, inner_bounds, outer_bounds, N_comm, num_comms)
-    print(configuration.name)
-    disease = Disease(4, .2)
 
-    safe_run_trials(configuration.name, run_connected_community_trial,
-                    (configuration, disease, rand), num_trials)
+    num_trials = 100
+    disease = Disease(4, .2)
+    rand = np.random.default_rng(0)
+    configurations = [UniformConfiguration(rand, inner_bounds, outer_bounds, N_comm, num_comms)
+                      for inner_bounds, outer_bounds, N_comm, num_comms
+                      in [((10, 16), (2, 5), 25, 20),
+                          ((10, 16), (5, 11), 25, 20),
+                          ((5, 9), (2, 5), 10, 50),
+                          ((5, 9), (5, 9), 10, 50)]]
+
+    for configuration in configurations:
+        print(configuration.name)
+        safe_run_trials(configuration.name, run_connected_community_trial,
+                        (configuration, disease, rand), num_trials)
 
 
 class ConnectedCommunityConfiguration(ABC):
