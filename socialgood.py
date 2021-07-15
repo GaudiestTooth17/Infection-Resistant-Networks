@@ -38,6 +38,8 @@ def get_distance_matrix(matrix: np.ndarray) -> np.ndarray:
 
     for d in range(num_nodes):
         x = x @ m
+        x[x > 0] = 1
+
         # For every new path we know that the distance is d + 2 since
         #  d starts at 0 and we already have everything of distance 1.
         dm[np.logical_and(dm == np.inf, x != 0)] = d + 2
