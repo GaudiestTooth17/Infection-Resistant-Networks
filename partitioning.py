@@ -5,11 +5,8 @@ import networkx as nx
 import numpy as np
 import sys
 from networkx.algorithms.community import girvan_newman, asyn_fluidc
-from fileio import get_network_name, read_network, write_network
-from analyzer import (COLORS, calc_prop_common_neighbors,
-                      make_meta_community_layout,
-                      make_meta_community_network,
-                      visualize_network)
+from fileio import get_network_name, read_network
+from analyzer import calc_prop_common_neighbors
 from collections import Counter
 import time
 import itertools as it
