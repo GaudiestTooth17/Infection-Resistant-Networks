@@ -115,6 +115,5 @@ def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, f
 
     trial_to_flickering_edges, trial_to_avg_sus, trial_to_social_good = zip(*results)
     experiment_results = ExperimentResult(name, trial_to_avg_sus,
-                                                  trial_to_flickering_edges, trial_to_social_good)
-    # experiment_results.save_box_plots('results')
+                                          trial_to_flickering_edges, trial_to_social_good)
     experiment_results.save_perc_sus_vs_social_good('results')

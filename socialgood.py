@@ -1,5 +1,5 @@
 from customtypes import Number
-from typing import Callable, Generic, Sequence, Tuple, TypeVar
+from typing import Callable, Generic, Sequence, Tuple, TypeVar, Union
 import numpy as np
 import networkx as nx
 import fileio as fio
@@ -10,6 +10,8 @@ from analyzer import visualize_network
 from networkgen import _connected_community as cc
 import networkx as nx
 from matplotlib import pyplot as plt
+
+import networkgen
 T = TypeVar('T', Number, np.ndarray)
 TDecayFunc = Callable[[T], T]
 
@@ -37,8 +39,11 @@ def get_distance_matrix(matrix: np.ndarray) -> np.ndarray:
     x = np.copy(matrix)
 
     for d in range(num_nodes):
+        old_x = x
         x = x @ m
         x[x > 0] = 1
+        if (old_x == x).all():
+            break
 
         # For every new path we know that the distance is d + 2 since
         #  d starts at 0 and we already have everything of distance 1.
@@ -50,20 +55,22 @@ def get_distance_matrix(matrix: np.ndarray) -> np.ndarray:
     return dm
 
 
-def rate_social_good(G: nx.Graph, decay_func: TDecayFunc = DecayFunction(1)) -> float:
+def rate_social_good(network: Union[nx.Graph, np.ndarray],
+                     decay_func: TDecayFunc = DecayFunction(1)) -> float:
     """
     Rate a network on how much social good it has.
     """
 
+    N = len(network)
     # If there is only 1 node, the score is 0.
-    if len(G.nodes) == 1:
+    if N == 1:
         return 0
-
-    dist_matrix = get_distance_matrix(nx.to_numpy_array(G))
+    M = network if isinstance(network, np.ndarray) else nx.to_numpy_array(network)
+    dist_matrix = get_distance_matrix(M)
 
     social_good_scores = decay_func(dist_matrix)
     social_good_scores[social_good_scores == np.inf] = 0
-    return np.sum(social_good_scores) / (len(G)*(len(G)-1))
+    return np.sum(social_good_scores) / (N*(N-1))
 
 
 def node_size_from_social_good(G: nx.Graph, decay_func: TDecayFunc) -> Sequence[Number]:

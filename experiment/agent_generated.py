@@ -1,6 +1,5 @@
 from common import safe_run_trials
 from networkgen import TimeBasedBehavior, AgentBehavior, make_agent_generated_network
-import time
 import numpy as np
 from sim_dynamic import Disease, PatternFlickerBehavior, simulate, make_starting_sir
 from typing import Optional, Tuple, Any
@@ -13,16 +12,16 @@ def agent_generated_entry_point(seed=1337):
     print('Running agent generated experiments')
     num_trials = 100
     rand = np.random.default_rng(seed)
-    N = 500
-    lb_connection = 4
-    ub_connection = 6
-    steps_to_stability = 20
-    agent_behavior = TimeBasedBehavior(N, lb_connection, ub_connection,
-                                       steps_to_stability, rand)
     disease = Disease(4, .2)
-
-    safe_run_trials(f'Agentbased {N}-{lb_connection}-{ub_connection}-{steps_to_stability}',
-                    run_agent_generated_trial, (disease, agent_behavior, N, rand), num_trials)
+    N = 500
+    behaviors = [TimeBasedBehavior(N, lb_connection, ub_connection, steps_to_stability, rand)
+                 for lb_connection, ub_connection, steps_to_stability
+                 in [(4, 6, 5),
+                     (4, 6, 10),
+                     (4, 6, 20)]]
+    for agent_behavior in behaviors:
+        safe_run_trials(agent_behavior.name, run_agent_generated_trial,
+                        (disease, agent_behavior, N, rand), num_trials)
 
 
 def run_agent_generated_trial(args: Tuple[Disease, AgentBehavior, int, Any])\
@@ -45,7 +44,8 @@ def run_agent_generated_trial(args: Tuple[Disease, AgentBehavior, int, Any])\
     social_good = rate_social_good(G)
     M = nx.to_numpy_array(G)
 
-    network_behavior = PatternFlickerBehavior(M, to_flicker, (True, False), "Probs don't change this")
+    network_behavior = PatternFlickerBehavior(M, to_flicker, (True, False),
+                                              "Probs don't change this")
     avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
                                        disease, network_behavior, sim_len, None, rand)[-1][0] > 0)
                        for _ in range(sims_per_trial)]) / len(M)

@@ -15,13 +15,16 @@ def run_social_circles_trial(args: Tuple[Dict[networkgen.Agent, int],
     agent_to_quantity, grid_dims, disease, rand = args
     sim_len = 200
     sims_per_trial = 150
+    target_communities = 25
 
     sc_results = networkgen.make_social_circles_network(agent_to_quantity, grid_dims, rand=rand)
     if sc_results is None:
         return None
     G, _, _ = sc_results
+    if nx.number_connected_components(G) > target_communities:
+        return None
 
-    to_flicker = partitioning.fluidc_partition(G, 25)
+    to_flicker = partitioning.fluidc_partition(G, target_communities)
     proportion_flickering = len(to_flicker) / len(G.edges)
     social_good_score = rate_social_good(G)
     M = nx.to_numpy_array(G)
@@ -30,7 +33,7 @@ def run_social_circles_trial(args: Tuple[Dict[networkgen.Agent, int],
                                               "Probs don't change this")
     avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
                                        disease, network_behavior, sim_len, None, rand)[-1][0] > 0)
-                       for _ in range(sims_per_trial)])
+                       for _ in range(sims_per_trial)]) / len(G)
 
     return proportion_flickering, avg_sus, social_good_score
 
