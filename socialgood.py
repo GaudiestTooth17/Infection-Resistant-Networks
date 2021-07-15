@@ -37,8 +37,11 @@ def get_distance_matrix(matrix: np.ndarray) -> np.ndarray:
     x = np.copy(matrix)
 
     for d in range(num_nodes):
+        old_x = x
         x = x @ m
         x[x > 0] = 1
+        if (old_x == x).all():
+            break
 
         # For every new path we know that the distance is d + 2 since
         #  d starts at 0 and we already have everything of distance 1.
