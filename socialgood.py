@@ -28,8 +28,6 @@ class DecayFunction(Generic[T]):
 def get_distance_matrix(matrix: np.ndarray) -> np.ndarray:
     """
     Returns the distance matrix of a given matrix with infinity value given.
-
-    The default infinity value is np.inf.
     """
 
     num_nodes = len(matrix)
