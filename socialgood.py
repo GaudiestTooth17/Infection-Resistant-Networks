@@ -122,7 +122,7 @@ def main():
         j = 4
         social_goods = []
         print('i:', i)
-        for n in range(10):
+        for n in range(1000):
             inner_degrees = np.round(RAND.poisson(i, 20))
             if np.sum(inner_degrees) % 2 == 1:
                 inner_degrees[np.argmin(inner_degrees)] += 1
