@@ -113,47 +113,13 @@ def visualize_social_good(networks: Sequence[str], network_paths: Sequence[str])
 
 
 def main():
-    # networks = ('cavemen-50-10', 'elitist-500', 'agent-generated-500',
-    #             'annealed-agent-generated-500', 'barabasi-albert-500-3', 'cgg-500',
-    #             'connected-comm-50-10', 'spatial-network', 'watts-strogatz-500-4-.1')
-    # network_paths = fio.network_names_to_paths(networks)
-    # visualize_social_good(networks, network_paths)
-
-    RAND = np.random.default_rng()
-
-    avg_social_goods = []
-    for i in range(20):
-        # for j in range(20):
-        j = 4
-        social_goods = []
-        print('i:', i)
-        for n in range(10):
-            inner_degrees = np.round(RAND.poisson(i, 20))
-            if np.sum(inner_degrees) % 2 == 1:
-                inner_degrees[np.argmin(inner_degrees)] += 1
-            outer_degrees = np.round(RAND.poisson(j, 10))
-            if np.sum(outer_degrees) % 2 == 1:
-                outer_degrees[np.argmin(outer_degrees)] += 1
-            graph, _ = cc.make_connected_community_network(inner_degrees, outer_degrees,
-                                                           RAND)  # type: ignore
-            # if n == 0:
-            #     nx.draw(graph)
-            #     plt.show()
-            social_goods.append(rate_social_good(graph))
-        avg_social_good = sum(social_goods) / len(social_goods)
-        avg_social_goods.append(avg_social_good)
-        # if i == 1:
-        # print('min:', min(social_goods), 'max:', max(social_goods), 'avg:', avg_social_good)
-        # plt.title(f'{i}: min = {min(social_goods)}, max = {max(social_goods)}')
-        # plt.hist(social_goods)
-        # plt.figure()
-    np.set_printoptions(precision=4)
-    print(np.array(avg_social_goods))
-    # plt.title(f'avg_social_goods: min = {min(avg_social_goods)}, max = {max(avg_social_goods)}')
-    # plt.hist(avg_social_goods)
-    # plt.show()
-    # nx.draw(graph)
-    # plt.show()
+    networks = ('cavemen-50-10', 'elitist-500', 'agent-generated-500',
+                'annealed-agent-generated-500', 'barabasi-albert-500-3', 'cgg-500',
+                'connected-comm-50-10', 'spatial-network', 'watts-strogatz-500-4-.1')
+    network_paths = fio.network_names_to_paths(networks)
+    for name, path in zip(networks, network_paths):
+        G, _, _ = fio.read_network(path)
+        print(f'{name:<30} {rate_social_good(G, DecayFunction(.5)):>10.3f}')
 
 
 if __name__ == '__main__':
