@@ -73,7 +73,7 @@ def homogenous_step(G: nx.Graph) -> None:
 
 
 def make_two_type_step(bridge_agents: Iterable[int], normal_agents: Iterable[int])\
-                       -> Callable[[nx.Graph], None]:
+        -> Callable[[nx.Graph], None]:
     """
     agent_roles should contain two entries: 'bridge', 'normal'. The iterables
     associated with these keys should union to form the set of all nodes in G.
@@ -163,6 +163,8 @@ class TimeBasedBehavior:
         self._agent_to_previous_neighbors = [set() for _ in range(N)]
         self._steps_taken = 0
         self._rand = rand
+        self.name = f'TimeBasedBehavior(N={N}, lb={lower_bound}, ub={upper_bound}, '\
+                    f'sts={steps_to_stable})'
 
     def _unstable_behavior(self, G: nx.Graph, agent: int, neighbors: Sequence[int]):
         # add a neighbor if lonely
