@@ -145,8 +145,8 @@ def _calc_num_communities_per_component(components: Sequence[Sequence[int]],
 
         error -= error_sign
 
-    component_to_n_comms = {comp: int(n_comms) for comp, n_comms in zip(components, comp_to_num_communities)}
-    print(f'Got {sum(component_to_n_comms.values())} communities.')
+    component_to_n_comms = {comp: int(n_comms)
+                            for comp, n_comms in zip(components, comp_to_num_communities)}
     # print(np.array(tuple(component_to_n_comms.values())))
     return component_to_n_comms
 
@@ -171,8 +171,8 @@ def label_partition(G: nx.Graph, labels: Union[int, np.ndarray]) -> Tuple[Tuple[
         # do label propagation
         new_labels = np.zeros(len(G), dtype=np.int64)
         for node in G:
-            label_counts = Counter([node_to_label[neighbor] for neighbor in G[node]]
-                                   + [node_to_label[node]])
+            label_counts = Counter([node_to_label[neighbor]
+                                    for neighbor in G[node]] + [node_to_label[node]])
             most_popular = max(label_counts.items(), key=lambda x: x[1])[0]
             new_labels[node] = most_popular
 
