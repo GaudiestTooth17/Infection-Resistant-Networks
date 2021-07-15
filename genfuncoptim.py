@@ -6,7 +6,7 @@ import numpy as np
 import itertools as it
 import matplotlib.pyplot as plt
 from genfuncs import identity, make_scaler, make_right_shift, differentiation, summation
-NUM_TO_TRANSFORMATION = dict(enumerate((identity, make_scaler(2),  make_right_shift(1),
+NUM_TO_TRANSFORMATION = dict(enumerate((identity, make_scaler(2), make_right_shift(1),
                                         differentiation, summation)))
 RAND = np.random.default_rng()
 

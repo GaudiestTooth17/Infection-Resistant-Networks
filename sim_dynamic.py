@@ -258,7 +258,7 @@ class RandomFlickerBehavior:
                              To be extra clear, the edges are either all present or all absent.
         """
         self._flicker_probability = flicker_probability
-        
+
         self._edges_on_M = np.copy(M)
         self._edges_off_M = np.copy(M)
         for u, v in edges_to_flicker:
@@ -280,7 +280,8 @@ class FlickerConfig:
         self.name = name
 
     def make_flicker_behavior(self, M: np.ndarray,
-                              edges_to_flicker: Collection[Tuple[int, int]]) -> PatternFlickerBehavior:
+                              edges_to_flicker: Collection[Tuple[int, int]])\
+            -> PatternFlickerBehavior:
         return PatternFlickerBehavior(M, edges_to_flicker, self._flicker_pattern, self.name)
 
 

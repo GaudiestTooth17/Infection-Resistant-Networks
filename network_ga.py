@@ -25,7 +25,7 @@ def main():
     optimizer = ga.GAOptimizer(IRNObjective(edge_set_to_network, rand),
                                NextNetworkGenEdgeSet(rand),
                                new_edge_set_pop(20, N, rand),
-                               True, 1)
+                               True, 6)
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
     global_best: Tuple[Number, np.ndarray] = None  # type: ignore
