@@ -148,7 +148,7 @@ def analyze_network(G: nx.Graph, name) -> None:
                                     dict(enumerate(node_to_degree)))
     # components = get_components(G)
     # print(f'size of components: {[len(comp) for comp in components]}')
-    show_deg_dist_from_matrix(M, name, display=False, save=True)
+    show_deg_dist_from_matrix(M, name, display=False, save=False)
 
 
 def all_same(G: nx.Graph) -> List[float]:
