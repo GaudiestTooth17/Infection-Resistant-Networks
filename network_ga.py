@@ -40,7 +40,7 @@ def main():
         if global_best is None or local_best[0] < global_best[0]:
             global_best = local_best
         costs[step] = local_best[0]
-        diversities[step] = len(cost_to_encoding) / len(set(tuple(ctt[1])
+        diversities[step] = len(cost_to_encoding) / len(set(ctt[1].tobytes()
                                                             for ctt in cost_to_encoding))
         pbar.set_description(f'Cost: {local_best[0]:.3f} Diversity: {diversities[step]:.3f}')
         if global_best[0] == 1:
