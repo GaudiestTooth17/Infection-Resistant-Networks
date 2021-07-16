@@ -17,7 +17,7 @@ import partitioning as part
 
 
 def main():
-    n_steps = 1000
+    n_steps = 250
     N = 250
     rand = np.random.default_rng()
     # optimizer = ga.GAOptimizer(PercolationResistanceObjective(rand, 10, edge_set_to_network),
@@ -27,7 +27,7 @@ def main():
     # TODO: Run with remember_cost=False. That might help get more accurate results.
     # It'll also take longer to run.
     optimizer = ga.GAOptimizer(IRNObjective(edge_set_to_network, rand),
-                               NextNetworkGenEdgeSet(rand, .0001),
+                               NextNetworkGenEdgeSet(rand, .01),
                                new_edge_set_pop(20, N, rand),
                                True, 6)
     pbar = tqdm(range(n_steps))
@@ -40,8 +40,8 @@ def main():
         if global_best is None or local_best[0] < global_best[0]:
             global_best = local_best
         costs[step] = local_best[0]
-        diversities[step] = len(cost_to_encoding) / len(set(ctt[1].tobytes()
-                                                            for ctt in cost_to_encoding))
+        diversities[step] = len(set(ctt[1].tobytes()
+                                for ctt in cost_to_encoding)) / len(cost_to_encoding)
         pbar.set_description(f'Cost: {local_best[0]:.3f} Diversity: {diversities[step]:.3f}')
         if global_best[0] == 1:
             break
