@@ -18,7 +18,7 @@ import partitioning as part
 
 def main():
     n_steps = 1000
-    N = 100
+    N = 250
     rand = np.random.default_rng()
     # optimizer = ga.GAOptimizer(PercolationResistanceObjective(rand, 10, edge_set_to_network),
     #                            NextNetworkGenEdgeSet(rand),
@@ -32,6 +32,7 @@ def main():
                                True, 6)
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
+    diversities = np.zeros(n_steps)
     global_best: Tuple[Number, np.ndarray] = None  # type: ignore
     for step in pbar:
         cost_to_encoding = optimizer.step()
@@ -39,7 +40,9 @@ def main():
         if global_best is None or local_best[0] < global_best[0]:
             global_best = local_best
         costs[step] = local_best[0]
-        pbar.set_description('Cost: {:.3f}'.format(local_best[0]))
+        diversities[step] = len(cost_to_encoding) / len(set(tuple(ctt[1])
+                                                            for ctt in cost_to_encoding))
+        pbar.set_description(f'Cost: {local_best[0]:.3f} Diversity: {diversities[step]:.3f}')
         if global_best[0] == 1:
             break
 
@@ -48,18 +51,22 @@ def main():
     print('Number of edges:', len(G.edges))
     print('Number of components:', len(tuple(nx.connected_components(G))))
 
+    plt.title('Cost')
     plt.plot(costs)
     plt.show(block=False)
     plt.figure()
-    plt.hist(tuple(x[1] for x in G.degree), bins=None)
-    plt.show(block=False)
+    plt.title('Diversity')
+    plt.plot(diversities)
     plt.figure()
     layout = nx.kamada_kawai_layout(G)
     visualize_network(G, layout,
                       f'From Edge List\nCost: {global_best[0]}',
                       False, all_same, False)
 
-    if input('Save? ')[0].lower() == 'y':
+    save = ''
+    while save.lower() not in ('y', 'n'):
+        save = input('Save? ')
+    if save == 'y':
         name = input('Name? ')
         communities = part.intercommunity_edges_to_communities(G,
                                                                part.fluidc_partition(G, len(G)//20))
