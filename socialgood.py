@@ -1,4 +1,4 @@
-from customtypes import Number
+from customtypes import Network, Number
 from typing import Callable, Generic, Sequence, TypeVar
 import numpy as np
 import networkx as nx
@@ -25,16 +25,16 @@ class DecayFunction(Generic[T]):
         return 1/(distance**self.k)  # type: ignore
 
 
-def get_distance_matrix(G: nx.Graph) -> np.ndarray:
+def get_distance_matrix(net: Network) -> np.ndarray:
     """
     Returns the distance matrix of a given matrix with infinity value given.
     """
-    if nx.is_connected(G):
+    if nx.is_connected(net.G):
         # I expect this will be faster than our algorithm -- especially for
         # any student interaction network.
-        return nx.floyd_warshall_numpy(G)
+        return nx.floyd_warshall_numpy(net.G)
 
-    M = nx.to_numpy_array(G)
+    M = net.M
     num_nodes = len(M)
     m = np.copy(M)
     dm = np.copy(M)
@@ -58,17 +58,17 @@ def get_distance_matrix(G: nx.Graph) -> np.ndarray:
     return dm
 
 
-def rate_social_good(G: nx.Graph,
+def rate_social_good(net: Network,
                      decay_func: TDecayFunc = DecayFunction(1)) -> float:
     """
     Rate a network on how much social good it has.
     """
 
-    N = len(G)
+    N = net.N
     # If there is only 1 node, the score is 0.
     if N == 1:
         return 0
-    dist_matrix = get_distance_matrix(G)
+    dist_matrix = get_distance_matrix(net)
 
     social_good_scores = decay_func(dist_matrix)
     social_good_scores[social_good_scores == np.inf] = 0
@@ -76,7 +76,7 @@ def rate_social_good(G: nx.Graph,
 
 
 def node_size_from_social_good(G: nx.Graph, decay_func: TDecayFunc) -> Sequence[Number]:
-    dist_matrix = get_distance_matrix(G)
+    dist_matrix = get_distance_matrix(Network(G))
 
     def calc_score(u: int, v: int) -> float:
         return 0 if u == v else decay_func(dist_matrix[u][v])
@@ -98,7 +98,8 @@ def save_social_good_csv(networks: Sequence[str], network_paths: Sequence[str]):
             scores = []
             for decay_func in decay_functions:
                 G, _, _ = fio.read_network(path)
-                social_good_score = rate_social_good(G, decay_func)
+                net = Network(G)
+                social_good_score = rate_social_good(net, decay_func)
                 scores.append(f'{social_good_score:.3f}')
             writer.writerow([name] + scores)
 
@@ -123,7 +124,8 @@ def main():
     network_paths = fio.network_names_to_paths(networks)
     for name, path in zip(networks, network_paths):
         G, _, _ = fio.read_network(path)
-        print(f'{name:<30} {rate_social_good(G, DecayFunction(.5)):>10.3f}')
+        net = Network(G)
+        print(f'{name:<30} {rate_social_good(net, DecayFunction(.5)):>10.3f}')
 
 
 if __name__ == '__main__':

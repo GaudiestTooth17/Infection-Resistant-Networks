@@ -1,6 +1,7 @@
 from typing import List, Dict, Tuple, Union, Set, TypeVar, Generic, Sequence
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 import numpy as np
+import networkx as nx
 import matplotlib.pyplot as plt
 import os
 from scipy.stats import wasserstein_distance
@@ -21,6 +22,51 @@ class CircularList(Generic[T]):
         if isinstance(i, int):
             return self._list[i % len(self._list)]
         return self._list[i]  # type: ignore
+
+
+class Network:
+    def __init__(self, data: Union[nx.Graph, np.ndarray]) -> None:
+        """
+        Holds both the NetworkX and NumPy representation of a network. It starts
+        off with just one and lazily creates the other representation.
+
+        Caveats:
+        Do not mutate; changes in one data structure are not reflected in the other.
+        Does not support selfloops or multiedges.
+        """
+        if isinstance(data, nx.Graph):
+            self._G = data
+            self._M = None
+        else:
+            self._G = None
+            self._M = data
+
+    @property
+    def G(self) -> nx.Graph:
+        if self._G is None:
+            self._G = nx.Graph(self._M)
+        return self._G
+
+    @property
+    def M(self) -> np.ndarray:
+        if self._M is None:
+            self._M = nx.to_numpy_array(self._G)
+        return self._M
+
+    @property
+    def N(self) -> int:
+        return self.__len__()
+
+    @property
+    def E(self) -> int:
+        if self._G is not None:
+            return len(self._G.edges)
+        return np.sum(self._M > 0) // 2  # type: ignore
+
+    def __len__(self) -> int:
+        if self._M is not None:
+            return len(self._M)
+        return len(self._G)  # type: ignore
 
 
 class CommunityEdges:

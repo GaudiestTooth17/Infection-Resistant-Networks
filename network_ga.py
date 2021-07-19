@@ -4,7 +4,7 @@ import itertools as it
 from partitioning import fluidc_partition
 from sim_dynamic import Disease, StaticFlickerBehavior, make_starting_sir, simulate
 from socialgood import DecayFunction, rate_social_good
-from customtypes import Number
+from customtypes import Network, Number
 from typing import Callable, List, Sequence, Tuple
 import networkx as nx
 import numpy as np
@@ -47,10 +47,10 @@ def main():
             break
     print(f'Total cache hits: {optimizer.num_cache_hits}')
 
-    G = edge_set_to_network(global_best[1])
-    print('Number of nodes:', len(G.nodes))
-    print('Number of edges:', len(G.edges))
-    print('Number of components:', len(tuple(nx.connected_components(G))))
+    net = edge_set_to_network(global_best[1])
+    print('Number of nodes:', net.N)
+    print('Number of edges:', net.E)
+    print('Number of components:', len(tuple(nx.connected_components(net.G))))
 
     plt.title('Cost')
     plt.plot(costs)
@@ -59,8 +59,8 @@ def main():
     plt.title('Diversity')
     plt.plot(diversities)
     plt.figure()
-    layout = nx.kamada_kawai_layout(G)
-    visualize_network(G, layout,
+    layout = nx.kamada_kawai_layout(net.G)
+    visualize_network(net.G, layout,
                       f'From Edge List\nCost: {global_best[0]}',
                       False, all_same, False)
 
@@ -69,9 +69,10 @@ def main():
         save = input('Save? ')
     if save == 'y':
         name = input('Name? ')
-        communities = part.intercommunity_edges_to_communities(G,
-                                                               part.fluidc_partition(G, len(G)//20))
-        write_network(G, name, layout, communities)
+        communities = part.intercommunity_edges_to_communities(net.G,
+                                                               part.fluidc_partition(net.G,
+                                                                                     net.N//20))
+        write_network(net.G, name, layout, communities)
 
 
 class PercolationResistanceObjective:
@@ -100,7 +101,7 @@ class PercolationResistanceObjective:
 
 
 class IRNObjective:
-    def __init__(self, encoding_to_network: Callable[[np.ndarray], nx.Graph], rand) -> None:
+    def __init__(self, encoding_to_network: Callable[[np.ndarray], Network], rand) -> None:
         self._enc_to_G = encoding_to_network
         self._rand = rand
         self._disease = Disease(4, .2)
@@ -109,15 +110,15 @@ class IRNObjective:
         self._decay_func = DecayFunction(.5)
 
     def __call__(self, encoding: np.ndarray) -> float:
-        G = self._enc_to_G(encoding)
-        M = nx.to_numpy_array(G)
-        to_flicker = fluidc_partition(G, len(G)//20)
+        net = self._enc_to_G(encoding)
+        M = net.M
+        to_flicker = fluidc_partition(net.G, net.N//20)
         flicker_behavior = StaticFlickerBehavior(M, to_flicker, (True, False), '')
         avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
                                            self._disease, flicker_behavior, self._sim_len,
                                            None, self._rand)[-1][0] > 0)
                            for _ in range(self._n_sims)]) / len(M)
-        cost = 2-avg_sus-rate_social_good(M, self._decay_func)
+        cost = 2-avg_sus-rate_social_good(net, self._decay_func)
         return cost
 
 
