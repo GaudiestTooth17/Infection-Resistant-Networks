@@ -10,7 +10,7 @@ T = TypeVar('T')
 
 
 class ExperimentResult:
-    def __init__(self, network_class: str,
+    def __init__(self, name: str,
                  trial_to_perc_sus: Sequence[Number],
                  trial_to_proportion_flickering_edges: Sequence[Number],
                  trial_to_social_good: Sequence[Number]):
@@ -24,7 +24,7 @@ class ExperimentResult:
                                               trial in trial_to_results.
         trial_to_social_good: The trial should line up with the trial in trial_to_results.
         """
-        self.network_class = network_class
+        self.name = name
         self.trial_to_perc_sus = trial_to_perc_sus
         self.trial_to_proportion_flickering_edges = trial_to_proportion_flickering_edges
         self.trial_to_social_good = trial_to_social_good
@@ -35,7 +35,7 @@ class ExperimentResult:
         """
         self._create_directory(directory)
 
-        with open(os.path.join(directory, self.network_class+'.csv'), 'w', newline='') as file:
+        with open(os.path.join(directory, self.name+'.csv'), 'w', newline='') as file:
             writer = csv.writer(file, dialect=csv.excel)
             writer.writerow(['Percentage of Susceptible Agents'])
             writer.writerow(self.trial_to_perc_sus)
@@ -48,24 +48,24 @@ class ExperimentResult:
         self._create_directory(directory)
 
         plt.figure()
-        plt.title(f'Percentage Suseptible for\n{self.network_class}')
+        plt.title(f'Percentage Suseptible for\n{self.name}')
         plt.boxplot(self.trial_to_perc_sus, notch=False)
         plt.savefig(os.path.join(directory,
-                                 f'Percentage Suseptible for {self.network_class}.png'),
+                                 f'Percentage Suseptible for {self.name}.png'),
                     format='png')
 
         plt.figure()
-        plt.title(f'Proportion Flickering Edges in\n{self.network_class}')
+        plt.title(f'Proportion Flickering Edges in\n{self.name}')
         plt.boxplot(self.trial_to_proportion_flickering_edges, notch=False)
         plt.savefig(os.path.join(directory,
-                                 f'Proportion Flickering Edges in {self.network_class}.png'),
+                                 f'Proportion Flickering Edges in {self.name}.png'),
                     format='png')
 
         plt.figure()
-        plt.title(f'Social Good on\n{self.network_class}')
+        plt.title(f'Social Good on\n{self.name}')
         plt.boxplot(self.trial_to_social_good, notch=False)
         plt.savefig(os.path.join(directory,
-                                 f'Social Good on {self.network_class}.png'),
+                                 f'Social Good on {self.name}.png'),
                     format='png')
 
     def save_perc_sus_vs_social_good(self, directory: str,
@@ -73,7 +73,7 @@ class ExperimentResult:
         self._create_directory(directory)
 
         plt.figure()
-        plt.title(f'Resilience vs Social Good Trade-off Space\n{self.network_class}')
+        plt.title(f'Resilience vs Social Good Trade-off Space\n{self.name}')
         plt.xlabel('Percentage Susceptible')
         plt.ylabel('Social Good')
         if static_x:
@@ -82,7 +82,7 @@ class ExperimentResult:
             plt.ylim(0, 1)
         plt.scatter(self.trial_to_perc_sus, self.trial_to_social_good)
         plt.savefig(os.path.join(directory,
-                                 f'R vs SG Trade off Space for {self.network_class}.png'),
+                                 f'R vs SG Trade off Space for {self.name}.png'),
                     format='png')
 
     @staticmethod
