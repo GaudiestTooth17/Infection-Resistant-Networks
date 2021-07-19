@@ -1,5 +1,5 @@
 from customtypes import Number
-from typing import Callable, Generic, Sequence, TypeVar, Union
+from typing import Callable, Generic, Sequence, TypeVar
 import numpy as np
 import networkx as nx
 import fileio as fio
@@ -25,16 +25,21 @@ class DecayFunction(Generic[T]):
         return 1/(distance**self.k)  # type: ignore
 
 
-def get_distance_matrix(matrix: np.ndarray) -> np.ndarray:
+def get_distance_matrix(G: nx.Graph) -> np.ndarray:
     """
     Returns the distance matrix of a given matrix with infinity value given.
     """
+    if nx.is_connected(G):
+        # I expect this will be faster than our algorithm -- especially for
+        # any student interaction network.
+        return nx.floyd_warshall_numpy(G)
 
-    num_nodes = len(matrix)
-    m = np.copy(matrix)
-    dm = np.copy(matrix)
+    M = nx.to_numpy_array(G)
+    num_nodes = len(M)
+    m = np.copy(M)
+    dm = np.copy(M)
     dm[dm < 1] = np.inf
-    x = np.copy(matrix)
+    x = np.copy(M)
 
     for d in range(num_nodes):
         old_x = x
@@ -53,18 +58,17 @@ def get_distance_matrix(matrix: np.ndarray) -> np.ndarray:
     return dm
 
 
-def rate_social_good(network: Union[nx.Graph, np.ndarray],
+def rate_social_good(G: nx.Graph,
                      decay_func: TDecayFunc = DecayFunction(1)) -> float:
     """
     Rate a network on how much social good it has.
     """
 
-    N = len(network)
+    N = len(G)
     # If there is only 1 node, the score is 0.
     if N == 1:
         return 0
-    M = network if isinstance(network, np.ndarray) else nx.to_numpy_array(network)
-    dist_matrix = get_distance_matrix(M)
+    dist_matrix = get_distance_matrix(G)
 
     social_good_scores = decay_func(dist_matrix)
     social_good_scores[social_good_scores == np.inf] = 0
@@ -72,7 +76,7 @@ def rate_social_good(network: Union[nx.Graph, np.ndarray],
 
 
 def node_size_from_social_good(G: nx.Graph, decay_func: TDecayFunc) -> Sequence[Number]:
-    dist_matrix = get_distance_matrix(nx.to_numpy_array(G))
+    dist_matrix = get_distance_matrix(G)
 
     def calc_score(u: int, v: int) -> float:
         return 0 if u == v else decay_func(dist_matrix[u][v])
