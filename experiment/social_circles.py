@@ -1,6 +1,6 @@
 from typing import Tuple, Dict, Any, Optional
 from common import safe_run_trials
-from sim_dynamic import Disease, PatternFlickerBehavior, make_starting_sir, simulate
+from sim_dynamic import Disease, StaticFlickerBehavior, make_starting_sir, simulate
 import networkgen
 import partitioning
 import networkx as nx
@@ -29,8 +29,8 @@ def run_social_circles_trial(args: Tuple[Dict[networkgen.Agent, int],
     social_good_score = rate_social_good(G)
     M = nx.to_numpy_array(G)
 
-    network_behavior = PatternFlickerBehavior(M, to_flicker, (True, False),
-                                              "Probs don't change this")
+    network_behavior = StaticFlickerBehavior(M, to_flicker, (True, False),
+                                             "Probs don't change this")
     avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
                                        disease, network_behavior, sim_len, None, rand)[-1][0] > 0)
                        for _ in range(sims_per_trial)]) / len(G)

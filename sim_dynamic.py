@@ -215,10 +215,10 @@ def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rand=RAND)
     return sir0
 
 
-class PatternFlickerBehavior:
+class StaticFlickerBehavior:
     def __init__(self, M: np.ndarray,
                  edges_to_flicker: Collection[Tuple[int, int]],
-                 flicker_pattern: Tuple[bool, ...],
+                 flicker_pattern: Sequence[bool],
                  name: Optional[str] = None) -> None:
         """
         Flickers inter-community edges according to flicker_pattern.
@@ -281,8 +281,8 @@ class FlickerConfig:
 
     def make_flicker_behavior(self, M: np.ndarray,
                               edges_to_flicker: Collection[Tuple[int, int]])\
-            -> PatternFlickerBehavior:
-        return PatternFlickerBehavior(M, edges_to_flicker, self._flicker_pattern, self.name)
+            -> StaticFlickerBehavior:
+        return StaticFlickerBehavior(M, edges_to_flicker, self._flicker_pattern, self.name)
 
 
 def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig], str])\

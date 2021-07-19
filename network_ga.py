@@ -2,7 +2,7 @@
 from fileio import write_network
 import itertools as it
 from partitioning import fluidc_partition
-from sim_dynamic import Disease, PatternFlickerBehavior, make_starting_sir, simulate
+from sim_dynamic import Disease, StaticFlickerBehavior, make_starting_sir, simulate
 from socialgood import DecayFunction, rate_social_good
 from customtypes import Number
 from typing import Callable, List, Sequence, Tuple
@@ -17,7 +17,7 @@ import partitioning as part
 
 
 def main():
-    n_steps = 250
+    n_steps = 100
     N = 250
     rand = np.random.default_rng()
     # optimizer = ga.GAOptimizer(PercolationResistanceObjective(rand, 10, edge_set_to_network),
@@ -27,8 +27,8 @@ def main():
     # TODO: Run with remember_cost=False. That might help get more accurate results.
     # It'll also take longer to run.
     optimizer = ga.GAOptimizer(IRNObjective(edge_set_to_network, rand),
-                               NextNetworkGenEdgeSet(rand, .01),
-                               new_edge_set_pop(20, N, rand),
+                               NextNetworkGenEdgeSet(rand, .00001),
+                               new_edge_set_pop(30, N, rand),
                                True, 6)
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
@@ -45,6 +45,7 @@ def main():
         pbar.set_description(f'Cost: {local_best[0]:.3f} Diversity: {diversities[step]:.3f}')
         if global_best[0] == 1:
             break
+    print(f'Total cache hits: {optimizer.num_cache_hits}')
 
     G = edge_set_to_network(global_best[1])
     print('Number of nodes:', len(G.nodes))
@@ -111,7 +112,7 @@ class IRNObjective:
         G = self._enc_to_G(encoding)
         M = nx.to_numpy_array(G)
         to_flicker = fluidc_partition(G, len(G)//20)
-        flicker_behavior = PatternFlickerBehavior(M, to_flicker, (True, False), '')
+        flicker_behavior = StaticFlickerBehavior(M, to_flicker, (True, False), '')
         avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
                                            self._disease, flicker_behavior, self._sim_len,
                                            None, self._rand)[-1][0] > 0)

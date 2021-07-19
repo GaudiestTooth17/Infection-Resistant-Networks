@@ -1,5 +1,5 @@
 from common import safe_run_trials
-from sim_dynamic import Disease, simulate, PatternFlickerBehavior, make_starting_sir
+from sim_dynamic import Disease, simulate, StaticFlickerBehavior, make_starting_sir
 import numpy as np
 from typing import Optional, Tuple, Any
 from abc import ABC, abstractmethod
@@ -155,7 +155,7 @@ def run_connected_community_trial(args: Tuple[ConnectedCommunityConfiguration, D
     social_good = rate_social_good(G)
     M = nx.to_numpy_array(G)
 
-    behavior = PatternFlickerBehavior(M, to_flicker, (True, False), "Probs don't change this")
+    behavior = StaticFlickerBehavior(M, to_flicker, (True, False), "Probs don't change this")
     avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
                                        disease, behavior, sim_len, None, rand)[-1][0] > 0)
                        for _ in range(sims_per_trial)]) / len(M)

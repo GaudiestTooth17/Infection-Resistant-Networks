@@ -1,6 +1,10 @@
-from typing import Callable, List, Optional, Tuple, TypeVar, Sequence
+from sim_dynamic import RandomFlickerBehavior, StaticFlickerBehavior, UpdateConnections
+from typing import (Any, Callable, Collection, List, Optional, Tuple, TypeVar,
+                    Sequence)
+from abc import ABC, abstractmethod
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 import csv
 import sys
@@ -30,9 +34,7 @@ class ExperimentResult:
         self.trial_to_social_good = trial_to_social_good
 
     def save_csv(self, directory: str) -> None:
-        """
-        Save a CSV with the stored data.
-        """
+        """Save a CSV with the stored data."""
         self._create_directory(directory)
 
         with open(os.path.join(directory, self.name+'.csv'), 'w', newline='') as file:
@@ -45,6 +47,7 @@ class ExperimentResult:
             writer.writerow(self.trial_to_social_good)
 
     def save_box_plots(self, directory: str) -> None:
+        """Save box plots of all the stored data."""
         self._create_directory(directory)
 
         plt.figure()
@@ -70,6 +73,7 @@ class ExperimentResult:
 
     def save_perc_sus_vs_social_good(self, directory: str,
                                      *, static_x: bool = True, static_y: bool = True) -> None:
+        """Save a scatter plot of percentage susctible vs social good"""
         self._create_directory(directory)
 
         plt.figure()
@@ -117,3 +121,46 @@ def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, f
     experiment_results = ExperimentResult(name, trial_to_avg_sus,
                                           trial_to_flickering_edges, trial_to_social_good)
     experiment_results.save_perc_sus_vs_social_good('results')
+
+
+class FlickerConfig(ABC):
+    @abstractmethod
+    def make_behavior(self, M: np.ndarray,
+                      edges_to_flicker: Collection[Tuple[int, int]])\
+            -> UpdateConnections:
+        """Return a some flicker behavior."""
+        pass
+
+
+class StaticFlickerConfig(FlickerConfig):
+    def __init__(self, flicker_pattern: Sequence[bool],
+                 name: Optional[str] = None) -> None:
+        self.flicker_pattern = flicker_pattern
+        self.name = name
+
+    def make_behavior(self, M: np.ndarray,
+                      edges_to_flicker: Collection[Tuple[int, int]])\
+            -> StaticFlickerBehavior:
+        return StaticFlickerBehavior(M, edges_to_flicker,
+                                     self.flicker_pattern,
+                                     self.name)
+
+
+class RandomFlickerConfig(FlickerConfig):
+    def __init__(self, flicker_probability: float,
+                 name: Optional[str] = None,
+                 rand: Optional[Any] = None):
+        self.flicker_probability = flicker_probability
+        self.name = name
+        self.rand = rand
+
+    def make_behavior(self, M: np.ndarray,
+                      edges_to_flicker: Collection[Tuple[int, int]])\
+            -> RandomFlickerBehavior:
+        if self.rand is None:
+            return RandomFlickerBehavior(M, edges_to_flicker,
+                                         self.flicker_probability,
+                                         self.name)
+        return RandomFlickerBehavior(M, edges_to_flicker,
+                                     self.flicker_probability,
+                                     self.name, self.rand)
