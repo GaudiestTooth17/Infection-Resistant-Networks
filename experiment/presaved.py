@@ -2,7 +2,8 @@ import sys
 sys.path.append('')
 import os
 from multiprocessing import Pool
-from customtypes import ExperimentResults, Network
+from customtypes import ExperimentResults
+from network import Network
 from socialgood import rate_social_good
 from typing import Dict, Optional, Sequence, Tuple
 import numpy as np
@@ -44,7 +45,7 @@ def main():
             behavior = config.make_behavior(net.M, to_flicker)
             sim_results = [get_final_stats(simulate(net.M, make_starting_sir(net.N, 1, rng),
                                                     disease, behavior, max_steps,
-                                                    None, rand=rng))
+                                                    None, rng=rng))
                            for _ in tqdm(range(n_trials))]
             results = BasicExperimentResult(f'{net_name} {config.name}', sim_results,
                                             trial_to_pf, trial_to_sg)
