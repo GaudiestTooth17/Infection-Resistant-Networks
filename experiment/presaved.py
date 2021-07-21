@@ -1,15 +1,18 @@
 import sys
 sys.path.append('')
-from customtypes import Network
+import os
+from multiprocessing import Pool
+from customtypes import ExperimentResults, Network
 from socialgood import rate_social_good
-from typing import Sequence
+from typing import Dict, Optional, Sequence, Tuple
 import numpy as np
 import networkx as nx
-from common import RandomFlickerConfig, StaticFlickerConfig
+from common import FlickerConfig, RandomFlickerConfig, StaticFlickerConfig
 from sim_dynamic import Disease, simulate, make_starting_sir
 import fileio as fio
-from experiment.common import ExperimentResult
+from experiment.common import BasicExperimentResult
 from tqdm import tqdm
+import time
 RESULTS_DIR = 'results'
 
 
@@ -43,8 +46,8 @@ def main():
                                                     disease, behavior, max_steps,
                                                     None, rand=rng))
                            for _ in tqdm(range(n_trials))]
-            results = ExperimentResult(f'{net_name} {config.name}', sim_results,
-                                       trial_to_pf, trial_to_sg)
+            results = BasicExperimentResult(f'{net_name} {config.name}', sim_results,
+                                            trial_to_pf, trial_to_sg)
             results.save_csv(RESULTS_DIR)
             results.save_box_plots(RESULTS_DIR)
             results.save_perc_sus_vs_social_good(RESULTS_DIR)
@@ -53,6 +56,98 @@ def main():
 def get_final_stats(all_stats: Sequence[np.ndarray]) -> float:
     """Return the percentage of agents susceptible at the end of the simulation."""
     return np.sum(all_stats[-1][0] > 0) / len(all_stats[-1][0])
+
+
+def entry_point():
+    start_time = time.time()
+    network_names = ('agent-generated-500',
+                     'annealed-agent-generated-500',
+                     'annealed-large-diameter',
+                     'annealed-medium-diameter',
+                     'annealed-short-diameter',
+                     'cgg-500',
+                     'watts-strogatz-500-4-.1',
+                     'elitist-500',
+                     'spatial-network',
+                     'connected-comm-50-10',
+                     'cavemen-50-10')
+    network_paths = ['networks/'+name+'.txt' for name in network_names]
+    # verify that all the networks exist
+    found_errors = False
+    for path in network_paths:
+        if not os.path.isfile(path):
+            print(f'{path} does not exist!')
+            found_errors = True
+    if found_errors:
+        print('Fix errors before continuing')
+        exit(1)
+
+    flicker_configurations = [StaticFlickerConfig((True,), 'Static'),
+                              StaticFlickerConfig((True, True, False), 'Two Thirds Flicker'),
+                              StaticFlickerConfig((True, False), 'One Half Flicker'),
+                              StaticFlickerConfig((True, False, False), 'One Third Flicker')]
+    arguments = [(path, 1000, 500, Disease(4, .2), flicker_configurations,
+                  flicker_configurations[0].name)
+                 for path in network_paths]
+    # use a maximum of 10 cores
+    with Pool(min(len(arguments), 10)) as p:
+        expirement_results = p.map(run_experiments, arguments)  # type: ignore
+
+    results_dir = 'experiment results'
+    if not os.path.exists(results_dir):
+        os.mkdir(results_dir)
+    for result in expirement_results:
+        if result is not None:
+            result.save(results_dir)
+
+    print(f'Finished simulations ({time.time()-start_time}).')
+
+
+def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig], str])\
+        -> Optional[ExperimentResults]:
+    """
+    Run a batch of experiments and return a tuple containing the network's name,
+    number of flickering edges, and a mapping of behavior name to the final
+    amount of susceptible nodes. Return None on failure.
+
+    args: (path to the network,
+           number of sims to run for each behavior,
+           simulation length,
+           disease,
+           a sequence of configs for the flickers to use,
+           the name of the baseline flicker to compare the other results to)
+    """
+    network_path, num_sims, sim_len, disease, flicker_configs, baseline_flicker_name = args
+    G, layout, communities = fio.read_network(network_path)
+    if layout is None:
+        print(f'{fio.get_network_name(network_path)} has no layout.')
+        return None
+    if communities is None:
+        print(f'{fio.get_network_name(network_path)} has no community data.')
+        return None
+    M = nx.to_numpy_array(G)
+    intercommunity_edges = {(u, v) for u, v in G.edges if communities[u] != communities[v]}
+    N = M.shape[0]
+
+    behavior_to_results: Dict[str, Sequence[int]] = {}
+    for config in flicker_configs:
+        behavior = config.make_behavior(M, intercommunity_edges)
+        # The tuple comprehension is pretty arcane, so here is an explanation.
+        # Each entry is the sum of the number of entries in the final SIR where
+        # the days in S are greater than 0. That is to say, the number of
+        # susceptible agents at the end of the simulation.
+        num_sus = tuple(np.sum(simulate(M,
+                                        make_starting_sir(N, 1),
+                                        disease,
+                                        behavior,
+                                        sim_len,
+                                        None)[-1][0] > 0)
+                        for _ in range(num_sims))
+        behavior_to_results[behavior.name] = num_sus
+
+    return ExperimentResults(fio.get_network_name(network_path), num_sims, sim_len,
+                             len(intercommunity_edges)/len(G.edges), behavior_to_results,
+                             baseline_flicker_name)
 
 
 if __name__ == '__main__':
