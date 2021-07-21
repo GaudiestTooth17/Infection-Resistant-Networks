@@ -22,7 +22,10 @@ class DecayFunction(Generic[T]):
         self.k = k
 
     def __call__(self, distance: T) -> T:
-        return 1/(distance**self.k)  # type: ignore
+        with np.errstate(divide='ignore'):
+            result = 1/(distance**self.k)
+        result = np.where(result == np.inf, 0, result)
+        return result
 
 
 def get_distance_matrix(net: Network) -> np.ndarray:
