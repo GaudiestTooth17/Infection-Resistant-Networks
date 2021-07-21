@@ -1,14 +1,10 @@
-import time
-from typing import Callable, Collection, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Collection, List, Optional, Sequence, Tuple, Union
 from dataclasses import dataclass
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-from fileio import get_network_name, read_network
-from customtypes import Layout, ExperimentResults
-from multiprocessing import Pool
-import os
-RAND = np.random.default_rng()
+from customtypes import Layout
+RNG = np.random.default_rng()
 
 UpdateConnections = Callable[[np.ndarray, np.ndarray, int, np.ndarray], np.ndarray]
 """
@@ -35,7 +31,7 @@ def simulate(M: np.ndarray,
              update_connections: UpdateConnections,
              max_steps: int,
              layout: Optional[Layout],
-             rand=RAND) -> List[np.ndarray]:
+             rng=RNG) -> List[np.ndarray]:
     """
     Simulate an infection on a dynamic network.
 
@@ -69,7 +65,7 @@ def simulate(M: np.ndarray,
 
         # next_sir is the workhorse of the simulation because it is responsible
         # for simulating the disease spread
-        sirs[step], states_changed = next_sir(sirs[step-1], D, disease, rand)
+        sirs[step], states_changed = next_sir(sirs[step-1], D, disease, rng)
         if vis_func is not None:
             vis_func(nx.Graph(D), sirs[step])
 
@@ -90,7 +86,7 @@ def simulate(M: np.ndarray,
     return sirs
 
 
-def next_sir(old_sir: np.ndarray, M: np.ndarray, disease: Disease, rand) -> Tuple[np.ndarray, bool]:
+def next_sir(old_sir: np.ndarray, M: np.ndarray, disease: Disease, rng) -> Tuple[np.ndarray, bool]:
     """
     Use the disease to make the next SIR matrix also returns whether or not the old one differs from
     the new. The first dimension of sir is state. The second dimension is node.
@@ -98,7 +94,7 @@ def next_sir(old_sir: np.ndarray, M: np.ndarray, disease: Disease, rand) -> Tupl
 
     sir = np.copy(old_sir)
     N = M.shape[0]
-    probs = rand.random(N)
+    probs = rng.random(N)
 
     # infectious to recovered
     to_r_filter = sir[1] > disease.days_infectious
@@ -153,7 +149,7 @@ class Visualize:
         plt.pause(.2)  # type: ignore
 
 
-def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rand=RAND) -> np.ndarray:
+def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rng=RNG) -> np.ndarray:
     """
     Make an initial SIR.
 
@@ -162,7 +158,7 @@ def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rand=RAND)
                If it is just a number, the agents will be randomly selected.
     """
     if isinstance(to_infect, int):
-        to_infect = rand.choice(N, size=to_infect)
+        to_infect = rng.choice(N, size=to_infect)
     sir0 = np.zeros((3, N), dtype=np.int64)
     sir0[0] = 1
     sir0[1, to_infect] = 1
@@ -203,7 +199,7 @@ class RandomFlickerBehavior:
                  edges_to_flicker: Collection[Tuple[int, int]],
                  flicker_probability: float,
                  name: Optional[str] = None,
-                 rand=RAND) -> None:
+                 rng=RNG) -> None:
         """
         Flickers inter-community edges according to flicker_pattern.
 
@@ -220,10 +216,10 @@ class RandomFlickerBehavior:
             self._edges_off_M[u, v] = 0
             self._edges_off_M[v, u] = 0
 
-        self._rand = rand
+        self._rng = rng
         self.name = name if name is not None else f'Flicker {flicker_probability}'
 
     def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
-        if self._rand.random() < self._flicker_probability:
+        if self._rng.random() < self._flicker_probability:
             return self._edges_on_M
         return self._edges_off_M
