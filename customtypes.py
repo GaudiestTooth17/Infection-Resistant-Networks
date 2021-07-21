@@ -1,10 +1,12 @@
-from typing import List, Dict, Tuple, Union, Set, TypeVar, Generic, Sequence
+from typing import (Collection, Iterable, List, Dict, Optional, Tuple, Union,
+                    Set, TypeVar, Generic, Sequence)
 from collections import defaultdict
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import os
 from scipy.stats import wasserstein_distance
+from partitioning import fluidc_partition, intercommunity_edges_to_communities
 
 NodeColors = Union[List[str], List[Tuple[int, int, int]]]
 Layout = Dict[int, Tuple[float, float]]
@@ -25,7 +27,10 @@ class CircularList(Generic[T]):
 
 
 class Network:
-    def __init__(self, data: Union[nx.Graph, np.ndarray]) -> None:
+    def __init__(self, data: Union[nx.Graph, np.ndarray],
+                 intercommunity_edges: Optional[Collection[Tuple[int, int]]] = None,
+                 communities: Optional[Communities] = None,
+                 community_size: int = 25) -> None:
         """
         Holds both the NetworkX and NumPy representation of a network. It starts
         off with just one and lazily creates the other representation.
@@ -40,6 +45,9 @@ class Network:
         else:
             self._G = None
             self._M = data
+        self._intercommunity_edges = intercommunity_edges
+        self._communities = communities
+        self._community_size = community_size
 
     @property
     def G(self) -> nx.Graph:
@@ -62,6 +70,27 @@ class Network:
         if self._G is not None:
             return len(self._G.edges)
         return np.sum(self._M > 0) // 2  # type: ignore
+
+    @property
+    def edges(self) -> Iterable[Tuple[int, int]]:
+        return self.G.edges
+
+    @property
+    def intercommunity_edges(self):
+        if self._intercommunity_edges is None:
+            if self._communities is None:
+                self._intercommunity_edges = fluidc_partition(self.G, self.N//self._community_size)
+            else:
+                self._intercommunity_edges = tuple((u, v) for u, v in self.edges
+                                                   if self._communities[u] != self._communities[v])
+        return self._intercommunity_edges
+
+    @property
+    def communities(self):
+        if self._communities is None:
+            self._communities = intercommunity_edges_to_communities(self.G,
+                                                                    self.intercommunity_edges)
+        return self._communities
 
     def __len__(self) -> int:
         if self._M is not None:
