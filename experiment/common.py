@@ -13,13 +13,14 @@ from customtypes import Number
 T = TypeVar('T')
 
 
-class ExperimentResult:
+class BasicExperimentResult:
     def __init__(self, name: str,
                  trial_to_perc_sus: Sequence[Number],
                  trial_to_proportion_flickering_edges: Sequence[Number],
                  trial_to_social_good: Sequence[Number]):
         """
-        A class for aggregating and recording results of experiments.
+        A class for aggregating and recording results of experiments on one type
+        of network with a fixed flicker rate.
 
         network_class: A string describing what type of network the simulations were run on.
         trial_to_perc_sus: The percentage (or probably the average percentage)
@@ -118,8 +119,8 @@ def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, f
         pbar.update(update_amount)
 
     trial_to_flickering_edges, trial_to_avg_sus, trial_to_social_good = zip(*results)
-    experiment_results = ExperimentResult(name, trial_to_avg_sus,
-                                          trial_to_flickering_edges, trial_to_social_good)
+    experiment_results = BasicExperimentResult(name, trial_to_avg_sus,
+                                               trial_to_flickering_edges, trial_to_social_good)
     experiment_results.save_perc_sus_vs_social_good('results')
 
 
