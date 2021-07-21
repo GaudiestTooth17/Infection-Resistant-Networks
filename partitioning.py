@@ -1,6 +1,6 @@
 from customtypes import Communities
 from itertools import takewhile
-from typing import Dict, Iterable, Sequence, Union, Tuple
+from typing import Collection, Dict, Iterable, Sequence, Union, Tuple
 import networkx as nx
 import numpy as np
 import sys
@@ -194,7 +194,7 @@ def label_partition(G: nx.Graph, labels: Union[int, np.ndarray]) -> Tuple[Tuple[
 
 
 def intercommunity_edges_to_communities(G: nx.Graph,
-                                        interedges: Tuple[Tuple[int, int], ...]) -> Communities:
+                                        interedges: Collection[Tuple[int, int]]) -> Communities:
     """
     Return a dictionary of node to the ID of the community it belongs to.
 
