@@ -3,13 +3,12 @@ from typing import Tuple
 
 from networkx.generators.random_graphs import watts_strogatz_graph
 sys.path.append('')
-from customtypes import Network
+from network import Network
 from socialgood import DecayFunction, rate_social_good
 from tqdm import tqdm
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-import itertools as it
 from multiprocessing import Pool
 
 
@@ -75,23 +74,12 @@ def watts_strogatz_k_experiment(decay_coeff: float):
                 stats = np.array(pool.map(rate_sg,
                                           [(net, decay) for net in networks],
                                           n_trials//4))
-        # if k == 0:
-        #     stats = np.zeros(n_trials)
-        #     actual_edge_densities[i] = 0.0
-        # else:
-        #     networks = (nx.connected_watts_strogatz_graph(N, k, rewiring_prob)
-        #                 for _ in range(n_trials))
-        #     networks = [Network(G) for G in networks]
-        #     actual_edge_densities[i] = len(networks[0].G.edges) / max_edges
-        #     stats = np.array([rate_sg((net, decay))
-        #                       for net in networks])
         all_stats[i] = stats
 
     quartiles = np.quantile(all_stats, (.25, .75), axis=1, interpolation='midpoint')
     plt.clf()
     plt.title(name)
     line = np.mean(all_stats, axis=1)
-    print('line', line)
     plt.xlabel('Edge Density')
     plt.ylabel('Social Good Score')
     plt.plot(actual_edge_densities, line)
