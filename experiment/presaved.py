@@ -1,5 +1,6 @@
 import sys
 sys.path.append('')
+from customtypes import Network
 from socialgood import rate_social_good
 from typing import Sequence
 import numpy as np
@@ -17,28 +18,28 @@ def main():
     max_steps = 100
     rng = np.random.default_rng(0)
     disease = Disease(4, .2)
-    names = ('elitist-500', 'student-interaction-friday', 'cavemen-50-10',
-             'spatial-network', 'cgg-500', 'watts-strogatz-500-4-.1')
+    names = ('elitist-500', 'cavemen-50-10', 'spatial-network', 'cgg-500',
+             'watts-strogatz-500-4-.1')
     paths = fio.network_names_to_paths(names)
-    behavior_configs = (RandomFlickerConfig(.5, 'Rand .5', rng),
+    behavior_configs = (RandomFlickerConfig(.5, 'Random .5', rng),
                         StaticFlickerConfig((True, False), 'Static .5'))
 
     for net_name, path in zip(names, paths):
         G, _, communities = fio.read_network(path)
-        M = nx.to_numpy_array(G)
+        net = Network(G)
         if communities is None:
             print(f'No community data for {net_name}. Skipping.', file=sys.stderr)
             continue
         to_flicker = tuple((u, v) for u, v in G.edges
                            if communities[u] != communities[v])
         proportion_flickering = len(to_flicker) / len(G.edges)
-        social_good = rate_social_good(G)
+        social_good = rate_social_good(net)
         trial_to_pf = tuple(proportion_flickering for _ in range(n_trials))
         trial_to_sg = tuple(social_good for _ in range(n_trials))
         print(f'Running simulations for {net_name}.')
         for config in behavior_configs:
-            behavior = config.make_behavior(M, to_flicker)
-            sim_results = [get_final_stats(simulate(M, make_starting_sir(len(M), 1, rng),
+            behavior = config.make_behavior(net.M, to_flicker)
+            sim_results = [get_final_stats(simulate(net.M, make_starting_sir(net.N, 1, rng),
                                                     disease, behavior, max_steps,
                                                     None, rand=rng))
                            for _ in tqdm(range(n_trials))]
