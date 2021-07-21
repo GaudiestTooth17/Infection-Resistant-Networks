@@ -1,7 +1,6 @@
 import sys
 from typing import Tuple
 
-from networkx.generators.random_graphs import watts_strogatz_graph
 sys.path.append('')
 from network import Network
 from socialgood import DecayFunction, rate_social_good
