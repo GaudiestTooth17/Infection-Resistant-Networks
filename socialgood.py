@@ -1,4 +1,4 @@
-from customtypes import Network, Number
+from customtypes import Number
 from typing import Callable, Generic, Sequence, TypeVar
 import numpy as np
 import networkx as nx
@@ -10,6 +10,7 @@ from analyzer import visualize_network
 from networkgen import _connected_community as cc
 import networkx as nx
 from matplotlib import pyplot as plt
+from network import Network
 T = TypeVar('T', Number, np.ndarray)
 TDecayFunc = Callable[[T], T]
 
