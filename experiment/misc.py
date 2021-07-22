@@ -87,14 +87,14 @@ class MakeConnectedCommunity:
 def connected_community_entry_point():
     rng = np.random.default_rng(501)
     min_inner, max_inner = 1, 15
-    min_outer, max_outer = 5, 10
+    min_outer, max_outer = 1, 5
     community_size = 20
     n_communities = 25
     next_network = MakeConnectedCommunity(community_size, (min_inner, max_inner),
                                           n_communities, (min_outer, max_outer), rng)
     base_name = f'Connected Community N_comm={community_size} [{min_inner}, {max_inner}]\n'\
         f'num_comms={n_communities} [{min_outer}, {max_outer}]'
-    diseases = [Disease(2, trans_prob) for trans_prob in np.linspace(.1, 1.0, 10)]
+    diseases = [Disease(2, trans_prob) for trans_prob in np.linspace(.1, 1.0, 25)]
     for flicker_prob in np.linspace(1, .2, 9):
         run_inf_prob_vs_perc_sus(f'{base_name} flicker_prob={flicker_prob:.2f}',
                                  diseases, next_network,
