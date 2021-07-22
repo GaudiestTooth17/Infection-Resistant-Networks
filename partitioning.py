@@ -1,12 +1,13 @@
 from customtypes import Communities
 from itertools import takewhile
-from typing import Dict, Iterable, Sequence, Union, Tuple
+from typing import Collection, Dict, Iterable, Sequence, Union, Tuple
 import networkx as nx
 import numpy as np
 import sys
 from networkx.algorithms.community import girvan_newman, asyn_fluidc
 from fileio import get_network_name, read_network
-from analyzer import calc_prop_common_neighbors
+from analyzer import (calc_prop_common_neighbors, make_meta_community_layout,
+                      make_meta_community_network, visualize_network)
 from collections import Counter
 import time
 import itertools as it
@@ -24,14 +25,20 @@ def main():
         print(f'Usage: {sys.argv[0]} <network> <num labels/partitions>')
         return
 
-    M, layout, _ = read_network(sys.argv[1])
+    path = sys.argv[1]
+    G, layout, _ = read_network(path)
     if layout is None:
         raise Exception('Layout cannot be None.')
-    name = get_network_name(sys.argv[1])
+    name = get_network_name(path)
     n_communities = int(sys.argv[2])
 
-    G = nx.Graph(M)
     start_time = time.time()
+    intercommunity_edges = fluidc_partition(G, n_communities)
+    meta_G, meta_node_size, meta_edge_width = make_meta_community_network(intercommunity_edges, G)
+    meta_layout = make_meta_community_layout(meta_G, layout)
+    print(f'Finished ({time.time()-start_time}).')
+    visualize_network(meta_G, meta_layout, f'{name} Meta Network',
+                      edge_width_func=lambda G: meta_edge_width, node_size=meta_node_size)
 
 
 def run_experiment(args) -> Tuple[int, int]:
@@ -187,7 +194,7 @@ def label_partition(G: nx.Graph, labels: Union[int, np.ndarray]) -> Tuple[Tuple[
 
 
 def intercommunity_edges_to_communities(G: nx.Graph,
-                                        interedges: Tuple[Tuple[int, int], ...]) -> Communities:
+                                        interedges: Collection[Tuple[int, int]]) -> Communities:
     """
     Return a dictionary of node to the ID of the community it belongs to.
 

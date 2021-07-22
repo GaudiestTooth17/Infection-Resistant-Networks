@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import matplotlib.pyplot as plt
 import collections
 import networkx as nx
@@ -9,7 +7,7 @@ import sys
 from itertools import takewhile
 from typing import Callable, Counter, Dict, Iterable, List, Sequence, Set, Optional, Tuple, Union
 from customtypes import Layout, Number, CircularList
-from fileio import old_read_network_file, get_network_name
+from fileio import get_network_name, read_network
 RAND = np.random.default_rng()
 
 
@@ -22,13 +20,24 @@ COLORS = CircularList(['blue', 'green', 'lightcoral', 'chocolate', 'darkred',
 def main(argv: List[str]):
     if len(argv) < 2:
         print(f'Usage: {argv[0]} <network>')
-    M, layout = old_read_network_file(argv[1])
+    G, layout, communities = read_network(argv[1])
+    if layout is None:
+        print('Layout is None.')
+        return
+    if communities is None:
+        print('Communities is None')
+        return
     name = get_network_name(argv[1])
-    # analyze_network(nx.Graph(M), name)
-    visualize_network(nx.Graph(M), layout, name, edge_width_func=all_same, save=True)
-    # visualize_eigen_communities(nx.Graph(M), layout, name)
-    # visualize_girvan_newman_communities(nx.Graph(M), layout, name)
-    # plot_edge_betweeness_centralities(nx.Graph(M), name)
+    analyze_network(G, name)
+    visualize_network(G, layout, name, edge_width_func=all_same, block=False)
+    intercommunity_edges = tuple((u, v) for u, v in G.edges if communities[u] != communities[v])
+    G.remove_edges_from(intercommunity_edges)
+    visualize_network(G, layout, 'Partitioned '+name, edge_width_func=all_same, block=False)
+    meta_G, meta_ns, meta_ew = make_meta_community_network(intercommunity_edges, G)
+    meta_layout = make_meta_community_layout(meta_G, layout)
+    visualize_network(meta_G, meta_layout, f'{name} Meta Communities',
+                      edge_width_func=lambda G: meta_ew, node_size=meta_ns, block=False)
+    input('Press <enter> to exit.')
 
 
 def get_giant_component_size(graph: nx.graph, p, num_percolations=1):
@@ -108,7 +117,6 @@ def show_clustering_coefficent_dist(node_to_coefficient: Dict[int, float],
     print(f'Average clustering coefficient for all nodes: {avg_clustering_coefficient}')
 
     plt.show(block=False)
-    plt.figure()
 
 
 def calc_edge_density(M) -> float:
@@ -151,8 +159,7 @@ def analyze_network(G: nx.Graph, name) -> None:
                                     dict(enumerate(node_to_degree)))
     # components = get_components(G)
     # print(f'size of components: {[len(comp) for comp in components]}')
-    show_deg_dist_from_matrix(M, name, display=False, save=True)
-    input('Press <enter> to continue.')
+    show_deg_dist_from_matrix(M, name, display=False, save=False)
 
 
 def all_same(G: nx.Graph) -> List[float]:
@@ -347,10 +354,12 @@ def random_walk_centrality(G: nx.Graph, num_paths: int) -> Dict[Tuple[int, int],
 
 def make_meta_community_network(edges_removed: Tuple[Tuple[int, int], ...],
                                 partitioned_G: nx.Graph)\
-                                    -> Tuple[nx.Graph, Sequence[int], Sequence[float]]:
+        -> Tuple[nx.Graph, Sequence[int], Sequence[float]]:
     """
     Make a network where each node represents a partition in the original network
     and each edge represents at least one edge going between the two partitions.
+
+    partitioned_G: make sure to remove edges_removed from partitioned_G.
 
     The nodes in the meta community network have the nodes in the communities
     they represent associated with them as attributes with the tab 'communities'.

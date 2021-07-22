@@ -1,5 +1,5 @@
 from typing import List, Dict, Tuple, Union, Set, TypeVar, Generic, Sequence
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
 import os

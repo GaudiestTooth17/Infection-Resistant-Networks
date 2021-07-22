@@ -1,9 +1,10 @@
 #!/usr/bin/python3
+from fileio import write_network
 import itertools as it
 from partitioning import fluidc_partition
-from sim_dynamic import Disease, PatternFlickerBehavior, make_starting_sir, simulate
-from socialgood import rate_social_good
-from customtypes import Number
+from sim_dynamic import Disease, StaticFlickerBehavior, make_starting_sir, simulate
+from socialgood import DecayFunction, rate_social_good
+from customtypes import Network, Number
 from typing import Callable, List, Sequence, Tuple
 import networkx as nx
 import numpy as np
@@ -12,22 +13,26 @@ from tqdm import tqdm
 import hcmioptim.ga as ga
 from analyzer import all_same, visualize_network, betw_centrality
 from encoding_lib import edge_set_to_network, edge_list_to_network
+import partitioning as part
 
 
 def main():
-    n_steps = 1000
-    N = 100
+    n_steps = 100
+    N = 250
     rand = np.random.default_rng()
     # optimizer = ga.GAOptimizer(PercolationResistanceObjective(rand, 10, edge_set_to_network),
     #                            NextNetworkGenEdgeSet(rand),
     #                            new_edge_set_pop(20, N, rand),
     #                            True, 6)
+    # TODO: Run with remember_cost=False. That might help get more accurate results.
+    # It'll also take longer to run.
     optimizer = ga.GAOptimizer(IRNObjective(edge_set_to_network, rand),
-                               NextNetworkGenEdgeSet(rand),
-                               new_edge_set_pop(20, N, rand),
-                               True, 1)
+                               NextNetworkGenEdgeSet(rand, .00001),
+                               new_edge_set_pop(30, N, rand),
+                               True, 6)
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
+    diversities = np.zeros(n_steps)
     global_best: Tuple[Number, np.ndarray] = None  # type: ignore
     for step in pbar:
         cost_to_encoding = optimizer.step()
@@ -35,26 +40,39 @@ def main():
         if global_best is None or local_best[0] < global_best[0]:
             global_best = local_best
         costs[step] = local_best[0]
-        pbar.set_description('Cost: {:.3f}'.format(local_best[0]))
+        diversities[step] = len(set(ctt[1].tobytes()
+                                for ctt in cost_to_encoding)) / len(cost_to_encoding)
+        pbar.set_description(f'Cost: {local_best[0]:.3f} Diversity: {diversities[step]:.3f}')
         if global_best[0] == 1:
             break
+    print(f'Total cache hits: {optimizer.num_cache_hits}')
 
-    G = edge_set_to_network(global_best[1])
-    print('Number of nodes:', len(G.nodes))
-    print('Number of edges:', len(G.edges))
-    print('Number of components:', len(tuple(nx.connected_components(G))))
+    net = edge_set_to_network(global_best[1])
+    print('Number of nodes:', net.N)
+    print('Number of edges:', net.E)
+    print('Number of components:', len(tuple(nx.connected_components(net.G))))
 
+    plt.title('Cost')
     plt.plot(costs)
     plt.show(block=False)
     plt.figure()
-    plt.hist(tuple(x[1] for x in G.degree), bins=None)
-    plt.show(block=False)
+    plt.title('Diversity')
+    plt.plot(diversities)
     plt.figure()
-    visualize_network(G, None,
+    layout = nx.kamada_kawai_layout(net.G)
+    visualize_network(net.G, layout,
                       f'From Edge List\nCost: {global_best[0]}',
                       False, all_same, False)
 
-    input('Press <enter> to exit.')
+    save = ''
+    while save.lower() not in ('y', 'n'):
+        save = input('Save? ')
+    if save == 'y':
+        name = input('Name? ')
+        communities = part.intercommunity_edges_to_communities(net.G,
+                                                               part.fluidc_partition(net.G,
+                                                                                     net.N//20))
+        write_network(net.G, name, layout, communities)
 
 
 class PercolationResistanceObjective:
@@ -83,23 +101,24 @@ class PercolationResistanceObjective:
 
 
 class IRNObjective:
-    def __init__(self, encoding_to_network: Callable[[np.ndarray], nx.Graph], rand) -> None:
+    def __init__(self, encoding_to_network: Callable[[np.ndarray], Network], rand) -> None:
         self._enc_to_G = encoding_to_network
         self._rand = rand
         self._disease = Disease(4, .2)
         self._sim_len = 100
         self._n_sims = 100
+        self._decay_func = DecayFunction(.5)
 
     def __call__(self, encoding: np.ndarray) -> float:
-        G = self._enc_to_G(encoding)
-        M = nx.to_numpy_array(G)
-        to_flicker = fluidc_partition(G, len(G)//20)
-        flicker_behavior = PatternFlickerBehavior(M, to_flicker, (True, False), '')
+        net = self._enc_to_G(encoding)
+        M = net.M
+        to_flicker = fluidc_partition(net.G, net.N//20)
+        flicker_behavior = StaticFlickerBehavior(M, to_flicker, (True, False), '')
         avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
                                            self._disease, flicker_behavior, self._sim_len,
                                            None, self._rand)[-1][0] > 0)
                            for _ in range(self._n_sims)]) / len(M)
-        cost = avg_sus-rate_social_good(M)
+        cost = 2-avg_sus-rate_social_good(net, self._decay_func)
         return cost
 
 
@@ -195,8 +214,9 @@ class NextNetworkGenEdgeList:
 
 
 class NextNetworkGenEdgeSet:
-    def __init__(self, rand) -> None:
+    def __init__(self, rand, mutation_prob: float) -> None:
         self._rand = rand
+        self._mutation_prob = mutation_prob
 
     def __call__(self, rated_pop: Sequence[Tuple[Number, np.ndarray]]) -> Tuple[np.ndarray, ...]:
         couples = ga.roulette_wheel_cost_selection(rated_pop)
@@ -204,7 +224,7 @@ class NextNetworkGenEdgeSet:
         children = tuple(child for pair in offspring for child in pair)
 
         for i, j in it.product(range(len(children)), range(len(children[0]))):
-            if self._rand.random() < .0001:
+            if self._rand.random() < self._mutation_prob:
                 children[i][j] = 1 - children[i][j]
 
         return children

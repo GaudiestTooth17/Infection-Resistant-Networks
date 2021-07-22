@@ -1,3 +1,4 @@
+from customtypes import Network
 import numpy as np
 import networkx as nx
 from typing import Sequence
@@ -33,7 +34,7 @@ def degree_sequence_to_network(degrees: Sequence[int],
     return G
 
 
-def edge_set_to_network(edge_set: np.ndarray) -> nx.Graph:
+def edge_set_to_network(edge_set: np.ndarray) -> Network:
     E = edge_set.shape[0]
     N = int(np.sqrt(2*E+.25)+.5)
     current_edge = 0
@@ -45,7 +46,7 @@ def edge_set_to_network(edge_set: np.ndarray) -> nx.Graph:
             M[j, i] = edge_set[current_edge]
             current_edge += 1
 
-    return nx.Graph(M)
+    return Network(M)
 
 
 def network_to_edge_set(M: np.ndarray) -> np.ndarray:

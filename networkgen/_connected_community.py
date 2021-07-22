@@ -1,4 +1,4 @@
-from customtypes import Communities
+from customtypes import Communities, Layout
 import numpy as np
 from fileio import write_network
 from analyzer import visualize_network
@@ -25,19 +25,18 @@ def connected_community_entry_point():
         exit(1)
     G, node_to_community = cc_results
 
-    layout: Layout = nx.spring_layout(G, iterations=200)  # type: ignore
+    layout: Layout = nx.spring_layout(G, iterations=200)
     visualize_network(G, layout, name, block=False)
     # analyze_network(G, name)
     if input('Save? ').lower() == 'y':
         write_network(G, name, layout, node_to_community)
-    # input('Done.')
 
 
 def make_connected_community_network(inner_degrees: np.ndarray,
                                      outer_degrees: np.ndarray,
                                      rand=RAND,
                                      max_tries: int = 100,
-                                     none_on_disconnected: bool = False)\
+                                     allow_disconnected: bool = True)\
         -> Optional[Tuple[nx.Graph, Communities]]:
     """
     Create a random network divided into randomly generated communities connected to each other.
@@ -77,7 +76,7 @@ def make_connected_community_network(inner_degrees: np.ndarray,
                         M[n2, n1] = 1
 
         G = nx.Graph(M)
-        if (not none_on_disconnected) or nx.is_connected(G):
+        if allow_disconnected or nx.is_connected(G):
             G.remove_edges_from(nx.selfloop_edges(G))
             return G, node_to_community
 
