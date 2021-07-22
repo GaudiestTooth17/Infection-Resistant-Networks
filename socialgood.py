@@ -122,6 +122,53 @@ def visualize_social_good(networks: Sequence[str], network_paths: Sequence[str])
 
 
 def main():
+    # networks = ('cavemen-50-10', 'elitist-500', 'agent-generated-500',
+    #             'annealed-agent-generated-500', 'barabasi-albert-500-3', 'cgg-500',
+    #             'connected-comm-50-10', 'spatial-network', 'watts-strogatz-500-4-.1')
+    # network_paths = fio.network_names_to_paths(networks)
+    # visualize_social_good(networks, network_paths)
+
+    # RAND = np.random.default_rng()
+
+    # outf = open('social-good-id0:20-od0:10_actual_degrees.txt', 'w+')
+    # num_id = 20
+    # num_od = 10
+    # # avg_social_goods = np.zeros((num_id, num_od))
+    # for i in range(num_id):
+    #     for j in range(num_od):
+    #         social_goods = []
+    #         deg_dists = []
+    #         print(f'i: {i+1}/{num_id}, j: {j+1}/{num_od}')
+    #         for n in range(100):
+    #             inner_degrees = np.round(RAND.poisson(i, 20))
+    #             if np.sum(inner_degrees) % 2 == 1:
+    #                 inner_degrees[np.argmin(inner_degrees)] += 1
+    #             outer_degrees = np.round(RAND.poisson(i, 10))
+    #             if np.sum(outer_degrees) % 2 == 1:
+    #                 outer_degrees[np.argmin(outer_degrees)] += 1
+    #             graph, _ = cc.make_connected_community_network(inner_degrees, outer_degrees, RAND)
+    #             deg_dist = [d for _, d in graph.degree()]
+    #             deg_dists.append(sum(deg_dist) / len(deg_dist))
+    #             social_goods.append(rate_social_good(graph))
+    #         avg_social_good = sum(social_goods) / len(social_goods)
+    #         # avg_social_goods[i, j] = avg_social_good
+    #         outf.write(f'{i} {j} {avg_social_good:.4f} {sum(deg_dists) / len(deg_dists)} {min(social_goods)} {max(social_goods)}\n')
+    # outf.close()
+
+    # np.set_printoptions(precision=4)
+    # for i in range(num_od):
+    #     x = range(len(avg_social_goods))
+    #     y = avg_social_goods[:, i]
+    #     plt.plot(x, y, 'o', color='black')
+    # plt.xlabel('Average Inner Degree')
+    # plt.ylabel('Average Social Good')
+    # plt.show()
+    # print(np.array(avg_social_goods))
+    # plt.title(f'avg_social_goods: min = {min(avg_social_goods)}, max = {max(avg_social_goods)}')
+    # plt.hist(avg_social_goods)
+    # plt.show()
+    # nx.draw(graph)
+    # plt.show()
     networks = ('cavemen-50-10', 'elitist-500', 'agent-generated-500',
                 'annealed-agent-generated-500', 'barabasi-albert-500-3', 'cgg-500',
                 'connected-comm-50-10', 'spatial-network', 'watts-strogatz-500-4-.1')
