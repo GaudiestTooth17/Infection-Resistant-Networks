@@ -31,6 +31,17 @@ def main(argv: List[str]):
     # plot_edge_betweeness_centralities(nx.Graph(M), name)
 
 
+def get_giant_component_size(graph: nx.graph, p, num_percolations=1):
+    sizes = []
+    for _ in range(num_percolations):
+        g = graph.copy()
+        for u, v in g.edges():
+            if np.random.rand() < p:
+                g.remove_edge(u, v)
+        sizes.append(len(max(nx.connected_components(g), key=len)))
+    return sum(sizes) / len(sizes)
+
+
 def show_deg_dist_from_matrix(M: np.ndarray, title, *, color='b', display=False, save=False):
     """
     This shows a degree distribution from a matrix.
