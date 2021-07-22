@@ -1,3 +1,5 @@
+from socialgood import get_distance_matrix
+from network import Network
 from typing import Callable, Collection, List, Optional, Sequence, Tuple, Union
 from dataclasses import dataclass
 import numpy as np
@@ -129,9 +131,10 @@ def remove_dead_agents(D: np.ndarray, M: np.ndarray, time_step: int, sir: np.nda
 
 
 class Visualize:
-    """Show the network for .2 seconds."""
     def __init__(self, layout: Layout) -> None:
         """
+        Show the network for .2 seconds.
+
         layout: Layout to use. This will not be automatically computed.
         """
         self._layout = layout
@@ -146,7 +149,8 @@ class Visualize:
         plt.clf()
         nx.draw_networkx(G, pos=self._layout, with_labels=False,
                          node_color=node_colors, node_size=50)
-        plt.pause(.2)  # type: ignore
+        # plt.show()
+        plt.pause(.75)  # type: ignore
 
 
 def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rng=RNG) -> np.ndarray:
@@ -223,3 +227,40 @@ class RandomFlickerBehavior:
         if self._rng.random() < self._flicker_probability:
             return self._edges_on_M
         return self._edges_off_M
+
+
+class PressureBehavior:
+    def __init__(self, net: Network,
+                 radius: int = 3,
+                 rng=RNG,
+                 name: Optional[str] = None):
+        """
+        Agents receive pressure when nearby agents become infectious. Agents
+        with enough pressure will remove connections to nearby agents.
+        """
+        self._net = net
+        self._radius = radius
+        self._name = f'Pressure(radius={radius})' if name is None else name
+        self._dm = get_distance_matrix(net)
+        self._pressure = np.zeros(net.N)
+        self._flicker_probability = 0.25
+        self._rng = rng
+
+    def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
+        infectious_agents = sir[1] == 1
+        if infectious_agents.any():
+            pressured_agents = (self._dm[infectious_agents] <= self._radius)[0]
+            self._pressure[pressured_agents] += 1
+
+        recovered_agents = sir[2] == 1
+        if recovered_agents.any():
+            unpressured_agents = (self._dm[recovered_agents] <= self._radius)[0]
+            self._pressure[unpressured_agents] -= 1
+
+        flicker_agents = ((self._pressure > 0) & (self._rng.random(self._pressure.shape)
+                                                  < self._flicker_probability))
+        R = np.copy(M)
+        R[flicker_agents, :] = 0
+        R[:, flicker_agents] = 0
+        print('Edges Removed', (np.sum(M) - np.sum(R)) / 2)
+        return R

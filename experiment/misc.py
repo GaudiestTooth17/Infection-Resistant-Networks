@@ -1,9 +1,11 @@
 import sys
+
+from networkx.generators.community import connected_caveman_graph
 sys.path.append('')
 from collections import defaultdict
 from common import RandomFlickerConfig
 from typing import Dict, Sequence, Callable, List, Tuple
-from sim_dynamic import Disease, make_starting_sir, simulate
+from sim_dynamic import Disease, make_starting_sir, simulate, PressureBehavior
 from network import Network
 from tqdm import tqdm
 import itertools as it
@@ -11,6 +13,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 from networkgen import make_connected_community_network
+import fileio as fio
+
+RNG = np.random.default_rng()
 
 
 def run_inf_prob_vs_perc_sus(name: str, diseases: Sequence[Disease],
@@ -101,5 +106,14 @@ def connected_community_entry_point():
                                  RandomFlickerConfig(flicker_prob, rand=rng), 100, rng)
 
 
+def pressure_test_entry_point():
+    G, layout, communities = fio.read_network('networks/cavemen-10-10.txt')
+    if layout is None or communities is None:
+        raise Exception('File is incomplete.')
+    net = Network(G, communities=communities)
+    simulate(net.M, make_starting_sir(net.N, (0,)), Disease(4, 0.3),
+             PressureBehavior(net), 200, layout, RNG)
+
+
 if __name__ == '__main__':
-    connected_community_entry_point()
+    pressure_test_entry_point()
