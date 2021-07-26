@@ -1,7 +1,6 @@
 import sys
-from typing import Tuple
-
 sys.path.append('')
+from typing import Tuple
 from network import Network
 from socialgood import DecayFunction, rate_social_good
 from tqdm import tqdm
@@ -12,10 +11,10 @@ from multiprocessing import Pool
 
 
 def main():
-    ks = (.25, .4, .5, .6, .75, 1.0, 1.5, 2.0)[1:]
+    ks = (.25, .4, .5, .6, .75, 1.0, 1.5, 2.0)[:2]
     for k in ks:
-        # erdos_renyi_k_experiment(k)
-        watts_strogatz_k_experiment(k)
+        erdos_renyi_k_experiment(k)
+        # watts_strogatz_k_experiment(k)
 
 
 def erdos_renyi_k_experiment(k: float):
@@ -25,14 +24,15 @@ def erdos_renyi_k_experiment(k: float):
     ps = np.linspace(0, 1, n_divisions)
     decay = DecayFunction(k)
     name = f'Social Good of Random Networks with p=0..1 k={k}'
-    print('Generating Networks')
     all_stats = np.zeros((n_divisions, n_trials))
     for i, p in tqdm(tuple(enumerate(ps))):
-        with Pool(4) as pool:
-            stats = np.array(pool.map(rate_sg,
-                                      [(Network(nx.erdos_renyi_graph(N, p)), decay)
-                                       for _ in range(n_trials)],
-                                      n_trials//4))
+        stats = np.array(list(map(rate_sg, [(Network(nx.erdos_renyi_graph(N, p)), decay)
+                                            for _ in range(n_trials)])))
+        # with Pool(4) as pool:
+        #     stats = np.array(pool.map(rate_sg,
+        #                               [(Network(nx.erdos_renyi_graph(N, p)), decay)
+        #                                for _ in range(n_trials)],
+        #                               n_trials//4))
         all_stats[i] = stats
 
     quartiles = np.quantile(all_stats, (.25, .75), axis=1, interpolation='midpoint')
