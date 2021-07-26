@@ -1,10 +1,11 @@
-from typing import List, Dict, Tuple, Union, Set, TypeVar, Generic
+from typing import List, Dict, Sequence, Tuple, Union, Set, TypeVar, Generic
 from collections import defaultdict
 import numpy as np
 
 NodeColors = Union[List[str], List[Tuple[int, int, int]]]
 Layout = Dict[int, Tuple[float, float]]
 Communities = Dict[int, int]
+Array = Union[np.ndarray, Sequence[int], Sequence[float]]
 """node ID to community ID"""
 Number = Union[int, float]
 T = TypeVar('T')

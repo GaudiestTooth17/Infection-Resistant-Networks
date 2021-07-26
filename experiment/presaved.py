@@ -2,7 +2,7 @@ import sys
 sys.path.append('')
 import os
 from multiprocessing import Pool
-from experiment.common import ComparisonResult
+from experiment.common import FlickerComparisonResult
 from network import Network
 from socialgood import rate_social_good
 from typing import Dict, Optional, Sequence, Tuple
@@ -105,7 +105,7 @@ def entry_point():
 
 
 def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig], str])\
-        -> Optional[ComparisonResult]:
+        -> Optional[FlickerComparisonResult]:
     """
     Run a batch of experiments and return a tuple containing the network's name,
     number of flickering edges, and a mapping of behavior name to the final
@@ -146,9 +146,9 @@ def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig],
                          for _ in range(num_sims))
         behavior_to_results[behavior.name] = perc_sus
 
-    return ComparisonResult(fio.get_network_name(network_path), num_sims, sim_len,
-                            len(intercommunity_edges)/len(G.edges), behavior_to_results,
-                            baseline_flicker_name)
+    return FlickerComparisonResult(fio.get_network_name(network_path), num_sims, sim_len,
+                                   len(intercommunity_edges)/len(G.edges), behavior_to_results,
+                                   baseline_flicker_name)
 
 
 if __name__ == '__main__':

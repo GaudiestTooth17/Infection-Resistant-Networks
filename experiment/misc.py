@@ -1,11 +1,11 @@
 import sys
-
-from networkx.generators.community import connected_caveman_graph
 sys.path.append('')
+from customtypes import Array
 from collections import defaultdict
-from common import RandomFlickerConfig
+from common import (PressureComparisonResult, PressureConfig, RandomFlickerConfig,
+                    simulate_return_survival_rate)
 from typing import Dict, Sequence, Callable, List, Tuple
-from sim_dynamic import Disease, make_starting_sir, simulate, PressureBehavior
+from sim_dynamic import Disease, make_starting_sir, no_update, simulate, PressureBehavior
 from network import Network
 from tqdm import tqdm
 import itertools as it
@@ -71,6 +71,8 @@ class MakeConnectedCommunity:
         self._num_comms = num_comms
         self._outer_bounds = outer_bounds
         self._rng = rng
+        self.class_name = f'ConnComm(N_comm={community_size}, ib={inner_bounds},'\
+                          f'num_comms={num_comms}, ob={outer_bounds})'
 
     def __call__(self) -> Network:
         id_dist = self._rng.integers(self._inner_bounds[0], self._inner_bounds[1],
@@ -82,11 +84,10 @@ class MakeConnectedCommunity:
         if np.sum(od_dist) % 2 > 0:
             od_dist[np.argmin(od_dist)] += 1
 
-        result = make_connected_community_network(id_dist, od_dist, self._rng)
-        if result is None:
+        net = make_connected_community_network(id_dist, od_dist, self._rng)
+        if net is None:
             raise Exception('This should not have happened.')
-        G, communities = result
-        return Network(G, communities=communities)
+        return net
 
 
 def connected_community_entry_point():
@@ -116,8 +117,36 @@ def pressure_test_entry_point():
 
 
 def pressure_vs_no_pressure_entry_point():
-    pressure_type_to_survival_rates: Dict[str, np.ndarray] = {}
+    pressure_type_to_survival_rates: Dict[str, Array] = {}
+    rng = np.random.default_rng(0xbeefee)
+    num_trials = 250
+    disease = Disease(4, .3)
+    inner_bounds = 1, 15
+    outer_bounds = 1, 5
+    community_size = 20
+    n_communities = 25
+    make_ccn = MakeConnectedCommunity(community_size, inner_bounds, n_communities,
+                                      outer_bounds, rng)
+    static_survival_rates = np.array([simulate_return_survival_rate(make_ccn(), disease,
+                                                                    no_update, rng)
+                                      for _ in range(num_trials)])
+    pressure_type_to_survival_rates['Static'] = static_survival_rates
+
+    pressure_configurations = (PressureConfig(1, .5, rng), PressureConfig(2, .5, rng),
+                               PressureConfig(3, .5, rng), PressureConfig(2, .25, rng),
+                               PressureConfig(2, .75, rng))
+    for configuration in pressure_configurations:
+        networks = [make_ccn() for _ in range(num_trials)]
+        behaviors = [configuration.make_behavior(net) for net in networks]
+        pressure_type_to_survival_rates[behaviors[0].name]\
+            = np.array([simulate_return_survival_rate(net, disease, behavior, rng)
+                        for net, behavior in zip(networks, behaviors)])
+
+    result = PressureComparisonResult(make_ccn.class_name, disease, num_trials,
+                                      pressure_type_to_survival_rates, 'Static')
+    result.save('results', True)
+    result.save_raw('results')
 
 
 if __name__ == '__main__':
-    pressure_test_entry_point()
+    pressure_vs_no_pressure_entry_point()
