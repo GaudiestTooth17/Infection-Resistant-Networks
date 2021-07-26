@@ -1,10 +1,11 @@
 from sim_dynamic import RandomFlickerBehavior, StaticFlickerBehavior, UpdateConnections
 from typing import (Any, Callable, Collection, List, Optional, Tuple, TypeVar,
-                    Sequence)
+                    Sequence, Dict)
 from abc import ABC, abstractmethod
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import wasserstein_distance
 import os
 import csv
 import sys
@@ -94,6 +95,74 @@ class BasicExperimentResult:
     def _create_directory(directory):
         if not os.path.exists(directory):
             os.mkdir(directory)
+
+
+class ComparisonResult:
+    def __init__(self, network_name: str,
+                 sims_per_behavior: int,
+                 sim_len: int,
+                 proportion_flickering_edges: float,
+                 behavior_to_survival_rate: Dict[str, Sequence[float]],
+                 baseline_behavior: str):
+        """
+        A class for gathering data on the effectives of different behaviors in comparision
+        to each other.
+
+        network_name
+        sims_per_behavior
+        behavior_to_num_sus: How many agents were still susceptible at the end of
+                            each simulation with the specified behavior.
+        baseline_behavior: The name of the behavior to computer the
+                        Wasserstein distance of the others against.
+        """
+        self.network_name = network_name
+        self.sims_per_behavior = sims_per_behavior
+        self.sim_len = sim_len
+        self.proportion_flickering_edges = proportion_flickering_edges
+        self.behavior_to_survival_rate = behavior_to_survival_rate
+        # Fail early if an incorrect name is supplied.
+        if baseline_behavior not in behavior_to_survival_rate:
+            print(f'{baseline_behavior} is not in {list(behavior_to_survival_rate.keys())}.'
+                  'Fix this before continuing.')
+            exit(1)
+        self.baseline_behavior = baseline_behavior
+
+    def save(self, directory: str, with_histograms: bool = False) -> None:
+        """Save a histogram and a text file with analysis information in directory."""
+        path = os.path.join(directory, self.network_name)
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+        # File Heading
+        file_lines = [f'Name: {self.network_name}\n',
+                      f'Number of sims per behavior: {self.sims_per_behavior}\n',
+                      f'Simulation length: {self.sim_len}\n'
+                      f'Proportion of edges flickering: {self.proportion_flickering_edges:.4f}\n\n']
+        baseline_distribution = self.behavior_to_survival_rate[self.baseline_behavior]
+        for behavior_name, results in self.behavior_to_survival_rate.items():
+            # possibly save histograms
+            if with_histograms:
+                plt.figure()
+                title = f'{self.network_name} {behavior_name}\n'\
+                    f'sims={self.sims_per_behavior} sim_len={self.sim_len}'
+                plt.title(title)
+                plt.xlabel('Number of Susceptible Agents')
+                plt.ylabel('Frequency')
+                plt.hist(results, bins=None)
+                plt.savefig(os.path.join(path, title+'.png'), format='png')
+
+            # create a text entry for each behavior
+            file_lines += [f'{behavior_name}\n',
+                           f'Min:{np.min(results) : >20}\n',
+                           f'Max:{np.max(results) : >20}\n',
+                           f'Median:{np.median(results) : >20}\n',
+                           f'Mean:{np.mean(results) : >20.3f}\n',
+                           f'EMD from {self.baseline_behavior}:'
+                           f'{wasserstein_distance(results, baseline_distribution) : >20.3f}\n\n']
+
+        # save text entries
+        with open(os.path.join(path, f'Report on {self.network_name}.txt'), 'w') as file:
+            file.writelines(file_lines)
 
 
 def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, float, float]]],

@@ -115,5 +115,9 @@ def pressure_test_entry_point():
              PressureBehavior(net), 200, layout, RNG)
 
 
+def pressure_vs_no_pressure_entry_point():
+    pressure_type_to_survival_rates: Dict[str, np.ndarray] = {}
+
+
 if __name__ == '__main__':
     pressure_test_entry_point()
