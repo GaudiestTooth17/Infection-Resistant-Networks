@@ -219,12 +219,12 @@ class PressureComparisonResult:
 
             # create a text entry for each behavior
             file_lines += [f'{behavior_name}\n',
-                           f'Min:{np.min(results) : >20}\n',
-                           f'Max:{np.max(results) : >20}\n',
-                           f'Median:{np.median(results) : >20}\n',
-                           f'Mean:{np.mean(results) : >20.3f}\n',
-                           f'EMD from {self.baseline_behavior}:'
-                           f'{wasserstein_distance(results, baseline_distribution) : >20.3f}\n\n']
+                           f'{"Min:":<20}{np.min(results)}\n',
+                           f'{"Max:":<20}{np.max(results)}\n',
+                           f'{"Median:":<20}{np.median(results)}\n',
+                           f'{"Mean:":<20}{np.mean(results)}\n',
+                           f'{f"EMD from {self.baseline_behavior}:":<20}'
+                           f'{wasserstein_distance(results, baseline_distribution)}\n\n']
 
         # save text entries
         with open(os.path.join(path, f'Report on {self.network_name}.txt'), 'w') as file:
