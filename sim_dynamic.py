@@ -231,6 +231,7 @@ class RandomFlickerBehavior:
 class PressureBehavior:
     def __init__(self, net: Network,
                  radius: int = 3,
+                 flicker_probability: float = .25,
                  rng=RNG,
                  name: Optional[str] = None):
         """
@@ -239,11 +240,16 @@ class PressureBehavior:
         """
         self._net = net
         self._radius = radius
-        self._name = f'Pressure(radius={radius})' if name is None else name
         self._dm = get_distance_matrix(net, self_distance=0)
+        self._name = f'Pressure(radius={radius}, flicker_probability={flicker_probability})'\
+            if name is None else name
         self._pressure = np.zeros(net.N)
-        self._flicker_probability = 0.25
+        self._flicker_probability = flicker_probability
         self._rng = rng
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
         infectious_agents = sir[1] == 1

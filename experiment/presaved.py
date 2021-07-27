@@ -2,7 +2,7 @@ import sys
 sys.path.append('')
 import os
 from multiprocessing import Pool
-from customtypes import ExperimentResults
+from experiment.common import FlickerComparisonResult
 from network import Network
 from socialgood import rate_social_good
 from typing import Dict, Optional, Sequence, Tuple
@@ -105,7 +105,7 @@ def entry_point():
 
 
 def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig], str])\
-        -> Optional[ExperimentResults]:
+        -> Optional[FlickerComparisonResult]:
     """
     Run a batch of experiments and return a tuple containing the network's name,
     number of flickering edges, and a mapping of behavior name to the final
@@ -130,25 +130,25 @@ def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig],
     intercommunity_edges = {(u, v) for u, v in G.edges if communities[u] != communities[v]}
     N = M.shape[0]
 
-    behavior_to_results: Dict[str, Sequence[int]] = {}
+    behavior_to_results: Dict[str, Sequence[float]] = {}
     for config in flicker_configs:
         behavior = config.make_behavior(M, intercommunity_edges)
         # The tuple comprehension is pretty arcane, so here is an explanation.
         # Each entry is the sum of the number of entries in the final SIR where
         # the days in S are greater than 0. That is to say, the number of
         # susceptible agents at the end of the simulation.
-        num_sus = tuple(np.sum(simulate(M,
-                                        make_starting_sir(N, 1),
-                                        disease,
-                                        behavior,
-                                        sim_len,
-                                        None)[-1][0] > 0)
-                        for _ in range(num_sims))
-        behavior_to_results[behavior.name] = num_sus
+        perc_sus = tuple(np.sum(simulate(M,
+                                         make_starting_sir(N, 1),
+                                         disease,
+                                         behavior,
+                                         sim_len,
+                                         None)[-1][0] > 0) / N
+                         for _ in range(num_sims))
+        behavior_to_results[behavior.name] = perc_sus
 
-    return ExperimentResults(fio.get_network_name(network_path), num_sims, sim_len,
-                             len(intercommunity_edges)/len(G.edges), behavior_to_results,
-                             baseline_flicker_name)
+    return FlickerComparisonResult(fio.get_network_name(network_path), num_sims, sim_len,
+                                   len(intercommunity_edges)/len(G.edges), behavior_to_results,
+                                   baseline_flicker_name)
 
 
 if __name__ == '__main__':

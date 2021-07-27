@@ -2,8 +2,9 @@ from customtypes import Communities, Layout
 import numpy as np
 from fileio import write_network
 from analyzer import visualize_network
-from typing import Optional, Tuple
+from typing import Optional
 import networkx as nx
+from network import Network
 RAND = np.random.default_rng()
 
 
@@ -19,17 +20,17 @@ def connected_community_entry_point():
     if np.sum(outer_degrees) % 2 == 1:
         outer_degrees[np.argmin(outer_degrees)] += 1
 
-    cc_results = make_connected_community_network(inner_degrees, outer_degrees)
-    if cc_results is None:
+    net = make_connected_community_network(inner_degrees, outer_degrees)
+    if net is None:
         print('Could not generate network.')
         exit(1)
-    G, node_to_community = cc_results
+    net
 
-    layout: Layout = nx.spring_layout(G, iterations=200)
-    visualize_network(G, layout, name, block=False)
-    # analyze_network(G, name)
+    layout: Layout = nx.spring_layout(net.G, iterations=200)
+    visualize_network(net.G, layout, name, block=False)
+    # analyze_network(net.G, name)
     if input('Save? ').lower() == 'y':
-        write_network(G, name, layout, node_to_community)
+        write_network(net.G, name, layout, net.communities)
 
 
 def make_connected_community_network(inner_degrees: np.ndarray,
@@ -37,7 +38,7 @@ def make_connected_community_network(inner_degrees: np.ndarray,
                                      rand=RAND,
                                      max_tries: int = 100,
                                      allow_disconnected: bool = True)\
-        -> Optional[Tuple[nx.Graph, Communities]]:
+        -> Optional[Network]:
     """
     Create a random network divided into randomly generated communities connected to each other.
 
@@ -78,7 +79,7 @@ def make_connected_community_network(inner_degrees: np.ndarray,
         G = nx.Graph(M)
         if allow_disconnected or nx.is_connected(G):
             G.remove_edges_from(nx.selfloop_edges(G))
-            return G, node_to_community
+            return Network(G, communities=node_to_community)
 
     return None
 
