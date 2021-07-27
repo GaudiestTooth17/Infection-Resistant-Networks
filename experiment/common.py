@@ -209,8 +209,7 @@ class PressureComparisonResult:
             # possibly save histograms
             if with_histograms:
                 plt.figure()
-                title = f'{self.network_name} {behavior_name}\n'\
-                    f'sims={self.sims_per_behavior}'
+                title = f'{self.network_name}\n{behavior_name} sims={self.sims_per_behavior}'
                 plt.title(title)
                 plt.xlabel('Number of Susceptible Agents')
                 plt.ylabel('Frequency')
@@ -219,12 +218,12 @@ class PressureComparisonResult:
 
             # create a text entry for each behavior
             file_lines += [f'{behavior_name}\n',
-                           f'{"Min:":<20}{np.min(results)}\n',
-                           f'{"Max:":<20}{np.max(results)}\n',
-                           f'{"Median:":<20}{np.median(results)}\n',
-                           f'{"Mean:":<20}{np.mean(results)}\n',
+                           f'{"Min:":<20}{np.min(results):.3f}\n',
+                           f'{"Max:":<20}{np.max(results):.3f}\n',
+                           f'{"Median:":<20}{np.median(results):.3f}\n',
+                           f'{"Mean:":<20}{np.mean(results):.3f}\n',
                            f'{f"EMD from {self.baseline_behavior}:":<20}'
-                           f'{wasserstein_distance(results, baseline_distribution)}\n\n']
+                           f'{wasserstein_distance(results, baseline_distribution):.3f}\n\n']
 
         # save text entries
         with open(os.path.join(path, f'Report on {self.network_name}.txt'), 'w') as file:
