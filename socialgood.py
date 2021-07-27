@@ -29,7 +29,7 @@ class DecayFunction(Generic[T]):
         return result
 
 
-def get_distance_matrix(net: Network) -> np.ndarray:
+def get_distance_matrix(net: Network, self_distance=None) -> np.ndarray:
     """
     Returns the distance matrix of a given matrix with infinity value given.
     """
@@ -57,8 +57,10 @@ def get_distance_matrix(net: Network) -> np.ndarray:
         dm[np.logical_and(dm == np.inf, x != 0)] = d + 2
 
     # Sets the given infinity value before return.
+    if self_distance is None:
+        self_distance = np.inf
     for n in range(num_nodes):
-        dm[n, n] = np.inf
+        dm[n, n] = self_distance
     return dm
 
 

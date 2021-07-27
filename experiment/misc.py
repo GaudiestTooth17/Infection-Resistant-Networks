@@ -112,7 +112,7 @@ def pressure_test_entry_point():
         raise Exception('File is incomplete.')
     net = Network(G, communities=communities)
     simulate(net.M, make_starting_sir(net.N, (0,)), Disease(4, 0.3),
-             PressureBehavior(net), 200, layout, RNG)
+             PressureBehavior(net, 1), 200, layout, RNG)
 
 
 if __name__ == '__main__':

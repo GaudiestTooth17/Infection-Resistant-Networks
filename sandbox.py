@@ -8,12 +8,15 @@ from tqdm import tqdm
 import csv
 from analyzer import visualize_network
 from networkgen import _connected_community as cc
+from sim_dynamic import Disease, PressureDecayBehavior, RandomFlickerBehavior, StaticFlickerBehavior, UnifiedPressureFlickerBehavior, make_starting_sir, simulate, PressureBehavior
 import networkx as nx
 # from mpl_toolkits import mplot3d
 from matplotlib import pyplot as plt
 import socialgood as sg
 import analyzer
 from network import Network
+from scipy.stats import wasserstein_distance
+RNG = np.random.default_rng()
 
 def make_plot_from_txt_file():
     data_file = open('social-good-id0:20-od0:10_actual_degrees.txt', 'r')
@@ -164,9 +167,9 @@ def social_good_giant_component_connected_community():
                     outer_degrees[np.argmin(outer_degrees)] += 1
 
                 g, _ = cc.make_connected_community_network(inner_degrees, outer_degrees, RAND)
-                social_good = sg.rate_social_good(g)
+                social_good = sg.rate_social_good(Network(g))
                 social_goods.append((i, j, social_good))
-                giant_comp_size = analyzer.get_giant_component_size(g, 0.9, 10)
+                giant_comp_size = analyzer.get_giant_component_size(g, 0.75, 10)
                 giant_comp_sizes.append((i, j, giant_comp_size / num_nodes))
 
     plt.figure()
@@ -189,7 +192,60 @@ def social_good_giant_component_connected_community():
     plt.title('Connected Community Social Good Analysis')
     plt.show()
 
+def generic_pressure_test():
+    G, layout, communities = fio.read_network('networks/cavemen-10-10.txt')
+    if layout is None or communities is None:
+        raise Exception('File is incomplete.')
+    net = Network(G, communities=communities)
+    simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
+             PressureBehavior(net, 1), 200, layout, RNG)
+
+def decay_pressure_test():
+    G, layout, communities = fio.read_network('networks/elitist-100.txt')
+    if layout is None or communities is None:
+        raise Exception('File is incomplete.')
+    net = Network(G, communities=communities)
+    simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
+             PressureDecayBehavior(net, 1), 200, layout, RNG)
+
+def behavior_comparison():
+    ccG, cclayout, cccommunities = fio.read_network('networks/cavemen-10-10.txt')
+    if cclayout is None or cccommunities is None:
+        raise Exception('File is incomplete.')
+    eG, elayoug, ecommunities = fio.read_network('networks/elitist-100.txt')
+
+    networks = (
+        ('Caveman-10-10', Network(ccG, communities=cccommunities)),
+        ('Elitist-100', Network(eG, communities=ecommunities))
+    )
+
+    distributions = []
+    for n_name, net in networks:
+        print(n_name)
+        behaviors = (
+            # ('All Edges Sequential Flicker 1/4', StaticFlickerBehavior(net.M, net.edges, (True, False, False, False))),
+            ('All Edges Random Flicker 0.25', RandomFlickerBehavior(net.M, net.edges, 0.25)),
+            ('Collected Pressure Flicker 0.25, R=1', UnifiedPressureFlickerBehavior(net, 1, RNG))
+            # ('Generic Pressure Radius 3', PressureBehavior(net, 1)),
+            # ('Pressure Decay Radius 3', PressureDecayBehavior(net, 1))
+        )
+        for b_name, behavior in behaviors:
+            print(f'  {b_name}')
+            s_scores = []
+            for _ in range(10000):
+                end_sir = simulate(net.M, make_starting_sir(net.N, 1), Disease(4, 0.3), behavior, 200, rng=RNG)[-1]
+                s_scores.append(np.sum(end_sir[0, :] > 0)/net.N)
+            plt.title(f'{n_name}, {b_name}, Avg: {sum(s_scores)/len(s_scores)}')
+            plt.hist(s_scores)
+            plt.figure()
+            distributions.append(s_scores)
+    print(wasserstein_distance(distributions[0], distributions[2]))
+    print(wasserstein_distance(distributions[1], distributions[3]))
+    plt.show()
+
+
 if __name__ == '__main__':
-    social_good_giant_component_connected_community()
+    behavior_comparison()
+    
 
         
