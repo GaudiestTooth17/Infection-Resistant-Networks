@@ -58,9 +58,9 @@ def get_distance_matrix(net: Network) -> np.ndarray:
         #  d starts at 0 and we already have everything of distance 1.
         dm[np.logical_and(dm == np.inf, x != 0)] = d + 2
 
-    # Sets the given infinity value before return.
+    # Sets the self distance to zero before return.
     for n in range(num_nodes):
-        dm[n, n] = np.inf
+        dm[n, n] = 0
     return dm
 
 
@@ -75,6 +75,9 @@ def rate_social_good(net: Network,
     if N == 1:
         return 0
     dist_matrix = get_distance_matrix(net)
+    # Sets self distance to infinity to avoid counting itself for social good
+    for n in range(N):
+        dist_matrix[n, n] = np.inf
 
     social_good_scores = decay_func(dist_matrix)
     social_good_scores[social_good_scores == np.inf] = 0
