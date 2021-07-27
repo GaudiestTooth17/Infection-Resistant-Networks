@@ -240,7 +240,7 @@ class PressureBehavior:
         """
         self._net = net
         self._radius = radius
-        self._dm = get_distance_matrix(net, self_distance=0)
+        self._dm = get_distance_matrix(net)
         self._name = f'Pressure(radius={radius}, flicker_probability={flicker_probability})'\
             if name is None else name
         self._pressure = np.zeros(net.N)
@@ -282,7 +282,7 @@ class UnifiedPressureFlickerBehavior:
         self._net = net
         self._radius = radius
         self._name = f'Pressure(radius={radius})' if name is None else name
-        self._dm = get_distance_matrix(net, self_distance=0)
+        self._dm = get_distance_matrix(net)
         self._pressure = np.zeros(net.N)
         self._flicker_probability = 0.25
         self._rng = rng
@@ -321,7 +321,7 @@ class PressureDecayBehavior:
         self._net = net
         self._radius = radius
         self._name = f'Pressure(radius={radius})' if name is None else name
-        self._dm = get_distance_matrix(net, self_distance=0)
+        self._dm = get_distance_matrix(net)
         self._pressure = np.zeros(net.N)
         self._flicker_probability = rng.random(net.N)
         self._rng = rng
