@@ -1,11 +1,10 @@
-from abc import ABC, abstractmethod
 import sys
 sys.path.append('')
-from customtypes import Array
 from collections import defaultdict
-from common import (PressureComparisonResult, PressureConfig, RandomFlickerConfig,
+from common import (MakeBarabasiAlbert, MakeConnectedCommunity, MakeRandomNetwork,
+                    PressureComparisonResult, PressureConfig, RandomFlickerConfig,
                     simulate_return_survival_rate)
-from typing import Dict, Sequence, Callable, List, Tuple
+from typing import Dict, Sequence, Callable, List
 from sim_dynamic import Disease, make_starting_sir, no_update, simulate, PressureBehavior
 from network import Network
 from tqdm import tqdm
@@ -13,7 +12,6 @@ import itertools as it
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
-from networkgen import make_connected_community_network
 import fileio as fio
 
 RNG = np.random.default_rng()
@@ -64,63 +62,6 @@ def test():
     run_inf_prob_vs_perc_sus(name, diseases, new_network, flicker_config, 10, rng)
 
 
-class MakeRandomNetwork(ABC):
-    @property
-    @abstractmethod
-    def class_name(self) -> str:
-        pass
-
-    @abstractmethod
-    def __call__(self) -> Network:
-        pass
-
-
-class MakeConnectedCommunity(MakeRandomNetwork):
-    def __init__(self, community_size: int, inner_bounds: Tuple[int, int],
-                 num_comms: int, outer_bounds: Tuple[int, int], rng):
-        self._community_size = community_size
-        self._inner_bounds = inner_bounds
-        self._num_comms = num_comms
-        self._outer_bounds = outer_bounds
-        self._rng = rng
-        self._class_name = f'ConnComm(N_comm={community_size},ib={inner_bounds},'\
-                           f'num_comms={num_comms},ob={outer_bounds})'
-
-    @property
-    def class_name(self) -> str:
-        return self._class_name
-
-    def __call__(self) -> Network:
-        id_dist = self._rng.integers(self._inner_bounds[0], self._inner_bounds[1],
-                                     self._community_size, endpoint=True)
-        if np.sum(id_dist) % 2 > 0:
-            id_dist[np.argmin(id_dist)] += 1
-        od_dist = self._rng.integers(self._outer_bounds[0], self._outer_bounds[1],
-                                     self._num_comms, endpoint=True)
-        if np.sum(od_dist) % 2 > 0:
-            od_dist[np.argmin(od_dist)] += 1
-
-        net = make_connected_community_network(id_dist, od_dist, self._rng)
-        if net is None:
-            raise Exception('This should not have happened.')
-        return net
-
-
-class MakeBarabasiAlbert(MakeRandomNetwork):
-    def __init__(self, N: int, m: int, seed: int):
-        self._N = N
-        self._m = m
-        self._seed = seed
-        self._class_name = f'AlbertBarabasi(N={N},m={m})'
-
-    @property
-    def class_name(self) -> str:
-        return self._class_name
-
-    def __call__(self) -> Network:
-        return Network(nx.barabasi_albert_graph(self._N, self._m, self._seed))
-
-
 def connected_community_entry_point():
     rng = np.random.default_rng(501)
     min_inner, max_inner = 1, 15
@@ -156,11 +97,19 @@ def pressure_experiment(make_network: MakeRandomNetwork,
                                       for _ in range(num_trials)])
     pressure_type_to_survival_rates['Static'] = static_survival_rates
 
+    pbar = tqdm(desc='Pressure Experiment',
+                total=len(pressure_configurations)*num_trials)
+
+    def simulate_and_update(net, disease, behavior, rng):
+        result = simulate_return_survival_rate(net, disease, behavior, rng)
+        pbar.update()
+        return result
+
     for configuration in pressure_configurations:
         networks = [make_network() for _ in range(num_trials)]
         behaviors = [configuration.make_behavior(net) for net in networks]
         pressure_type_to_survival_rates[behaviors[0].name]\
-            = np.array([simulate_return_survival_rate(net, disease, behavior, rng)
+            = np.array([simulate_and_update(net, disease, behavior, rng)
                         for net, behavior in zip(networks, behaviors)])
 
     result = PressureComparisonResult(make_network.class_name, disease, num_trials,
@@ -186,7 +135,7 @@ def cc_pressure_vs_none_entry_point():
 
 def ba_pressure_vs_none_entry_point():
     rng = np.random.default_rng(0xbeefee)
-    num_trials = 250
+    num_trials = 1000
     disease = Disease(4, .4)
     N = 500
     m = 3
@@ -197,5 +146,4 @@ def ba_pressure_vs_none_entry_point():
 
 
 if __name__ == '__main__':
-    # cc_pressure_vs_none_entry_point()
-    ba_pressure_vs_none_entry_point()
+    cc_pressure_vs_none_entry_point()
