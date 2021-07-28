@@ -40,7 +40,7 @@ def main(argv: List[str]):
     input('Press <enter> to exit.')
 
 
-def get_giant_component_size(graph: nx.graph, p, num_percolations=1):
+def get_giant_component_size(graph: nx.Graph, p, num_percolations=1):
     sizes = []
     for _ in range(num_percolations):
         g = graph.copy()
