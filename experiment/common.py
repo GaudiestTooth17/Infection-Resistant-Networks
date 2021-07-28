@@ -16,12 +16,12 @@ import os
 import csv
 from customtypes import Array, Number
 from networkgen import make_connected_community_network
+from pathlib import Path
 T = TypeVar('T')
 
 
 def _create_directory(directory: str):
-    if not os.path.exists(directory):
-        os.mkdir(directory)
+    Path(directory).mkdir(parents=True, exist_ok=True)
 
 
 class BasicExperimentResult:
