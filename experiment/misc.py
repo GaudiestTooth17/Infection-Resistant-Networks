@@ -98,16 +98,26 @@ def pressure_experiment(make_network: MakeRandomNetwork,
     pressure_type_to_survival_rates['Static'] = static_survival_rates
 
     pbar = tqdm(desc='Pressure Experiment',
-                total=len(pressure_configurations)*num_trials)
+                total=len(pressure_configurations)*num_trials*3)
 
     def simulate_and_update(net, disease, behavior, rng):
         result = simulate_return_survival_rate(net, disease, behavior, rng)
         pbar.update()
         return result
 
+    def make_net_and_update():
+        net = make_network()
+        pbar.update()
+        return net
+
+    def make_behavior_and_update(net: Network):
+        behavior = configuration.make_behavior(net)
+        pbar.update()
+        return behavior
+
     for configuration in pressure_configurations:
-        networks = [make_network() for _ in range(num_trials)]
-        behaviors = [configuration.make_behavior(net) for net in networks]
+        networks = [make_net_and_update() for _ in range(num_trials)]
+        behaviors = [make_behavior_and_update(net) for net in networks]
         pressure_type_to_survival_rates[behaviors[0].name]\
             = np.array([simulate_and_update(net, disease, behavior, rng)
                         for net, behavior in zip(networks, behaviors)])
@@ -120,7 +130,7 @@ def pressure_experiment(make_network: MakeRandomNetwork,
 
 def cc_pressure_vs_none_entry_point():
     rng = np.random.default_rng(0xbeefee)
-    num_trials = 250
+    num_trials = 1000
     disease = Disease(4, .4)
     inner_bounds = 1, 15
     outer_bounds = 1, 5
@@ -128,8 +138,8 @@ def cc_pressure_vs_none_entry_point():
     n_communities = 25
     make_ccn = MakeConnectedCommunity(community_size, inner_bounds, n_communities,
                                       outer_bounds, rng)
-    pressure_configurations = (PressureConfig(1, .75, rng), PressureConfig(1, .25, rng),
-                               PressureConfig(3, .75, rng), PressureConfig(3, .25, rng))
+    pressure_configurations = [PressureConfig(radius, prob, rng)
+                               for radius, prob in it.product((1, 2, 3), (.25, .5, .75))]
     pressure_experiment(make_ccn, pressure_configurations, disease, num_trials, rng)
 
 
@@ -146,4 +156,5 @@ def ba_pressure_vs_none_entry_point():
 
 
 if __name__ == '__main__':
-    cc_pressure_vs_none_entry_point()
+    # cc_pressure_vs_none_entry_point()
+    ba_pressure_vs_none_entry_point()
