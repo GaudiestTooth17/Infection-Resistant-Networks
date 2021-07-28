@@ -1,6 +1,11 @@
 
 {
     "python.analysis.extraPaths": ["./experiment", "./networkgen"],
-    "python.linting.pycodestyleArgs": ["--ignore=E402,E226,W503", "--max-line-length=100"],
+    "python.linting.pycodestyleArgs": [
+        "--ignore=E402,E226,W503",
+        "--max-line-length=100"
+    ],
+    "python.linting.pycodestyleEnabled": true,
+    "python.linting.enabled": false,
     // "python.pythonPath": "/home/alex/miniconda3/envs/py3.9/bin/python",
 }

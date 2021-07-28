@@ -228,6 +228,7 @@ class RandomFlickerBehavior:
             return self._edges_on_M
         return self._edges_off_M
 
+
 class PressureBehavior:
     def __init__(self, net: Network,
                  radius: int = 3,
@@ -270,6 +271,7 @@ class PressureBehavior:
         # print('Edges Removed', (np.sum(M) - np.sum(R)) / 2)
         return R
 
+
 class UnifiedPressureFlickerBehavior:
     def __init__(self, net: Network,
                  radius: int = 3,
@@ -308,6 +310,7 @@ class UnifiedPressureFlickerBehavior:
             R[:, flicker_agents] = 0
         # print('Edges Removed', (np.sum(M) - np.sum(R)) / 2)
         return R
+
 
 class PressureDecayBehavior:
     def __init__(self, net: Network,

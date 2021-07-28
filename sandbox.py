@@ -18,6 +18,7 @@ from network import Network
 from scipy.stats import wasserstein_distance
 RNG = np.random.default_rng()
 
+
 def make_plot_from_txt_file():
     data_file = open('social-good-id0:20-od0:10_actual_degrees.txt', 'r')
     xyz = []
@@ -44,7 +45,6 @@ def make_plot_from_txt_file():
     plt.figure()
     ax = plt.axes(projection='3d')
 
-
     p_list = actual
     x_ = [x for x, y, z in p_list]
     y_ = [y for x, y, z in p_list]
@@ -67,6 +67,7 @@ def make_plot_from_txt_file():
     plt.xlabel('Average Outer Degree')
     plt.show()
 
+
 def validate_connected_community_network():
     d_map = {}
     d_dist = []
@@ -80,15 +81,16 @@ def validate_connected_community_network():
                     d_map[d] = 0
                 d_map[d] += 1
                 d_dist.append(d)
-        
+
         s = sum(d_map.values())
         for d, v in d_map.items():
             d_map[d] = v / s
         # print(d_map)
         plt.hist(d_dist)
         plt.figure()
-        
+
     plt.show()
+
 
 def social_good_giant_component_barabasi_albert():
     social_goods = []
@@ -106,6 +108,7 @@ def social_good_giant_component_barabasi_albert():
     plt.plot(range(1, 100), social_goods, 'o', color='blue')
     plt.plot(range(1, 100), giant_comp_sizes, 'o', color='red')
     plt.show()
+
 
 def social_good_giant_component_watts_strogatz():
     num_nodes = 100
@@ -192,6 +195,7 @@ def social_good_giant_component_connected_community():
     plt.title('Connected Community Social Good Analysis')
     plt.show()
 
+
 def generic_pressure_test():
     G, layout, communities = fio.read_network('networks/cavemen-10-10.txt')
     if layout is None or communities is None:
@@ -200,6 +204,7 @@ def generic_pressure_test():
     simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
              PressureBehavior(net, 1), 200, layout, RNG)
 
+
 def decay_pressure_test():
     G, layout, communities = fio.read_network('networks/elitist-100.txt')
     if layout is None or communities is None:
@@ -207,6 +212,7 @@ def decay_pressure_test():
     net = Network(G, communities=communities)
     simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
              PressureDecayBehavior(net, 1), 200, layout, RNG)
+
 
 def behavior_comparison():
     ccG, cclayout, cccommunities = fio.read_network('networks/cavemen-10-10.txt')
@@ -246,6 +252,4 @@ def behavior_comparison():
 
 if __name__ == '__main__':
     behavior_comparison()
-    
 
-        
