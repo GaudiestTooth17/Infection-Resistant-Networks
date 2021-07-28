@@ -1,3 +1,5 @@
+import sys
+sys.path.append('')
 from dataclasses import dataclass
 from network import Network
 from sim_dynamic import (Disease, PressureBehavior, RandomFlickerBehavior,
@@ -8,12 +10,12 @@ from abc import ABC, abstractmethod
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
+import networkx as nx
 from scipy.stats import wasserstein_distance
 import os
 import csv
-import sys
-sys.path.append('')
 from customtypes import Array, Number
+from networkgen import make_connected_community_network
 T = TypeVar('T')
 
 
@@ -211,7 +213,7 @@ class PressureComparisonResult:
                 plt.figure()
                 title = f'{self.network_name}\n{behavior_name} sims={self.sims_per_behavior}'
                 plt.title(title)
-                plt.xlabel('Number of Susceptible Agents')
+                plt.xlabel('Survival Rate')
                 plt.ylabel('Frequency')
                 plt.hist(results, bins=None)
                 plt.savefig(os.path.join(path, title+'.png'), format='png')
@@ -326,3 +328,60 @@ class PressureConfig:
 
     def make_behavior(self, net: Network) -> PressureBehavior:
         return PressureBehavior(net, self.radius, self.flicker_probability, self.rng, self.name)
+
+
+class MakeRandomNetwork(ABC):
+    @property
+    @abstractmethod
+    def class_name(self) -> str:
+        pass
+
+    @abstractmethod
+    def __call__(self) -> Network:
+        pass
+
+
+class MakeConnectedCommunity(MakeRandomNetwork):
+    def __init__(self, community_size: int, inner_bounds: Tuple[int, int],
+                 num_comms: int, outer_bounds: Tuple[int, int], rng):
+        self._community_size = community_size
+        self._inner_bounds = inner_bounds
+        self._num_comms = num_comms
+        self._outer_bounds = outer_bounds
+        self._rng = rng
+        self._class_name = f'ConnComm(N_comm={community_size},ib={inner_bounds},'\
+                           f'num_comms={num_comms},ob={outer_bounds})'
+
+    @property
+    def class_name(self) -> str:
+        return self._class_name
+
+    def __call__(self) -> Network:
+        id_dist = self._rng.integers(self._inner_bounds[0], self._inner_bounds[1],
+                                     self._community_size, endpoint=True)
+        if np.sum(id_dist) % 2 > 0:
+            id_dist[np.argmin(id_dist)] += 1
+        od_dist = self._rng.integers(self._outer_bounds[0], self._outer_bounds[1],
+                                     self._num_comms, endpoint=True)
+        if np.sum(od_dist) % 2 > 0:
+            od_dist[np.argmin(od_dist)] += 1
+
+        net = make_connected_community_network(id_dist, od_dist, self._rng)
+        if net is None:
+            raise Exception('This should not have happened.')
+        return net
+
+
+class MakeBarabasiAlbert(MakeRandomNetwork):
+    def __init__(self, N: int, m: int, seed: int):
+        self._N = N
+        self._m = m
+        self._seed = seed
+        self._class_name = f'AlbertBarabasi(N={N},m={m})'
+
+    @property
+    def class_name(self) -> str:
+        return self._class_name
+
+    def __call__(self) -> Network:
+        return Network(nx.barabasi_albert_graph(self._N, self._m, self._seed))

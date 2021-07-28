@@ -338,7 +338,7 @@ class PressureDecayBehavior:
         self._pressure = self._pressure * self._flicker_probability
 
         flicker_agents = ((self._pressure >= .5) & (self._rng.random(self._pressure.shape)
-                                                  < self._flicker_probability))
+                                                    < self._flicker_probability))
         R = np.copy(M)
         R[flicker_agents, :] = 0
         R[:, flicker_agents] = 0

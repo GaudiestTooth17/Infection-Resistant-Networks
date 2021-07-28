@@ -1,6 +1,8 @@
 import sys
 sys.path.append('')
-from typing import Tuple
+from customtypes import Array, Number
+from common import MakeConnectedCommunity
+from typing import Callable, Sequence, Tuple
 from network import Network
 from socialgood import DecayFunction, rate_social_good
 from tqdm import tqdm
@@ -17,17 +19,13 @@ def main():
         # watts_strogatz_k_experiment(k)
 
 
-def erdos_renyi_k_experiment(k: float):
-    N = 500
-    n_divisions = 20
-    n_trials = 250
-    ps = np.linspace(0, 1, n_divisions)
+def k_experiment(k: float, name: str, n_trials: int,
+                 independent_variable: Array, make_network: Callable[[Number], Network]):
     decay = DecayFunction(k)
-    name = f'Social Good of Random Networks with p=0..1 k={k}'
-    all_stats = np.zeros((n_divisions, n_trials))
-    for i, p in tqdm(tuple(enumerate(ps))):
-        stats = np.array(list(map(rate_sg, [(Network(nx.erdos_renyi_graph(N, p)), decay)
-                                            for _ in range(n_trials)])))
+    all_stats = np.zeros((len(independent_variable), n_trials))
+    for i, x in tqdm(tuple(enumerate(independent_variable))):
+        stats = np.array(list(map(rate_sg, [(make_network(x), decay)
+                                            for _ in tqdm(range(n_trials))])))
         # with Pool(4) as pool:
         #     stats = np.array(pool.map(rate_sg,
         #                               [(Network(nx.erdos_renyi_graph(N, p)), decay)
@@ -39,9 +37,34 @@ def erdos_renyi_k_experiment(k: float):
     plt.clf()
     plt.title(name)
     line = np.mean(all_stats, axis=1)
-    plt.plot(ps, line)
-    plt.fill_between(ps, quartiles[0], quartiles[1], alpha=.4)
+    plt.plot(independent_variable, line)
+    plt.fill_between(independent_variable, quartiles[0], quartiles[1], alpha=.4)
     plt.savefig(f'results/{name}.png', format='png', dpi=300)
+
+
+def erdos_renyi_k_experiment(k: float):
+    N = 500
+    n_divisions = 20
+    n_trials = 250
+    ps = np.linspace(0, 1, n_divisions)
+    name = f'Social Good of Random Networks with p=0..1 k={k}'
+    k_experiment(k, name, n_trials, ps, lambda p: Network(nx.erdos_renyi_graph(N, p)))
+
+
+def cc_social_good_variance_entry_point():
+    rng = np.random.default_rng(404)
+    num_trials = 250
+    inner_bounds = 1, 15
+    community_size = 20
+    n_comms = 25
+
+    def make_ccn(outer_connections: Number):
+        return MakeConnectedCommunity(community_size, inner_bounds, n_comms,
+                                      (outer_connections, outer_connections), rng)()  # type: ignore
+
+    k_experiment(.5,
+                 f'ConnComm(N_comm={community_size},ib={inner_bounds},num_comms={n_comms},ob=x)',
+                 num_trials, range(1, 11), make_ccn)
 
 
 def watts_strogatz_k_experiment(decay_coeff: float):
