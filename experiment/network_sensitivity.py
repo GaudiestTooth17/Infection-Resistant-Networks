@@ -37,7 +37,7 @@ def elitist_experiment():
     plt.savefig(title+'.png', format='png')
 
 
-def barabasi_albert_choose_infected_node():
+def choose_infected_node():
     """This experiment is for choosing nodes with specific attributes to be patient 0"""
     rng = np.random.default_rng()
     r, fp = 2, .5
@@ -90,4 +90,4 @@ def barabasi_albert_choose_infected_node():
 
 if __name__ == '__main__':
     # elitist_experiment()
-    barabasi_albert_choose_infected_node()
+    choose_infected_node()
