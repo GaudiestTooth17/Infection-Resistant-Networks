@@ -59,7 +59,7 @@ def simulate(M: np.ndarray,
     N = M.shape[0]
     vis_func = Visualize(layout) if layout is not None else None
     if vis_func is not None:
-        vis_func(nx.Graph(D), sirs[0])
+        vis_func(nx.Graph(D), sirs[0], 0)
 
     for step in range(1, max_steps):
         # Get the adjacency matrix to use at this step
@@ -69,7 +69,7 @@ def simulate(M: np.ndarray,
         # for simulating the disease spread
         sirs[step], states_changed = next_sir(sirs[step-1], D, disease, rng)
         if vis_func is not None:
-            vis_func(nx.Graph(D), sirs[step])
+            vis_func(nx.Graph(D), sirs[step], step)
 
         # find all the agents that are in the removed state. If that number is N,
         # the simulation is done.
@@ -140,7 +140,7 @@ class Visualize:
         self._layout = layout
         self._state_to_color = {0: 'blue', 1: 'green', 2: 'grey'}
 
-    def __call__(self, G: nx.Graph, sir: np.ndarray) -> None:
+    def __call__(self, G: nx.Graph, sir: np.ndarray, step) -> None:
         node_colors = np.empty(len(G), dtype=np.object_)
         for state in range(sir.shape[0]):
             for node in range(sir.shape[1]):
@@ -149,8 +149,9 @@ class Visualize:
         plt.clf()
         nx.draw_networkx(G, pos=self._layout, with_labels=False,
                          node_color=node_colors, node_size=50)
+        plt.title(f'Step: {step}, S: {np.sum(sir[0, :] > 0)}, I: {np.sum(sir[1, :] > 0)}, R: {np.sum(sir[2, :] > 0)}')
         # plt.show()
-        plt.pause(.75)  # type: ignore
+        plt.pause(.5)  # type: ignore
 
 
 def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rng=RNG) -> np.ndarray:
@@ -168,6 +169,11 @@ def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rng=RNG) -
     sir0[1, to_infect] = 1
     sir0[0, to_infect] = 0
     return sir0
+
+
+class NoMitigation:
+    def __call__(self, D, M, time_step, sir):
+        return M
 
 
 class StaticFlickerBehavior:
@@ -343,4 +349,44 @@ class PressureDecayBehavior:
         R[flicker_agents, :] = 0
         R[:, flicker_agents] = 0
         # print('Edges Removed', (np.sum(M) - np.sum(R)) / 2)
+        return R
+
+
+class PressureFlickerBehavior:
+    def __init__(self, net: Network,
+                 radius: int = 3,
+                 rng=RNG,
+                 name: Optional[str] = None):
+        """
+        Agents receive pressure when nearby agents become infectious. Agents
+        with enough pressure will remove connections to nearby agents.
+        """
+        self._net = net
+        self._radius = radius
+        self._name = f'Pressure(radius={radius})' if name is None else name
+        self._dm = get_distance_matrix(net)
+        self._pressure = np.zeros(net.N)
+        self._flicker_probability = rng.random(net.N)
+        self._pressure_to_flicker = rng.random(net.N)
+        self._rng = rng
+
+    def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
+        infectious_agents = sir[1] > 0
+        if infectious_agents.any():
+            pressured_agents = (self._dm[infectious_agents] <= self._radius)[0]
+            self._pressure[pressured_agents] += self._flicker_probability[pressured_agents]
+
+
+        flicker_amount = self._pressure / self._pressure_to_flicker
+        current_flicker_prob = (1 -
+            np.minimum((1 - self._flicker_probability), self._flicker_probability) ** flicker_amount)
+
+        flicker_agents = ((self._pressure > self._pressure_to_flicker) &
+                          (self._rng.random(self._pressure.shape) < current_flicker_prob))
+        R = np.copy(M)
+        R[flicker_agents, :] = 0
+        R[:, flicker_agents] = 0
+
+        self._pressure = self._pressure * self._flicker_probability
+
         return R
