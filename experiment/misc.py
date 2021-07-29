@@ -140,7 +140,11 @@ def cc_pressure_vs_none_entry_point():
                                       outer_bounds, rng)
     pressure_configurations = [PressureConfig(radius, prob, rng)
                                for radius, prob in it.product((1, 2, 3), (.25, .5, .75))]
-    pressure_experiment(make_ccn, pressure_configurations, disease, num_trials, rng)
+    # pressure_experiment(make_ccn, pressure_configurations, disease, num_trials, rng)
+    net = make_ccn()
+    simulate(net.M, make_starting_sir(net.N, 1, rng), disease,
+             pressure_configurations[1].make_behavior(net),
+             100, nx.spring_layout(net.G))
 
 
 def ba_pressure_vs_none_entry_point():
@@ -156,5 +160,5 @@ def ba_pressure_vs_none_entry_point():
 
 
 if __name__ == '__main__':
-    # cc_pressure_vs_none_entry_point()
-    ba_pressure_vs_none_entry_point()
+    cc_pressure_vs_none_entry_point()
+    # ba_pressure_vs_none_entry_point()

@@ -271,8 +271,10 @@ def safe_run_trials(name: str, trial_func: Callable[[T], Optional[Tuple[float, f
 
 
 def simulate_return_survival_rate(net: Network, disease: Disease,
-                                  behavior: UpdateConnections, rng) -> float:
-    sir0 = make_starting_sir(net.N, 1, rng)
+                                  behavior: UpdateConnections, rng,
+                                  sir0: Optional[np.ndarray] = None) -> float:
+    if sir0 is None:
+        sir0 = make_starting_sir(net.N, 1, rng)
     return np.sum(simulate(net.M, sir0, disease, behavior, 100, None, rng)[-1][0] > 0) / net.N
 
 
@@ -373,7 +375,7 @@ class MakeConnectedCommunity(MakeRandomNetwork):
 
 
 class MakeBarabasiAlbert(MakeRandomNetwork):
-    def __init__(self, N: int, m: int, seed: int):
+    def __init__(self, N: int, m: int, seed: Optional[int] = None):
         self._N = N
         self._m = m
         self._seed = seed
@@ -384,4 +386,24 @@ class MakeBarabasiAlbert(MakeRandomNetwork):
         return self._class_name
 
     def __call__(self) -> Network:
-        return Network(nx.barabasi_albert_graph(self._N, self._m, self._seed))
+        if self._seed is not None:
+            return Network(nx.barabasi_albert_graph(self._N, self._m, self._seed))
+        return Network(nx.barabasi_albert_graph(self._N, self._m))
+
+
+class MakeWattsStrogatz(MakeRandomNetwork):
+    def __init__(self, N: int, k: int, p: float, seed: Optional[int] = None):
+        self._N = N
+        self._k = k
+        self._p = p
+        self._seed = seed
+        self._class_name = f'WattsStrogatz(N={N},k={k},p={p})'
+
+    @property
+    def class_name(self) -> str:
+        return self._class_name
+
+    def __call__(self) -> Network:
+        if self._seed is not None:
+            return Network(nx.watts_strogatz_graph(self._N, self._k, self._p, self._seed))
+        return Network(nx.watts_strogatz_graph(self._N, self._k, self._p))
