@@ -8,7 +8,7 @@ from tqdm import tqdm
 import csv
 from analyzer import visualize_network
 from networkgen import _connected_community as cc
-from sim_dynamic import Disease, PressureDecayBehavior, RandomFlickerBehavior, StaticFlickerBehavior, UnifiedPressureFlickerBehavior, make_starting_sir, simulate, PressureBehavior
+from sim_dynamic import *
 import networkx as nx
 # from mpl_toolkits import mplot3d
 from matplotlib import pyplot as plt
@@ -17,6 +17,7 @@ import analyzer
 from network import Network
 from scipy.stats import wasserstein_distance
 RNG = np.random.default_rng()
+
 
 def make_plot_from_txt_file():
     data_file = open('social-good-id0:20-od0:10_actual_degrees.txt', 'r')
@@ -44,7 +45,6 @@ def make_plot_from_txt_file():
     plt.figure()
     ax = plt.axes(projection='3d')
 
-
     p_list = actual
     x_ = [x for x, y, z in p_list]
     y_ = [y for x, y, z in p_list]
@@ -67,6 +67,7 @@ def make_plot_from_txt_file():
     plt.xlabel('Average Outer Degree')
     plt.show()
 
+
 def validate_connected_community_network():
     d_map = {}
     d_dist = []
@@ -80,15 +81,16 @@ def validate_connected_community_network():
                     d_map[d] = 0
                 d_map[d] += 1
                 d_dist.append(d)
-        
+
         s = sum(d_map.values())
         for d, v in d_map.items():
             d_map[d] = v / s
         # print(d_map)
         plt.hist(d_dist)
         plt.figure()
-        
+
     plt.show()
+
 
 def social_good_giant_component_barabasi_albert():
     social_goods = []
@@ -106,6 +108,7 @@ def social_good_giant_component_barabasi_albert():
     plt.plot(range(1, 100), social_goods, 'o', color='blue')
     plt.plot(range(1, 100), giant_comp_sizes, 'o', color='red')
     plt.show()
+
 
 def social_good_giant_component_watts_strogatz():
     num_nodes = 100
@@ -192,6 +195,7 @@ def social_good_giant_component_connected_community():
     plt.title('Connected Community Social Good Analysis')
     plt.show()
 
+
 def generic_pressure_test():
     G, layout, communities = fio.read_network('networks/cavemen-10-10.txt')
     if layout is None or communities is None:
@@ -200,52 +204,71 @@ def generic_pressure_test():
     simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
              PressureBehavior(net, 1), 200, layout, RNG)
 
+
 def decay_pressure_test():
     G, layout, communities = fio.read_network('networks/elitist-100.txt')
     if layout is None or communities is None:
         raise Exception('File is incomplete.')
     net = Network(G, communities=communities)
     simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
-             PressureDecayBehavior(net, 1), 200, layout, RNG)
+             PressureDecayBehavior(net, 3), 200, layout, RNG)
+
+
+def pressure_flicker_test():
+    G, layout, communities = fio.read_network('networks/elitist-500.txt')
+    if layout is None or communities is None:
+        raise Exception('File is incomplete.')
+    net = Network(G, communities=communities)
+    simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
+             PressureFlickerBehavior(net, 3), 200, layout, RNG)
+
 
 def behavior_comparison():
-    ccG, cclayout, cccommunities = fio.read_network('networks/cavemen-10-10.txt')
-    if cclayout is None or cccommunities is None:
-        raise Exception('File is incomplete.')
-    eG, elayoug, ecommunities = fio.read_network('networks/elitist-100.txt')
-
+    ccG, _, _ = fio.read_network('networks/cavemen-50-10.txt')
+    eG, _, _ = fio.read_network('networks/elitist-500.txt')
+    cgg, _, _ = fio.read_network('networks/cgg-500.txt')
     networks = (
-        ('Caveman-10-10', Network(ccG, communities=cccommunities)),
-        ('Elitist-100', Network(eG, communities=ecommunities))
+        ('Caveman-50-10', Network(ccG)),
+        ('Elitist-500', Network(eG)),
+        ('CGG-500', Network(cgg))
     )
 
+    num_sims = 1000
+    num_behaviors = 7
     distributions = []
-    for n_name, net in networks:
-        print(n_name)
+    averages = np.zeros((len(networks), num_behaviors))
+    loop = tqdm(total=len(networks) * num_behaviors * num_sims)
+    for i, (n_name, net) in enumerate(networks):
+
         behaviors = (
-            # ('All Edges Sequential Flicker 1/4', StaticFlickerBehavior(net.M, net.edges, (True, False, False, False))),
+            ('No Mitigations', NoMitigation()),
+            ('All Edges Sequential Flicker 1/4', StaticFlickerBehavior(net.M, net.edges, (True, False, False, False))),
             ('All Edges Random Flicker 0.25', RandomFlickerBehavior(net.M, net.edges, 0.25)),
-            ('Collected Pressure Flicker 0.25, R=1', UnifiedPressureFlickerBehavior(net, 1, RNG))
-            # ('Generic Pressure Radius 3', PressureBehavior(net, 1)),
-            # ('Pressure Decay Radius 3', PressureDecayBehavior(net, 1))
+            ('Collected Pressure Flicker 0.25, R=1', UnifiedPressureFlickerBehavior(net, 1, RNG)),
+            ('Generic Pressure Radius 3', PressureBehavior(net, 3)),
+            ('Pressure Decay Radius 3', PressureDecayBehavior(net, 3)),
+            ('Pressure Flicker Radius 3', PressureFlickerBehavior(net, 3))
         )
-        for b_name, behavior in behaviors:
-            print(f'  {b_name}')
+
+        for j, (b_name, behavior) in enumerate(behaviors):
             s_scores = []
-            for _ in range(10000):
+            for _ in range(num_sims):
+                loop.set_description(f'{n_name}, {b_name}')
                 end_sir = simulate(net.M, make_starting_sir(net.N, 1), Disease(4, 0.3), behavior, 200, rng=RNG)[-1]
                 s_scores.append(np.sum(end_sir[0, :] > 0)/net.N)
-            plt.title(f'{n_name}, {b_name}, Avg: {sum(s_scores)/len(s_scores)}')
-            plt.hist(s_scores)
-            plt.figure()
+                loop.update()
+            # plt.title(f'{n_name}, {b_name}, Avg: {sum(s_scores)/len(s_scores)}')
+            # plt.hist(s_scores)
+            # plt.figure()
+            averages[i, j] = sum(s_scores)/len(s_scores)
             distributions.append(s_scores)
-    print(wasserstein_distance(distributions[0], distributions[2]))
-    print(wasserstein_distance(distributions[1], distributions[3]))
-    plt.show()
+    # print(wasserstein_distance(distributions[0], distributions[2]))
+    # print(wasserstein_distance(distributions[1], distributions[3]))
+    # plt.show()
+    np.set_printoptions(precision=3, suppress=True)
+    print(averages)
 
 
 if __name__ == '__main__':
     behavior_comparison()
-    
 
-        
