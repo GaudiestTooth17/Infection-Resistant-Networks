@@ -3,8 +3,8 @@ The purpose of these experiments is to try to establish how much the outcome on 
 is to which agent starts infectious.
 """
 import sys
-from typing import Tuple
 sys.path.append('')
+from typing import Tuple
 import fileio as fio
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,6 +15,8 @@ from common import (MakeBarabasiAlbert, MakeConnectedCommunity, MakeRandomNetwor
 import networkx as nx
 from tqdm import tqdm
 import itertools as it
+import os
+import csv
 
 
 def elitist_experiment():
@@ -40,8 +42,9 @@ def elitist_experiment():
 def choose_infected_node():
     """This experiment is for choosing nodes with specific attributes to be patient 0"""
     rng = np.random.default_rng()
-    r, fp = 2, .5
-    disease = sd.Disease(4, .4)
+    r, fp = 2, .25
+    disease = sd.Disease(4, .3)
+    n_trials = 500
 
     def choose_by_centrality(net, centrality_measure, max_or_min):
         degrees = dict(centrality_measure(net.G))  # type: ignore
@@ -69,9 +72,10 @@ def choose_infected_node():
     )
 
     print(f'Running {len(networks)*len(sir_strats)} experiments')
+    experiment_to_survival_rates = {}
     for make_net, (strat_name, sir_strat) in it.product(networks, sir_strats):
         survival_rates = []
-        for _ in tqdm(range(1000), desc=f'{make_net.class_name} & {strat_name}'):
+        for _ in tqdm(range(n_trials), desc=f'{make_net.class_name} & {strat_name}'):
             net = make_net()
             update_connections = sd.PressureBehavior(net, r, fp)
             sir0 = sir_strat(net)
@@ -83,9 +87,17 @@ def choose_infected_node():
         plt.figure()
         plt.title(title)
         plt.xlim(0, 1.0)
-        plt.ylim(0, 1000)
+        plt.ylim(0, n_trials)
         plt.hist(survival_rates, bins=None)
-        plt.savefig(title+'.png', format='png')
+        plt.savefig(os.path.join('results', title+'.png'), format='png')
+        experiment_to_survival_rates[title] = survival_rates
+
+    # save the raw data
+    with open(os.path.join('results', 'patient-0-sensitivity.csv'), 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        for experiment_name, survival_rates in experiment_to_survival_rates.items():
+            writer.writerow([experiment_name])
+            writer.writerow(survival_rates)
 
 
 if __name__ == '__main__':
