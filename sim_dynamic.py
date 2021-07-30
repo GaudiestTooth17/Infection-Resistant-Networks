@@ -235,7 +235,7 @@ class RandomFlickerBehavior:
         return self._edges_off_M
 
 
-class PressureBehavior:
+class SimplePressureBehavior:
     def __init__(self, net: Network,
                  radius: int = 3,
                  flicker_probability: float = .25,

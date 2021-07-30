@@ -197,7 +197,7 @@ def generic_pressure_test():
         raise Exception('File is incomplete.')
     net = Network(G, communities=communities)
     simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
-             PressureBehavior(net, 1), 200, layout, RNG)
+             SimplePressureBehavior(net, 1), 200, layout, RNG)
 
 
 def decay_pressure_test():
@@ -240,7 +240,7 @@ def behavior_comparison():
             ('All Edges Sequential Flicker 1/4', StaticFlickerBehavior(net.M, net.edges, (True, False, False, False))),
             ('All Edges Random Flicker 0.25', RandomFlickerBehavior(net.M, net.edges, 0.25)),
             ('Collected Pressure Flicker 0.25, R=1', UnifiedPressureFlickerBehavior(net, 1, RNG)),
-            ('Generic Pressure Radius 3', PressureBehavior(net, 3)),
+            ('Generic Pressure Radius 3', SimplePressureBehavior(net, 3)),
             ('Pressure Decay Radius 3', PressureDecayBehavior(net, 3)),
             ('Pressure Flicker Radius 3', PressureFlickerBehavior(net, 3))
         )

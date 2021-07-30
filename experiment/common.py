@@ -2,7 +2,7 @@ import sys
 sys.path.append('')
 from dataclasses import dataclass
 from network import Network
-from sim_dynamic import (Disease, PressureBehavior, RandomFlickerBehavior,
+from sim_dynamic import (Disease, SimplePressureBehavior, RandomFlickerBehavior,
                          StaticFlickerBehavior, UpdateConnections, make_starting_sir, simulate)
 from typing import (Any, Callable, Collection, List, Optional, Tuple, TypeVar,
                     Sequence, Dict)
@@ -329,8 +329,8 @@ class PressureConfig:
     rng: Any
     name: Optional[str] = None
 
-    def make_behavior(self, net: Network) -> PressureBehavior:
-        return PressureBehavior(net, self.radius, self.flicker_probability, self.rng, self.name)
+    def make_behavior(self, net: Network) -> SimplePressureBehavior:
+        return SimplePressureBehavior(net, self.radius, self.flicker_probability, self.rng, self.name)
 
 
 class MakeNetwork(ABC):

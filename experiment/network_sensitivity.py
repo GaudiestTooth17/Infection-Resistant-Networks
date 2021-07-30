@@ -25,7 +25,7 @@ def elitist_experiment():
     name = fio.get_network_name(path)
     net = fio.read_network(path)
     r, fp = 2, .75
-    update_connections, uc_name = sd.PressureBehavior(net, r, fp), f'Pressure(r={r}, fp={fp})'
+    update_connections, uc_name = sd.SimplePressureBehavior(net, r, fp), f'Pressure(r={r}, fp={fp})'
     # update_connections, uc_name = sd.no_update, 'Static'
     disease = sd.Disease(4, .2)
     sir0 = sd.make_starting_sir(net.N, (0,), rng)
@@ -82,7 +82,7 @@ def choose_infected_node():
         survival_rates = []
         for _ in tqdm(range(n_trials), desc=f'{make_net.class_name} & {strat_name}'):
             net = make_net()
-            update_connections = sd.PressureBehavior(net, r, fp)
+            update_connections = sd.SimplePressureBehavior(net, r, fp)
             sir0 = sir_strat(net)
             survival_rate = simulate_return_survival_rate(net, disease, update_connections,
                                                           rng, sir0)

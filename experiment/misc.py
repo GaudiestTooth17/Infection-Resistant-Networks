@@ -5,7 +5,7 @@ from common import (MakeBarabasiAlbert, MakeConnectedCommunity, MakeNetwork,
                     PressureComparisonResult, PressureConfig, RandomFlickerConfig,
                     simulate_return_survival_rate)
 from typing import Dict, Sequence, Callable, List
-from sim_dynamic import Disease, make_starting_sir, no_update, simulate, PressureBehavior
+from sim_dynamic import Disease, make_starting_sir, no_update, simulate, SimplePressureBehavior
 from network import Network
 from tqdm import tqdm
 import itertools as it
@@ -82,7 +82,7 @@ def connected_community_entry_point():
 def pressure_test_entry_point():
     net = fio.read_network('networks/cavemen-10-10.txt')
     simulate(net.M, make_starting_sir(net.N, (0,)), Disease(4, 0.3),
-             PressureBehavior(net, 1), 200, net.layout, RNG)
+             SimplePressureBehavior(net, 1), 200, net.layout, RNG)
 
 
 def pressure_experiment(make_network: MakeNetwork,
