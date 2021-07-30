@@ -20,6 +20,10 @@ class Network:
         Does not support selfloops or multiedges.
         """
         if isinstance(data, nx.Graph):
+            # make sure that nodes are identified by integers
+            if not isinstance(next(iter(data.nodes)), int):
+                data = nx.Graph(data)
+                nx.relabel_nodes(data, {old: new for new, old in enumerate(data.nodes)})
             self._G = data
             self._M = None
         else:
