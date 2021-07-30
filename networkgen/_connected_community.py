@@ -1,7 +1,7 @@
 from customtypes import Communities, Layout
 import numpy as np
 from fileio import write_network
-from analyzer import visualize_network
+from analysis import visualize_network
 from typing import Optional
 import networkx as nx
 from network import Network

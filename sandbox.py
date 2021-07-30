@@ -1,12 +1,8 @@
-from customtypes import Number
-from typing import Callable, Generic, Sequence, Tuple, TypeVar, Union
 import numpy as np
 import networkx as nx
 import fileio as fio
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-import csv
-from analyzer import visualize_network
 from networkgen import _connected_community as cc
 from sim_dynamic import *
 import networkx as nx
@@ -15,7 +11,6 @@ from matplotlib import pyplot as plt
 import socialgood as sg
 import analyzer
 from network import Network
-from scipy.stats import wasserstein_distance
 RNG = np.random.default_rng()
 
 

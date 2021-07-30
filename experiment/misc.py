@@ -1,7 +1,7 @@
 import sys
 sys.path.append('')
 from collections import defaultdict
-from common import (MakeBarabasiAlbert, MakeConnectedCommunity, MakeRandomNetwork,
+from common import (MakeBarabasiAlbert, MakeConnectedCommunity, MakeNetwork,
                     PressureComparisonResult, PressureConfig, RandomFlickerConfig,
                     simulate_return_survival_rate)
 from typing import Dict, Sequence, Callable, List
@@ -80,15 +80,12 @@ def connected_community_entry_point():
 
 
 def pressure_test_entry_point():
-    G, layout, communities = fio.read_network('networks/cavemen-10-10.txt')
-    if layout is None or communities is None:
-        raise Exception('File is incomplete.')
-    net = Network(G, communities=communities)
+    net = fio.read_network('networks/cavemen-10-10.txt')
     simulate(net.M, make_starting_sir(net.N, (0,)), Disease(4, 0.3),
-             PressureBehavior(net, 1), 200, layout, RNG)
+             PressureBehavior(net, 1), 200, net.layout, RNG)
 
 
-def pressure_experiment(make_network: MakeRandomNetwork,
+def pressure_experiment(make_network: MakeNetwork,
                         pressure_configurations: Sequence[PressureConfig],
                         disease: Disease, num_trials: int, rng) -> None:
     pressure_type_to_survival_rates = {}

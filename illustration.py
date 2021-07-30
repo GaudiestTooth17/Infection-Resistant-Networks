@@ -15,17 +15,16 @@ def main():
               Agent('purple', 50): N_purple}
     # grid_dim = (int(N/.005), int(N/.005))  # the denominator is the desired density
     grid_dim = int(N*1.25), int(N*1.25)
-    G, layout, _ = make_social_circles_network(agents, grid_dim,
+    net, _ = make_social_circles_network(agents, grid_dim,
                                                rand=np.random.default_rng(0))  # type: ignore
-    net = Network(G, community_size=20)
     colored_edges = net.intercommunity_edges
 
     def make_cmap():
-        return ['black' if edge not in colored_edges else 'red' for edge in G.edges]
+        return ['black' if edge not in colored_edges else 'red' for edge in net.edges]
 
-    n = nx.draw_networkx_nodes(G, pos=layout, node_size=150, node_color='dimgrey')
+    n = nx.draw_networkx_nodes(net.G, pos=net.layout, node_size=150, node_color='dimgrey')
     n.set_edgecolor('black')
-    nx.draw_networkx_edges(G, pos=layout, width=2, edge_color='black')
+    nx.draw_networkx_edges(net.G, pos=net.layout, width=2, edge_color='black')
     plt.show(block=True)
     # while True:
     #     i = input(': ')

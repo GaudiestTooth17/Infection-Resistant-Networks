@@ -1,5 +1,5 @@
-from typing import Union, Optional, Collection, Tuple, Iterable
-from customtypes import Communities
+from typing import Callable, Union, Optional, Collection, Tuple, Iterable
+from customtypes import Communities, Layout
 import networkx as nx
 import numpy as np
 from partitioning import fluidc_partition, intercommunity_edges_to_communities
@@ -9,7 +9,8 @@ class Network:
     def __init__(self, data: Union[nx.Graph, np.ndarray],
                  intercommunity_edges: Optional[Collection[Tuple[int, int]]] = None,
                  communities: Optional[Communities] = None,
-                 community_size: int = 25) -> None:
+                 community_size: int = 25,
+                 layout: Union[Layout, Callable[[nx.Graph], Layout]] = nx.kamada_kawai_layout):
         """
         Holds both the NetworkX and NumPy representation of a network. It starts
         off with just one and lazily creates the other representation.
@@ -27,6 +28,7 @@ class Network:
         self._intercommunity_edges = intercommunity_edges
         self._communities = communities
         self._community_size = community_size
+        self._layout = layout
 
     @property
     def G(self) -> nx.Graph:
@@ -70,6 +72,12 @@ class Network:
             self._communities = intercommunity_edges_to_communities(self.G,
                                                                     self.intercommunity_edges)
         return self._communities
+
+    @property
+    def layout(self) -> Layout:
+        if callable(self._layout):
+            self._layout = self._layout(self.G)
+        return self._layout
 
     def __len__(self) -> int:
         if self._M is not None:

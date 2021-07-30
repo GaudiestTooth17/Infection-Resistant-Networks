@@ -17,6 +17,7 @@ import csv
 from customtypes import Array, Number
 from networkgen import make_connected_community_network
 from pathlib import Path
+import copy
 T = TypeVar('T')
 
 
@@ -332,7 +333,10 @@ class PressureConfig:
         return PressureBehavior(net, self.radius, self.flicker_probability, self.rng, self.name)
 
 
-class MakeRandomNetwork(ABC):
+class MakeNetwork(ABC):
+    """
+    Interface for classes that create networks and keep track of the type of network they create.
+    """
     @property
     @abstractmethod
     def class_name(self) -> str:
@@ -343,7 +347,7 @@ class MakeRandomNetwork(ABC):
         pass
 
 
-class MakeConnectedCommunity(MakeRandomNetwork):
+class MakeConnectedCommunity(MakeNetwork):
     def __init__(self, community_size: int, inner_bounds: Tuple[int, int],
                  num_comms: int, outer_bounds: Tuple[int, int], rng):
         self._community_size = community_size
@@ -374,7 +378,7 @@ class MakeConnectedCommunity(MakeRandomNetwork):
         return net
 
 
-class MakeBarabasiAlbert(MakeRandomNetwork):
+class MakeBarabasiAlbert(MakeNetwork):
     def __init__(self, N: int, m: int, seed: Optional[int] = None):
         self._N = N
         self._m = m
@@ -391,7 +395,7 @@ class MakeBarabasiAlbert(MakeRandomNetwork):
         return Network(nx.barabasi_albert_graph(self._N, self._m))
 
 
-class MakeWattsStrogatz(MakeRandomNetwork):
+class MakeWattsStrogatz(MakeNetwork):
     def __init__(self, N: int, k: int, p: float, seed: Optional[int] = None):
         self._N = N
         self._k = k
@@ -407,3 +411,38 @@ class MakeWattsStrogatz(MakeRandomNetwork):
         if self._seed is not None:
             return Network(nx.watts_strogatz_graph(self._N, self._k, self._p, self._seed))
         return Network(nx.watts_strogatz_graph(self._N, self._k, self._p))
+
+
+class MakeErdosRenyi(MakeNetwork):
+    def __init__(self, N: int, p: float, seed: Optional[int] = None) -> None:
+        self._N = N
+        self._p = p
+        self._seed = seed
+        self._class_name = f'ErdosRenyi(N={N},p={p})'
+
+    @property
+    def class_name(self) -> str:
+        return self._class_name
+
+    def __call__(self) -> Network:
+        return Network(nx.erdos_renyi_graph(self._N, self._p, self._seed))
+
+
+class MakeGrid(MakeNetwork):
+    def __init__(self, m: int, n: int) -> None:
+        self._m = m
+        self._n = n
+        self._class_name = f'Grid(n={n},m={m})'
+        # There is no randomness, so just save the network once it is generated once.
+        self._net: Optional[Network] = None
+
+    @property
+    def class_name(self) -> str:
+        return self._class_name
+
+    def __call__(self) -> Network:
+        if self._net is None:
+            self._net = Network(nx.grid_2d_graph(self._m, self._n))
+        # Make a copy so that if someone really wants to mutate the Network, it
+        # won't screw up future return values.
+        return copy.deepcopy(self._net)

@@ -1,18 +1,19 @@
 #!/usr/bin/python3
+from network import Network
 from typing import Iterable, List, Callable, Optional, Sequence, Tuple, Union
 import networkx as nx
 import numpy as np
 import sys
 from random import choice
 from fileio import read_network
-from analyzer import COLORS, calc_prop_common_neighbors
+from analysis import COLORS, calc_prop_common_neighbors
 import time
 AgentBehavior = Callable[[nx.Graph], Tuple[nx.Graph, bool]]
 
 
 def make_agent_generated_network(starting_point: Union[int, nx.Graph],
                                  behavior: AgentBehavior,
-                                 max_steps: int = 150) -> Optional[nx.Graph]:
+                                 max_steps: int = 150) -> Optional[Network]:
     """Use the provided behavior to make a network. Return None on timeout."""
     def make_initial_network() -> nx.Graph:
         if isinstance(starting_point, int):
@@ -27,7 +28,7 @@ def make_agent_generated_network(starting_point: Union[int, nx.Graph],
             return None
         G, finished = behavior(G)
         steps_taken += 1
-    return G
+    return Network(G)
 
 
 def assign_colors(G: nx.Graph) -> List[str]:
@@ -242,19 +243,15 @@ def agent_based_entry_point():
 
     N = int_or_none(sys.argv[1])
     if N is None:
-        M, layout, _ = read_network(sys.argv[1])
-        G = nx.Graph(M)
-        N = len(G.nodes)
+        net = read_network(sys.argv[1])
+        N = net.N
     else:
-        G: nx.Graph = nx.empty_graph(N)  # type: ignore
-        layout = None
-    if layout is None:
-        layout = nx.kamada_kawai_layout(G)
+        net = Network(nx.empty_graph(N))
 
     rand = np.random.default_rng()
     for i in range(50):
         start_time = time.time()
-        H = make_agent_generated_network(nx.Graph(G), TimeBasedBehavior(N, 4, 6, 15, rand))
+        H = make_agent_generated_network(nx.Graph(net.G), TimeBasedBehavior(N, 4, 6, 15, rand))
         if H is None:
             print(f'Failure on iteration {i} ({time.time()-start_time:.2f} s).')
         else:

@@ -35,20 +35,19 @@ def run_agent_generated_trial(args: Tuple[Disease, AgentBehavior, int, Any])\
     disease, agent_behavior, N, rand = args
     sim_len = 200
     sims_per_trial = 150
-    G = make_agent_generated_network(N, agent_behavior)
-    if G is None:
+    net = make_agent_generated_network(N, agent_behavior)
+    if net is None:
         return None
 
-    to_flicker = partitioning.fluidc_partition(G, 50)
-    proportion_flickering = len(to_flicker) / len(G.edges)
-    social_good = rate_social_good(G)
-    M = nx.to_numpy_array(G)
+    to_flicker = partitioning.fluidc_partition(net.G, 50)
+    proportion_flickering = len(to_flicker) / net.E
+    social_good = rate_social_good(net)
 
-    network_behavior = StaticFlickerBehavior(M, to_flicker, (True, False),
+    network_behavior = StaticFlickerBehavior(net.M, to_flicker, (True, False),
                                              "Probs don't change this")
-    avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
+    avg_sus = np.mean([np.sum(simulate(net.M, make_starting_sir(net.N, 1),
                                        disease, network_behavior, sim_len, None, rand)[-1][0] > 0)
-                       for _ in range(sims_per_trial)]) / len(M)
+                       for _ in range(sims_per_trial)]) / net.N
 
     return proportion_flickering, avg_sus, social_good
 

@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from network import Network
 import sim_dynamic as sd
-from common import (MakeBarabasiAlbert, MakeConnectedCommunity, MakeRandomNetwork,
+from common import (MakeBarabasiAlbert, MakeConnectedCommunity, MakeErdosRenyi, MakeGrid, MakeNetwork,
                     MakeWattsStrogatz, simulate_return_survival_rate)
 import networkx as nx
 from tqdm import tqdm
@@ -23,8 +23,7 @@ def elitist_experiment():
     rng = np.random.default_rng()
     path = 'networks/elitist-500.txt'
     name = fio.get_network_name(path)
-    G, _, communities = fio.read_network(path)
-    net = Network(G, communities=communities)
+    net = fio.read_network(path)
     r, fp = 2, .75
     update_connections, uc_name = sd.PressureBehavior(net, r, fp), f'Pressure(r={r}, fp={fp})'
     # update_connections, uc_name = sd.no_update, 'Static'
@@ -60,7 +59,7 @@ def choose_infected_node():
         ('Lowest Eigenvector Centrality',
          lambda net: choose_by_centrality(net, nx.eigenvector_centrality_numpy, min))
     )
-    networks: Tuple[MakeRandomNetwork, ...] = (
+    networks: Tuple[MakeNetwork, ...] = (
         MakeConnectedCommunity(20, (15, 20), 25, (3, 6), rng),
         MakeConnectedCommunity(10, (5, 10), 50, (3, 6), rng),
         MakeWattsStrogatz(500, 4, .01),
@@ -68,8 +67,14 @@ def choose_infected_node():
         MakeWattsStrogatz(500, 5, .01),
         MakeBarabasiAlbert(500, 2),
         MakeBarabasiAlbert(500, 3),
-        MakeBarabasiAlbert(500, 4)
-    )
+        MakeBarabasiAlbert(500, 4),
+        MakeErdosRenyi(500, .01),
+        MakeErdosRenyi(500, .02),
+        MakeErdosRenyi(500, .03),
+        MakeGrid(25, 20),
+        MakeGrid(50, 10),
+        MakeGrid(100, 5)
+    )[-6:]
 
     print(f'Running {len(networks)*len(sir_strats)} experiments')
     experiment_to_survival_rates = {}

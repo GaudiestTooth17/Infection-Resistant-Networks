@@ -4,14 +4,15 @@ import itertools as it
 from partitioning import fluidc_partition
 from sim_dynamic import Disease, StaticFlickerBehavior, make_starting_sir, simulate
 from socialgood import DecayFunction, rate_social_good
-from customtypes import Network, Number
+from customtypes import Number
+from network import Network
 from typing import Callable, List, Sequence, Tuple
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import hcmioptim.ga as ga
-from analyzer import all_same, visualize_network, betw_centrality
+from analysis import all_same, visualize_network
 from encoding_lib import edge_set_to_network, edge_list_to_network
 import partitioning as part
 

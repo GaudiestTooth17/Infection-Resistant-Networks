@@ -1,7 +1,8 @@
+from network import Network
 import os
 import networkx as nx
 import numpy as np
-from typing import Optional, Sequence, Union, Callable, Tuple, Dict, Any
+from typing import List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
 from customtypes import Layout, Communities
 import os.path as op
 import sys
@@ -26,7 +27,7 @@ def write_network(G: nx.Graph,
 
 def read_network(file_name: str,
                  remove_self_loops: bool = True)\
-        -> Tuple[nx.Graph, Optional[Layout], Optional[Communities]]:
+        -> Network:
     G: nx.Graph = nx.read_gml(file_name, None)  # type: ignore
 
     layout = nx.get_node_attributes(G, 'layout')
@@ -42,7 +43,9 @@ def read_network(file_name: str,
     if remove_self_loops:
         G.remove_edges_from(nx.selfloop_edges(G))
 
-    return G, layout, node_to_community
+    if layout is not None:
+        return Network(G, communities=node_to_community, layout=layout)
+    return Network(G, communities=node_to_community)
 
 
 def old_output_network(G: nx.Graph, network_name: str,
@@ -124,3 +127,8 @@ def network_names_to_paths(network_names: Sequence[str]) -> Sequence[str]:
         exit(1)
 
     return network_paths
+
+
+def save_animation(net: Network, sirs: List[np.ndarray], output_name: str) -> None:
+    """Save an animation of the the sirs on the network."""
+    pass
