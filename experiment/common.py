@@ -383,7 +383,7 @@ class MakeBarabasiAlbert(MakeNetwork):
         self._N = N
         self._m = m
         self._seed = seed
-        self._class_name = f'AlbertBarabasi(N={N},m={m})'
+        self._class_name = f'BarabasiAlbert(N={N},m={m})'
 
     @property
     def class_name(self) -> str:

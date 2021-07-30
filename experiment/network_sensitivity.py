@@ -138,6 +138,7 @@ def centrality_plots():
         for class_name, centrality_dist in class_to_centrality_dist.items():
             title = f'{class_name}\n{centrality_name} of the Highest {n_top_nodes} nodes'
             plt.figure()
+            plt.ylim(0, 1.0)
             plt.title(title)
             plt.ylabel(centrality_name)
             plt.boxplot(centrality_dist)
