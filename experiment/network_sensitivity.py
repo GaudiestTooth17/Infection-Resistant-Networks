@@ -105,6 +105,48 @@ def choose_infected_node():
             writer.writerow(survival_rates)
 
 
+def centrality_plots():
+    rng = np.random.default_rng()
+    # centrality_name, calc_centrality = 'Eigenvector Centrality', nx.eigenvector_centrality_numpy
+    centrality_name, calc_centrality = 'Degree Centrality', lambda G: dict(nx.degree_centrality(G))
+    make_network_funcs = (
+        MakeConnectedCommunity(20, (15, 20), 25, (3, 6), rng),
+        MakeConnectedCommunity(10, (5, 10), 50, (3, 6), rng),
+        MakeWattsStrogatz(500, 4, .01),
+        MakeWattsStrogatz(500, 4, .02),
+        MakeWattsStrogatz(500, 5, .01),
+        MakeBarabasiAlbert(500, 2),
+        MakeBarabasiAlbert(500, 3),
+        MakeBarabasiAlbert(500, 4),
+        MakeErdosRenyi(500, .01),
+        MakeErdosRenyi(500, .02),
+        MakeErdosRenyi(500, .03),
+        MakeGrid(25, 20),
+        MakeGrid(50, 10),
+        MakeGrid(100, 5)
+    )
+    n_top_nodes = 10
+    class_to_centrality_dist = {}
+    for make_network in tqdm(make_network_funcs, desc=centrality_name):
+        centralities = list(it.chain(*(sorted(calc_centrality(make_network().G).values(),
+                                              reverse=True)[:n_top_nodes]
+                                       for _ in range(1000))))
+        class_to_centrality_dist[make_network.class_name] = centralities
+    
+    with open(f'{centrality_name}.csv', 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        for class_name, centrality_dist in class_to_centrality_dist.items():
+            title = f'{class_name}\n{centrality_name} of the Highest {n_top_nodes} nodes'
+            plt.figure()
+            plt.title(title)
+            plt.ylabel(centrality_name)
+            plt.boxplot(centrality_dist)
+            plt.savefig(title+'.png', format='png')
+
+            writer.writerow([class_name])
+            writer.writerow(centrality_dist)
+
+
 if __name__ == '__main__':
     # elitist_experiment()
-    choose_infected_node()
+    centrality_plots()
