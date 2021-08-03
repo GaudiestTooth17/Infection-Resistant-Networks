@@ -18,6 +18,7 @@ from customtypes import Array, Number
 from networkgen import make_connected_community_network
 from pathlib import Path
 import copy
+import fileio as fio
 T = TypeVar('T')
 
 
@@ -446,3 +447,19 @@ class MakeGrid(MakeNetwork):
         # Make a copy so that if someone really wants to mutate the Network, it
         # won't screw up future return values.
         return copy.deepcopy(self._net)
+
+
+class LoadNetwork(MakeNetwork):
+    def __init__(self, name: str):
+        self._name = name
+        self._net = None
+
+    @property
+    def class_name(self) -> str:
+        return self._name
+
+    def __call__(self) -> Network:
+        if self._net is None:
+            path = fio.network_names_to_paths((self._name,))[0]
+            self._net = fio.read_network(path)
+        return self._net

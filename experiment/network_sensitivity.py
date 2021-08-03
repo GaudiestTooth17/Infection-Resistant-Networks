@@ -8,10 +8,10 @@ from typing import Tuple
 import fileio as fio
 import numpy as np
 import matplotlib.pyplot as plt
-from network import Network
 import sim_dynamic as sd
-from common import (MakeBarabasiAlbert, MakeConnectedCommunity, MakeErdosRenyi, MakeGrid, MakeNetwork,
-                    MakeWattsStrogatz, simulate_return_survival_rate)
+from common import (LoadNetwork, MakeBarabasiAlbert, MakeConnectedCommunity,
+                    MakeErdosRenyi, MakeGrid, MakeNetwork, MakeWattsStrogatz,
+                    simulate_return_survival_rate)
 import networkx as nx
 from tqdm import tqdm
 import itertools as it
@@ -73,8 +73,9 @@ def choose_infected_node():
         MakeErdosRenyi(500, .03),
         MakeGrid(25, 20),
         MakeGrid(50, 10),
-        MakeGrid(100, 5)
-    )[-6:]
+        MakeGrid(100, 5),
+        LoadNetwork('evolved-low-communicability-100')
+    )[-1:]
 
     print(f'Running {len(networks)*len(sir_strats)} experiments')
     experiment_to_survival_rates = {}
@@ -149,5 +150,4 @@ def centrality_plots():
 
 
 if __name__ == '__main__':
-    # elitist_experiment()
-    centrality_plots()
+    choose_infected_node()
