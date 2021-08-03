@@ -180,7 +180,6 @@ def visualize_network(G: nx.Graph, layout: Optional[Layout], name='', save=False
     if node_color is None:
         node_color = colors_from_communities(comps)
     edge_width = edge_width_func(G)
-    plt.figure()
     plt.title(f'{name}\n{len(comps)} Components')
     # node_size = np.array(tuple(nx.betweenness_centrality(G).values()))
     # node_size = np.array(tuple(nx.eigenvector_centrality_numpy(G).values()))
