@@ -1,0 +1,1602 @@
+graph [
+  node [
+    id 0
+    label "0"
+    layout 1.0
+    layout 0.06989174893806444
+    community 0
+  ]
+  node [
+    id 1
+    label "1"
+    layout 0.8402857688781239
+    layout 0.08038402145377965
+    community 0
+  ]
+  node [
+    id 2
+    label "2"
+    layout 0.6369890502510871
+    layout 0.15455842818705331
+    community 0
+  ]
+  node [
+    id 3
+    label "3"
+    layout 0.43052449644745666
+    layout 0.06002298219259703
+    community 0
+  ]
+  node [
+    id 4
+    label "4"
+    layout 0.36193853019501016
+    layout 0.3451958279064262
+    community 1
+  ]
+  node [
+    id 5
+    label "5"
+    layout 0.21244008240131254
+    layout 0.5412431414702293
+    community 1
+  ]
+  node [
+    id 6
+    label "6"
+    layout -0.00678259028950329
+    layout 0.5744643967664956
+    community 1
+  ]
+  node [
+    id 7
+    label "7"
+    layout -0.14451985532598835
+    layout 0.5776665957733318
+    community 1
+  ]
+  node [
+    id 8
+    label "8"
+    layout -0.060147351717847276
+    layout 0.6502621184674015
+    community 2
+  ]
+  node [
+    id 9
+    label "9"
+    layout -0.04197891664377117
+    layout 0.4158378838019413
+    community 2
+  ]
+  node [
+    id 10
+    label "10"
+    layout 0.8744515786762006
+    layout 0.15849548610962214
+    community 0
+  ]
+  node [
+    id 11
+    label "11"
+    layout 0.6379639445016769
+    layout 0.2684566739541094
+    community 0
+  ]
+  node [
+    id 12
+    label "12"
+    layout 0.49659965649694005
+    layout 0.28625802570880066
+    community 0
+  ]
+  node [
+    id 13
+    label "13"
+    layout 0.4068842493341261
+    layout 0.4441085999548401
+    community 3
+  ]
+  node [
+    id 14
+    label "14"
+    layout 0.23730462305354832
+    layout 0.34144140969274295
+    community 3
+  ]
+  node [
+    id 15
+    label "15"
+    layout 0.2692356995895993
+    layout 0.09373466950120721
+    community 3
+  ]
+  node [
+    id 16
+    label "16"
+    layout 0.15660785049805806
+    layout -0.20271334427274604
+    community 1
+  ]
+  node [
+    id 17
+    label "17"
+    layout -0.2834364349421895
+    layout 0.35406663474971023
+    community 1
+  ]
+  node [
+    id 18
+    label "18"
+    layout -0.38210898156787604
+    layout 0.532260130244706
+    community 2
+  ]
+  node [
+    id 19
+    label "19"
+    layout -0.22307812633626686
+    layout 0.6171075158718115
+    community 2
+  ]
+  node [
+    id 20
+    label "20"
+    layout 0.7294230265899103
+    layout -0.016295886315397315
+    community 0
+  ]
+  node [
+    id 21
+    label "21"
+    layout 0.5789344882335543
+    layout 0.06100613640180834
+    community 0
+  ]
+  node [
+    id 22
+    label "22"
+    layout 0.5883958053080508
+    layout -0.13824869982797092
+    community 0
+  ]
+  node [
+    id 23
+    label "23"
+    layout 0.22095702604389172
+    layout 0.4109768816644392
+    community 3
+  ]
+  node [
+    id 24
+    label "24"
+    layout 0.044869009514230764
+    layout 0.42977572449065593
+    community 3
+  ]
+  node [
+    id 25
+    label "25"
+    layout -0.19311205890426894
+    layout 0.4718041620658667
+    community 3
+  ]
+  node [
+    id 26
+    label "26"
+    layout -0.46140497768047717
+    layout 0.4278120116924008
+    community 4
+  ]
+  node [
+    id 27
+    label "27"
+    layout -0.5118458787657374
+    layout 0.2960592389682434
+    community 4
+  ]
+  node [
+    id 28
+    label "28"
+    layout -0.5694478054804585
+    layout 0.49384981488992813
+    community 2
+  ]
+  node [
+    id 29
+    label "29"
+    layout -0.41904814681514563
+    layout 0.672874582138251
+    community 2
+  ]
+  node [
+    id 30
+    label "30"
+    layout 0.5509374171451252
+    layout -0.05080377136562458
+    community 0
+  ]
+  node [
+    id 31
+    label "31"
+    layout 0.27742478790888553
+    layout -0.04570405497214634
+    community 0
+  ]
+  node [
+    id 32
+    label "32"
+    layout 0.360544505083492
+    layout -0.08744160207313953
+    community 0
+  ]
+  node [
+    id 33
+    label "33"
+    layout 0.19570512603698406
+    layout 0.17685939511238055
+    community 3
+  ]
+  node [
+    id 34
+    label "34"
+    layout -0.0480154895367971
+    layout 0.18710521602442298
+    community 3
+  ]
+  node [
+    id 35
+    label "35"
+    layout -0.30378560344981603
+    layout 0.262754277754988
+    community 3
+  ]
+  node [
+    id 36
+    label "36"
+    layout -0.5826126291525434
+    layout 0.22656687311614127
+    community 4
+  ]
+  node [
+    id 37
+    label "37"
+    layout -0.7295931117116904
+    layout 0.23047020587666747
+    community 4
+  ]
+  node [
+    id 38
+    label "38"
+    layout -0.6145924728763029
+    layout 0.36204803179116846
+    community 2
+  ]
+  node [
+    id 39
+    label "39"
+    layout -0.4460655029092547
+    layout 0.5466388286611781
+    community 2
+  ]
+  node [
+    id 40
+    label "40"
+    layout 0.48753697200312246
+    layout -0.15303909036743243
+    community 0
+  ]
+  node [
+    id 41
+    label "41"
+    layout 0.3252103661037854
+    layout -0.17674620796258497
+    community 3
+  ]
+  node [
+    id 42
+    label "42"
+    layout 0.18301532738868287
+    layout -0.11209047652808506
+    community 3
+  ]
+  node [
+    id 43
+    label "43"
+    layout 0.13791024026622803
+    layout 0.003754980536960615
+    community 3
+  ]
+  node [
+    id 44
+    label "44"
+    layout -0.05702527722228454
+    layout -0.05910225949699726
+    community 3
+  ]
+  node [
+    id 45
+    label "45"
+    layout -0.34341476894361656
+    layout 0.033197120210544814
+    community 3
+  ]
+  node [
+    id 46
+    label "46"
+    layout -0.5886113979657331
+    layout -0.006077378774902711
+    community 4
+  ]
+  node [
+    id 47
+    label "47"
+    layout -0.6192514083237134
+    layout 0.07986521828179119
+    community 4
+  ]
+  node [
+    id 48
+    label "48"
+    layout -0.4422821197001509
+    layout 0.196773158166998
+    community 4
+  ]
+  node [
+    id 49
+    label "49"
+    layout -0.24095770654631424
+    layout 0.4143763761362328
+    community 4
+  ]
+  node [
+    id 50
+    label "50"
+    layout 0.362929992275274
+    layout -0.0021891944272446
+    community 0
+  ]
+  node [
+    id 51
+    label "51"
+    layout 0.3886413682139753
+    layout -0.306030638012865
+    community 3
+  ]
+  node [
+    id 52
+    label "52"
+    layout 0.20530607993949718
+    layout -0.3832657077606305
+    community 3
+  ]
+  node [
+    id 53
+    label "53"
+    layout -0.018437330370837102
+    layout -0.5142388034514058
+    community 3
+  ]
+  node [
+    id 54
+    label "54"
+    layout -0.160916822513618
+    layout -0.3432456288070739
+    community 3
+  ]
+  node [
+    id 55
+    label "55"
+    layout -0.31295920189909127
+    layout -0.263623369964085
+    community 4
+  ]
+  node [
+    id 56
+    label "56"
+    layout -0.5271247610880665
+    layout -0.178819425254244
+    community 4
+  ]
+  node [
+    id 57
+    label "57"
+    layout -0.4947096201970595
+    layout -0.05480561554707216
+    community 4
+  ]
+  node [
+    id 58
+    label "58"
+    layout -0.3103259579927232
+    layout 0.18944653955646018
+    community 4
+  ]
+  node [
+    id 59
+    label "59"
+    layout -0.07553819980196023
+    layout 0.3067728338878629
+    community 4
+  ]
+  node [
+    id 60
+    label "60"
+    layout -0.03399967164643767
+    layout -0.25504862219744084
+    community 3
+  ]
+  node [
+    id 61
+    label "61"
+    layout 0.21329664560629163
+    layout -0.43930339899964016
+    community 3
+  ]
+  node [
+    id 62
+    label "62"
+    layout 0.10821677601374279
+    layout -0.6060998297994629
+    community 3
+  ]
+  node [
+    id 63
+    label "63"
+    layout -0.12740986533113433
+    layout -0.6768603017784671
+    community 3
+  ]
+  node [
+    id 64
+    label "64"
+    layout -0.23664481445931268
+    layout -0.4959758870555502
+    community 4
+  ]
+  node [
+    id 65
+    label "65"
+    layout -0.4223182371961908
+    layout -0.37575085833467
+    community 4
+  ]
+  node [
+    id 66
+    label "66"
+    layout -0.40404790760300824
+    layout -0.1447271868630026
+    community 4
+  ]
+  node [
+    id 67
+    label "67"
+    layout -0.39248081387697425
+    layout 0.07952970926295351
+    community 4
+  ]
+  node [
+    id 68
+    label "68"
+    layout -0.1600167805878357
+    layout 0.16515612183405728
+    community 4
+  ]
+  node [
+    id 69
+    label "69"
+    layout 0.06967786385554639
+    layout 0.12897892283550846
+    community 0
+  ]
+  node [
+    id 70
+    label "70"
+    layout -0.3462686925543594
+    layout -0.2542530335808823
+    community 1
+  ]
+  node [
+    id 71
+    label "71"
+    layout -0.3015397440882282
+    layout -0.4461172178602529
+    community 1
+  ]
+  node [
+    id 72
+    label "72"
+    layout -0.07253318493354075
+    layout -0.5772721619825484
+    community 1
+  ]
+  node [
+    id 73
+    label "73"
+    layout -0.015493299688782682
+    layout -0.6689235207051945
+    community 1
+  ]
+  node [
+    id 74
+    label "74"
+    layout -0.04335426937796862
+    layout -0.3950182313004639
+    community 4
+  ]
+  node [
+    id 75
+    label "75"
+    layout -0.27050519701576126
+    layout -0.33730300665841473
+    community 4
+  ]
+  node [
+    id 76
+    label "76"
+    layout -0.3515490924225117
+    layout -0.05236489955048817
+    community 4
+  ]
+  node [
+    id 77
+    label "77"
+    layout -0.21044690911463942
+    layout -0.029248526073207774
+    community 4
+  ]
+  node [
+    id 78
+    label "78"
+    layout -0.07097788242728859
+    layout 0.05034111046958273
+    community 4
+  ]
+  node [
+    id 79
+    label "79"
+    layout -0.07738488128144749
+    layout -0.12180076408550301
+    community 0
+  ]
+  node [
+    id 80
+    label "80"
+    layout -0.3650030461640521
+    layout -0.11350555842630386
+    community 1
+  ]
+  node [
+    id 81
+    label "81"
+    layout -0.21641189096225766
+    layout -0.2375291720592119
+    community 1
+  ]
+  node [
+    id 82
+    label "82"
+    layout 0.17060061996932846
+    layout -0.48370183104415887
+    community 1
+  ]
+  node [
+    id 83
+    label "83"
+    layout 0.1314806218410978
+    layout -0.6483167301309748
+    community 1
+  ]
+  node [
+    id 84
+    label "84"
+    layout 0.23568754346428844
+    layout -0.1988875841761177
+    community 0
+  ]
+  node [
+    id 85
+    label "85"
+    layout -0.10300867471400357
+    layout -0.5112464089208577
+    community 4
+  ]
+  node [
+    id 86
+    label "86"
+    layout 0.08918518302050817
+    layout -0.5011660413392536
+    community 2
+  ]
+  node [
+    id 87
+    label "87"
+    layout 0.05900820373089744
+    layout -0.12921048243679106
+    community 3
+  ]
+  node [
+    id 88
+    label "88"
+    layout 0.09387989606085906
+    layout -0.01844004626338556
+    community 0
+  ]
+  node [
+    id 89
+    label "89"
+    layout -0.1495391453851595
+    layout -0.049785886408962546
+    community 2
+  ]
+  node [
+    id 90
+    label "90"
+    layout -0.24688806861175772
+    layout 0.0661350919210865
+    community 1
+  ]
+  node [
+    id 91
+    label "91"
+    layout -0.046198776066873934
+    layout -0.16367221116328556
+    community 1
+  ]
+  node [
+    id 92
+    label "92"
+    layout 0.22823961691570696
+    layout -0.2960251788039323
+    community 1
+  ]
+  node [
+    id 93
+    label "93"
+    layout 0.29213924006357495
+    layout -0.5162621556491125
+    community 1
+  ]
+  node [
+    id 94
+    label "94"
+    layout 0.31668996874751304
+    layout -0.39513579884925454
+    community 3
+  ]
+  node [
+    id 95
+    label "95"
+    layout 0.07851605534488569
+    layout -0.3792804570794994
+    community 3
+  ]
+  node [
+    id 96
+    label "96"
+    layout 0.09128965234504322
+    layout -0.2401192568014154
+    community 2
+  ]
+  node [
+    id 97
+    label "97"
+    layout 0.174215141711287
+    layout 0.041580104846649896
+    community 2
+  ]
+  node [
+    id 98
+    label "98"
+    layout 0.315864059947539
+    layout 0.14446430728782958
+    community 0
+  ]
+  node [
+    id 99
+    label "99"
+    layout 0.010197195164691036
+    layout 0.13040413493142647
+    community 2
+  ]
+  edge [
+    source 0
+    target 1
+    weight 1
+  ]
+  edge [
+    source 0
+    target 10
+    weight 1
+  ]
+  edge [
+    source 1
+    target 2
+    weight 1
+  ]
+  edge [
+    source 1
+    target 10
+    weight 1
+  ]
+  edge [
+    source 2
+    target 3
+    weight 1
+  ]
+  edge [
+    source 2
+    target 12
+    weight 1
+  ]
+  edge [
+    source 3
+    target 4
+    weight 1
+  ]
+  edge [
+    source 3
+    target 84
+    weight 1
+  ]
+  edge [
+    source 4
+    target 5
+    weight 1
+  ]
+  edge [
+    source 4
+    target 14
+    weight 1
+  ]
+  edge [
+    source 5
+    target 6
+    weight 1
+  ]
+  edge [
+    source 5
+    target 23
+    weight 1
+  ]
+  edge [
+    source 6
+    target 7
+    weight 1
+  ]
+  edge [
+    source 6
+    target 49
+    weight 1
+  ]
+  edge [
+    source 7
+    target 8
+    weight 1
+  ]
+  edge [
+    source 7
+    target 17
+    weight 1
+  ]
+  edge [
+    source 8
+    target 9
+    weight 1
+  ]
+  edge [
+    source 8
+    target 19
+    weight 1
+  ]
+  edge [
+    source 9
+    target 19
+    weight 1
+  ]
+  edge [
+    source 9
+    target 99
+    weight 1
+  ]
+  edge [
+    source 10
+    target 20
+    weight 1
+  ]
+  edge [
+    source 11
+    target 12
+    weight 1
+  ]
+  edge [
+    source 11
+    target 21
+    weight 1
+  ]
+  edge [
+    source 12
+    target 13
+    weight 1
+  ]
+  edge [
+    source 12
+    target 98
+    weight 1
+  ]
+  edge [
+    source 13
+    target 14
+    weight 1
+  ]
+  edge [
+    source 13
+    target 23
+    weight 1
+  ]
+  edge [
+    source 14
+    target 15
+    weight 1
+  ]
+  edge [
+    source 14
+    target 24
+    weight 1
+  ]
+  edge [
+    source 15
+    target 16
+    weight 1
+  ]
+  edge [
+    source 15
+    target 43
+    weight 1
+  ]
+  edge [
+    source 16
+    target 82
+    weight 1
+  ]
+  edge [
+    source 16
+    target 91
+    weight 1
+  ]
+  edge [
+    source 17
+    target 18
+    weight 1
+  ]
+  edge [
+    source 17
+    target 90
+    weight 1
+  ]
+  edge [
+    source 18
+    target 19
+    weight 1
+  ]
+  edge [
+    source 18
+    target 28
+    weight 1
+  ]
+  edge [
+    source 19
+    target 29
+    weight 1
+  ]
+  edge [
+    source 20
+    target 21
+    weight 1
+  ]
+  edge [
+    source 20
+    target 30
+    weight 1
+  ]
+  edge [
+    source 21
+    target 22
+    weight 1
+  ]
+  edge [
+    source 21
+    target 50
+    weight 1
+  ]
+  edge [
+    source 22
+    target 30
+    weight 1
+  ]
+  edge [
+    source 22
+    target 32
+    weight 1
+  ]
+  edge [
+    source 23
+    target 24
+    weight 1
+  ]
+  edge [
+    source 23
+    target 33
+    weight 1
+  ]
+  edge [
+    source 24
+    target 25
+    weight 1
+  ]
+  edge [
+    source 24
+    target 59
+    weight 1
+  ]
+  edge [
+    source 25
+    target 26
+    weight 1
+  ]
+  edge [
+    source 25
+    target 35
+    weight 1
+  ]
+  edge [
+    source 26
+    target 27
+    weight 1
+  ]
+  edge [
+    source 26
+    target 36
+    weight 1
+  ]
+  edge [
+    source 27
+    target 28
+    weight 1
+  ]
+  edge [
+    source 27
+    target 67
+    weight 1
+  ]
+  edge [
+    source 28
+    target 29
+    weight 1
+  ]
+  edge [
+    source 28
+    target 38
+    weight 1
+  ]
+  edge [
+    source 29
+    target 39
+    weight 1
+  ]
+  edge [
+    source 30
+    target 31
+    weight 1
+  ]
+  edge [
+    source 30
+    target 40
+    weight 1
+  ]
+  edge [
+    source 31
+    target 32
+    weight 1
+  ]
+  edge [
+    source 31
+    target 44
+    weight 1
+  ]
+  edge [
+    source 32
+    target 33
+    weight 1
+  ]
+  edge [
+    source 32
+    target 92
+    weight 1
+  ]
+  edge [
+    source 33
+    target 34
+    weight 1
+  ]
+  edge [
+    source 33
+    target 43
+    weight 1
+  ]
+  edge [
+    source 34
+    target 35
+    weight 1
+  ]
+  edge [
+    source 34
+    target 44
+    weight 1
+  ]
+  edge [
+    source 35
+    target 36
+    weight 1
+  ]
+  edge [
+    source 35
+    target 45
+    weight 1
+  ]
+  edge [
+    source 36
+    target 37
+    weight 1
+  ]
+  edge [
+    source 36
+    target 46
+    weight 1
+  ]
+  edge [
+    source 37
+    target 38
+    weight 1
+  ]
+  edge [
+    source 37
+    target 47
+    weight 1
+  ]
+  edge [
+    source 38
+    target 39
+    weight 1
+  ]
+  edge [
+    source 38
+    target 48
+    weight 1
+  ]
+  edge [
+    source 39
+    target 49
+    weight 1
+  ]
+  edge [
+    source 40
+    target 41
+    weight 1
+  ]
+  edge [
+    source 40
+    target 50
+    weight 1
+  ]
+  edge [
+    source 41
+    target 42
+    weight 1
+  ]
+  edge [
+    source 41
+    target 87
+    weight 1
+  ]
+  edge [
+    source 42
+    target 43
+    weight 1
+  ]
+  edge [
+    source 42
+    target 52
+    weight 1
+  ]
+  edge [
+    source 42
+    target 99
+    weight 1
+  ]
+  edge [
+    source 43
+    target 60
+    weight 1
+  ]
+  edge [
+    source 44
+    target 45
+    weight 1
+  ]
+  edge [
+    source 44
+    target 54
+    weight 1
+  ]
+  edge [
+    source 45
+    target 46
+    weight 1
+  ]
+  edge [
+    source 45
+    target 80
+    weight 1
+  ]
+  edge [
+    source 46
+    target 47
+    weight 1
+  ]
+  edge [
+    source 46
+    target 56
+    weight 1
+  ]
+  edge [
+    source 47
+    target 48
+    weight 1
+  ]
+  edge [
+    source 47
+    target 57
+    weight 1
+  ]
+  edge [
+    source 48
+    target 49
+    weight 1
+  ]
+  edge [
+    source 48
+    target 76
+    weight 1
+  ]
+  edge [
+    source 49
+    target 59
+    weight 1
+  ]
+  edge [
+    source 50
+    target 51
+    weight 1
+  ]
+  edge [
+    source 50
+    target 69
+    weight 1
+  ]
+  edge [
+    source 51
+    target 52
+    weight 1
+  ]
+  edge [
+    source 51
+    target 61
+    weight 1
+  ]
+  edge [
+    source 52
+    target 53
+    weight 1
+  ]
+  edge [
+    source 52
+    target 62
+    weight 1
+  ]
+  edge [
+    source 53
+    target 54
+    weight 1
+  ]
+  edge [
+    source 53
+    target 63
+    weight 1
+  ]
+  edge [
+    source 54
+    target 55
+    weight 1
+  ]
+  edge [
+    source 54
+    target 64
+    weight 1
+  ]
+  edge [
+    source 55
+    target 56
+    weight 1
+  ]
+  edge [
+    source 55
+    target 79
+    weight 1
+  ]
+  edge [
+    source 56
+    target 57
+    weight 1
+  ]
+  edge [
+    source 56
+    target 66
+    weight 1
+  ]
+  edge [
+    source 57
+    target 58
+    weight 1
+  ]
+  edge [
+    source 57
+    target 70
+    weight 1
+  ]
+  edge [
+    source 58
+    target 59
+    weight 1
+  ]
+  edge [
+    source 58
+    target 68
+    weight 1
+  ]
+  edge [
+    source 59
+    target 69
+    weight 1
+  ]
+  edge [
+    source 60
+    target 61
+    weight 1
+  ]
+  edge [
+    source 60
+    target 70
+    weight 1
+  ]
+  edge [
+    source 61
+    target 62
+    weight 1
+  ]
+  edge [
+    source 61
+    target 94
+    weight 1
+  ]
+  edge [
+    source 62
+    target 63
+    weight 1
+  ]
+  edge [
+    source 62
+    target 72
+    weight 1
+  ]
+  edge [
+    source 63
+    target 64
+    weight 1
+  ]
+  edge [
+    source 63
+    target 73
+    weight 1
+  ]
+  edge [
+    source 64
+    target 65
+    weight 1
+  ]
+  edge [
+    source 64
+    target 74
+    weight 1
+  ]
+  edge [
+    source 65
+    target 66
+    weight 1
+  ]
+  edge [
+    source 65
+    target 75
+    weight 1
+  ]
+  edge [
+    source 66
+    target 67
+    weight 1
+  ]
+  edge [
+    source 66
+    target 89
+    weight 1
+  ]
+  edge [
+    source 67
+    target 68
+    weight 1
+  ]
+  edge [
+    source 67
+    target 77
+    weight 1
+  ]
+  edge [
+    source 68
+    target 69
+    weight 1
+  ]
+  edge [
+    source 68
+    target 78
+    weight 1
+  ]
+  edge [
+    source 69
+    target 79
+    weight 1
+  ]
+  edge [
+    source 70
+    target 71
+    weight 1
+  ]
+  edge [
+    source 70
+    target 80
+    weight 1
+  ]
+  edge [
+    source 71
+    target 72
+    weight 1
+  ]
+  edge [
+    source 71
+    target 81
+    weight 1
+  ]
+  edge [
+    source 72
+    target 73
+    weight 1
+  ]
+  edge [
+    source 72
+    target 82
+    weight 1
+  ]
+  edge [
+    source 73
+    target 74
+    weight 1
+  ]
+  edge [
+    source 73
+    target 83
+    weight 1
+  ]
+  edge [
+    source 74
+    target 75
+    weight 1
+  ]
+  edge [
+    source 74
+    target 84
+    weight 1
+  ]
+  edge [
+    source 75
+    target 76
+    weight 1
+  ]
+  edge [
+    source 75
+    target 85
+    weight 1
+  ]
+  edge [
+    source 76
+    target 77
+    weight 1
+  ]
+  edge [
+    source 76
+    target 90
+    weight 1
+  ]
+  edge [
+    source 77
+    target 78
+    weight 1
+  ]
+  edge [
+    source 77
+    target 87
+    weight 1
+  ]
+  edge [
+    source 78
+    target 79
+    weight 1
+  ]
+  edge [
+    source 78
+    target 88
+    weight 1
+  ]
+  edge [
+    source 79
+    target 96
+    weight 1
+  ]
+  edge [
+    source 80
+    target 81
+    weight 1
+  ]
+  edge [
+    source 80
+    target 90
+    weight 1
+  ]
+  edge [
+    source 81
+    target 89
+    weight 1
+  ]
+  edge [
+    source 81
+    target 91
+    weight 1
+  ]
+  edge [
+    source 82
+    target 83
+    weight 1
+  ]
+  edge [
+    source 82
+    target 92
+    weight 1
+  ]
+  edge [
+    source 83
+    target 85
+    weight 1
+  ]
+  edge [
+    source 83
+    target 93
+    weight 1
+  ]
+  edge [
+    source 84
+    target 88
+    weight 1
+  ]
+  edge [
+    source 84
+    target 94
+    weight 1
+  ]
+  edge [
+    source 85
+    target 86
+    weight 1
+  ]
+  edge [
+    source 85
+    target 95
+    weight 1
+  ]
+  edge [
+    source 86
+    target 93
+    weight 1
+  ]
+  edge [
+    source 86
+    target 96
+    weight 1
+  ]
+  edge [
+    source 87
+    target 95
+    weight 1
+  ]
+  edge [
+    source 87
+    target 97
+    weight 1
+  ]
+  edge [
+    source 88
+    target 89
+    weight 1
+  ]
+  edge [
+    source 88
+    target 98
+    weight 1
+  ]
+  edge [
+    source 89
+    target 99
+    weight 1
+  ]
+  edge [
+    source 90
+    target 91
+    weight 1
+  ]
+  edge [
+    source 91
+    target 92
+    weight 1
+  ]
+  edge [
+    source 92
+    target 93
+    weight 1
+  ]
+  edge [
+    source 93
+    target 94
+    weight 1
+  ]
+  edge [
+    source 94
+    target 95
+    weight 1
+  ]
+  edge [
+    source 95
+    target 96
+    weight 1
+  ]
+  edge [
+    source 96
+    target 97
+    weight 1
+  ]
+  edge [
+    source 97
+    target 98
+    weight 1
+  ]
+  edge [
+    source 97
+    target 99
+    weight 1
+  ]
+]
