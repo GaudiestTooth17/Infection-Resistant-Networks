@@ -180,14 +180,15 @@ def visualize_network(G: nx.Graph, layout: Optional[Layout], name='', save=False
     if node_color is None:
         node_color = colors_from_communities(comps)
     edge_width = edge_width_func(G)
+    plt.figure()
     plt.title(f'{name}\n{len(comps)} Components')
     # node_size = np.array(tuple(nx.betweenness_centrality(G).values()))
     # node_size = np.array(tuple(nx.eigenvector_centrality_numpy(G).values()))
     if layout is None:
         nx.draw_kamada_kawai(G, node_size=node_size, node_color=node_color, width=edge_width)
     else:
-        nx.draw_networkx(G, pos=layout, node_size=node_size, node_color=node_color,
-                         width=edge_width, with_labels=False)
+        nx.draw(G, pos=layout, node_size=node_size, node_color=node_color,
+                width=edge_width, with_labels=False)
     if save:
         plt.savefig(f'vis-{name}.png', dpi=300, format='png')
     else:

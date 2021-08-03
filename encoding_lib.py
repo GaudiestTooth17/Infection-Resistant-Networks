@@ -1,7 +1,8 @@
+from customtypes import Number
 from network import Network
 import numpy as np
 import networkx as nx
-from typing import Sequence
+from typing import Sequence, Tuple
 
 
 def degree_sequence_to_network(degrees: Sequence[int],
@@ -73,3 +74,21 @@ def edge_list_to_network(edge_list: np.ndarray) -> nx.Graph:
     G.add_edges_from(((edge_list[i], edge_list[i+1])
                       for i in range(0, len(edge_list), 2)))
     return G
+
+
+def calc_edge_set_population_diversity(rated_population: Sequence[Tuple[Number, np.ndarray]]) -> float:
+    diversity = 0
+    genotype_len = len(rated_population[0][1])
+    pop_size = len(rated_population)
+    n_unique_pairings = (pop_size**2 - pop_size) // 2
+    normalization_quantity = n_unique_pairings * genotype_len
+    # first set diversity equal to how undiverse the population is
+    for i in range(len(rated_population)):
+        for j in range(i+1, len(rated_population)):
+            # add 1 for each time an index is the same
+            diversity += np.sum(rated_population[i][1] == rated_population[j][1])
+    # normalize
+    diversity /= normalization_quantity
+    # subtract from 1 to change from uniformity to diversity
+    diversity = 1 - diversity
+    return diversity

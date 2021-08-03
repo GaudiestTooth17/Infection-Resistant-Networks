@@ -5,18 +5,18 @@ from analysis import visualize_network
 from typing import Optional
 import networkx as nx
 from network import Network
-RAND = np.random.default_rng()
+RNG = np.random.default_rng()
 
 
 def connected_community_entry_point():
     N_comm = 10
-    num_communities = 50
+    num_communities = 10
     name = f'connected-comm-{num_communities}-{N_comm}'
 
-    inner_degrees = np.round(RAND.poisson(10, N_comm))
+    inner_degrees = RNG.integers(5, 10, N_comm)
     if np.sum(inner_degrees) % 2 == 1:
         inner_degrees[np.argmin(inner_degrees)] += 1
-    outer_degrees = np.round(RAND.poisson(4, num_communities))
+    outer_degrees = RNG.integers(3, 6, num_communities)
     if np.sum(outer_degrees) % 2 == 1:
         outer_degrees[np.argmin(outer_degrees)] += 1
 
@@ -24,7 +24,6 @@ def connected_community_entry_point():
     if net is None:
         print('Could not generate network.')
         exit(1)
-    net
 
     layout: Layout = nx.spring_layout(net.G, iterations=200)
     visualize_network(net.G, layout, name, block=False)
@@ -35,7 +34,7 @@ def connected_community_entry_point():
 
 def make_connected_community_network(inner_degrees: np.ndarray,
                                      outer_degrees: np.ndarray,
-                                     rand=RAND,
+                                     rand=RNG,
                                      max_tries: int = 100,
                                      allow_disconnected: bool = True)\
         -> Optional[Network]:

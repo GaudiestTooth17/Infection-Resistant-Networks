@@ -107,8 +107,8 @@ def choose_infected_node():
 
 def centrality_plots():
     rng = np.random.default_rng()
-    # centrality_name, calc_centrality = 'Eigenvector Centrality', nx.eigenvector_centrality_numpy
-    centrality_name, calc_centrality = 'Degree Centrality', lambda G: dict(nx.degree_centrality(G))
+    centrality_name, calc_centrality = 'Eigenvector Centrality', nx.eigenvector_centrality_numpy
+    # centrality_name, calc_centrality = 'Degree Centrality', lambda G: dict(nx.degree_centrality(G))
     make_network_funcs = (
         MakeConnectedCommunity(20, (15, 20), 25, (3, 6), rng),
         MakeConnectedCommunity(10, (5, 10), 50, (3, 6), rng),
@@ -132,7 +132,7 @@ def centrality_plots():
                                               reverse=True)[:n_top_nodes]
                                        for _ in range(1000))))
         class_to_centrality_dist[make_network.class_name] = centralities
-    
+
     with open(f'{centrality_name}.csv', 'w', newline='') as csv_file:
         writer = csv.writer(csv_file)
         for class_name, centrality_dist in class_to_centrality_dist.items():

@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-from fileio import write_network
+import os
+import fileio as fio
 import itertools as it
 from partitioning import fluidc_partition
 from sim_dynamic import Disease, StaticFlickerBehavior, make_starting_sir, simulate
@@ -13,24 +14,23 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import hcmioptim.ga as ga
 from analysis import all_same, visualize_network
-from encoding_lib import edge_set_to_network, edge_list_to_network
+import encoding_lib as lib
 import partitioning as part
 
 
 def main():
-    n_steps = 100
+    n_steps = 400
     N = 250
-    rand = np.random.default_rng()
-    # optimizer = ga.GAOptimizer(PercolationResistanceObjective(rand, 10, edge_set_to_network),
-    #                            NextNetworkGenEdgeSet(rand),
-    #                            new_edge_set_pop(20, N, rand),
-    #                            True, 6)
-    # TODO: Run with remember_cost=False. That might help get more accurate results.
-    # It'll also take longer to run.
-    optimizer = ga.GAOptimizer(IRNObjective(edge_set_to_network, rand),
-                               NextNetworkGenEdgeSet(rand, .00001),
-                               new_edge_set_pop(30, N, rand),
-                               True, 6)
+    rng = np.random.default_rng()
+    for network_path in (os.path.join('networks', name)
+                         for name in ('cavemen-10-10.txt', 'elitist-100.txt')):
+        net = fio.read_network(network_path)
+        disp_name = fio.get_network_name(network_path)
+        print(f'{disp_name}: {low_communicability_objective(lib.network_to_edge_set(net.M))}')
+    optimizer = ga.GAOptimizer(low_communicability_objective,
+                               NextGenFixedEdges(.0001, rng),
+                               new_fixed_edge_set_pop(24, 100, .03, rng),
+                               True, 4)
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
     diversities = np.zeros(n_steps)
@@ -41,14 +41,11 @@ def main():
         if global_best is None or local_best[0] < global_best[0]:
             global_best = local_best
         costs[step] = local_best[0]
-        diversities[step] = len(set(ctt[1].tobytes()
-                                for ctt in cost_to_encoding)) / len(cost_to_encoding)
+        diversities[step] = lib.calc_edge_set_population_diversity(cost_to_encoding)
         pbar.set_description(f'Cost: {local_best[0]:.3f} Diversity: {diversities[step]:.3f}')
-        if global_best[0] == 1:
-            break
     print(f'Total cache hits: {optimizer.num_cache_hits}')
 
-    net = edge_set_to_network(global_best[1])
+    net = lib.edge_set_to_network(global_best[1])
     print('Number of nodes:', net.N)
     print('Number of edges:', net.E)
     print('Number of components:', len(tuple(nx.connected_components(net.G))))
@@ -69,11 +66,11 @@ def main():
     while save.lower() not in ('y', 'n'):
         save = input('Save? ')
     if save == 'y':
-        name = input('Name? ')
+        disp_name = input('Name? ')
         communities = part.intercommunity_edges_to_communities(net.G,
                                                                part.fluidc_partition(net.G,
                                                                                      net.N//20))
-        write_network(net.G, name, layout, communities)
+        fio.write_network(net.G, disp_name, layout, communities)
 
 
 class PercolationResistanceObjective:
@@ -103,6 +100,10 @@ class PercolationResistanceObjective:
 
 class IRNObjective:
     def __init__(self, encoding_to_network: Callable[[np.ndarray], Network], rand) -> None:
+        """
+        This objective is problematic because there is so much variance in how
+        much a disease spreads.
+        """
         self._enc_to_G = encoding_to_network
         self._rand = rand
         self._disease = Disease(4, .2)
@@ -138,7 +139,7 @@ class ClusteringObjective:
 
 
 def component_objective(edge_list: np.ndarray) -> int:
-    G = edge_list_to_network(edge_list)
+    G = lib.edge_list_to_network(edge_list)
     conn_comps = tuple(nx.connected_components(G))
     largest_component = max(conn_comps, key=len)
     bad = len(largest_component)*2 + len(conn_comps)
@@ -165,6 +166,13 @@ class HighBetweenessObjective:
                                   reverse=True)
         return -sum(edge_betwenesses[:self._num_important_edges])\
             - nx.diameter(G)*self._diameter_weight  # type: ignore
+
+
+def low_communicability_objective(edges_present: np.ndarray) -> float:
+    """Accept a bitset of edges and return the sum of the communicability values."""
+    net = lib.edge_set_to_network(edges_present)
+    communicability = nx.communicability(net.G)
+    return sum(c for inner_values in communicability.values() for c in inner_values.values())
 
 
 def configuration_neighbor(degrees: Sequence[int], rand) -> Sequence[int]:
@@ -231,6 +239,36 @@ class NextNetworkGenEdgeSet:
         return children
 
 
+class NextGenFixedEdges:
+    def __init__(self, mutation_prob: float, rng) -> None:
+        self._mutation_prob = mutation_prob
+        self._rng = rng
+
+    def __call__(self, rated_pop: Sequence[Tuple[Number, np.ndarray]]) -> Sequence[np.ndarray]:
+        couples = ga.roulette_wheel_rank_selection(rated_pop)
+        children = tuple(it.chain(*(ga.bitset_cross_over(*couple) for couple in couples)))
+
+        n_children = len(children)
+        len_child = len(children[0])
+        for i, j in it.product(range(n_children), range(len_child)):
+            # This would allow an edge to mutate and mutate back to the original value,
+            # but I'm going with my gut feeling that it isn't worth adding a check to
+            # prevent this.
+            if self._rng.random() < self._mutation_prob:
+                child = children[i]
+                old_value = child[j]
+                search_ind = (j+1) % len_child
+                child[j] = 1 - child[j]
+                # swap another value to compensate
+                # it makes sense to start looking close to the old value because
+                # the mutation will stay more local that way.
+                while child[search_ind] == old_value:
+                    search_ind = (search_ind+1) % len_child
+                child[search_ind] = 1 - child[search_ind]
+
+        return children
+
+
 def new_edge_list_pop(population_size: int, N: int, rand) -> Tuple[np.ndarray, ...]:
     # decide on a degree for each of the nodes
     node_to_degree = np.clip(rand.normal(5, 3, N), 1, None).astype('int')
@@ -251,12 +289,28 @@ def new_edge_list_pop(population_size: int, N: int, rand) -> Tuple[np.ndarray, .
 
 
 def new_edge_set_pop(size: int, N: int, rand) -> List[np.ndarray]:
+    """Create a new population of 'bitsets' that represent whether an edge is off or on."""
     edge_density = .01
     E = (N**2 - N) // 2
     population = [np.array([1 if i < int(E*edge_density) else 0 for i in range(E)])
                   for _ in range(size)]
     for edge_set in population:
         rand.shuffle(edge_set)
+    return population
+
+
+def new_fixed_edge_set_pop(size: int, N: int, approx_edge_density: float, rng) -> List[np.ndarray]:
+    """
+    Create a new population of 'bitsets' that represent whether an edge is off or on.
+    Each genotype has the same number of edges which is calculated using
+    approx_edge_density.
+    """
+    possible_edges = (N**2 - N) // 2
+    n_edges = np.ceil(possible_edges*approx_edge_density)
+    prototype = np.array([1 if i < n_edges else 0 for i in range(possible_edges)])
+    population = [np.copy(prototype) for _ in range(size)]
+    for edge_set in population:
+        rng.shuffle(edge_set)
     return population
 
 
