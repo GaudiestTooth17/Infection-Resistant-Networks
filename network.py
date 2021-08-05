@@ -33,6 +33,7 @@ class Network:
         self._communities = communities
         self._community_size = community_size
         self._layout = layout
+        self._edge_density = None
 
     @property
     def G(self) -> nx.Graph:
@@ -55,6 +56,12 @@ class Network:
         if self._G is not None:
             return len(self._G.edges)
         return np.sum(self._M > 0) // 2  # type: ignore
+
+    @property
+    def edge_density(self) -> float:
+        if self._edge_density is None:
+            self._edge_density = self.E / ((self.N**2 - self.N)//2)
+        return self._edge_density
 
     @property
     def edges(self) -> Iterable[Tuple[int, int]]:
