@@ -43,7 +43,7 @@ def get_distance_matrix(net: Network) -> np.ndarray:
     M = net.M
     num_nodes = len(M)
     m = np.copy(M)
-    dm = np.copy(M)
+    dm = np.copy(M).astype(np.float64)
     dm[dm < 1] = np.inf
     x = np.copy(M)
 
