@@ -1,6 +1,7 @@
 from typing import Callable, Union, Optional, Collection, Tuple, Iterable
 from customtypes import Communities, Layout
 import networkx as nx
+import retworkx as rx
 import numpy as np
 from partitioning import fluidc_partition, intercommunity_edges_to_communities
 
@@ -34,6 +35,7 @@ class Network:
         self._community_size = community_size
         self._layout = layout
         self._edge_density = None
+        self._R = None
 
     @property
     def G(self) -> nx.Graph:
@@ -46,6 +48,13 @@ class Network:
         if self._M is None:
             self._M = nx.to_numpy_array(self._G)
         return self._M
+
+    @property
+    def R(self):
+        """Return a retworkx PyGraph"""
+        if self._R is None:
+            self._R = rx.networkx_converter(self.G)
+        return self._R
 
     @property
     def N(self) -> int:
