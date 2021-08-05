@@ -5,6 +5,8 @@ from analysis import (analyze_network, visualize_network, all_same,
                       make_meta_community_layout, make_meta_community_network)
 import numpy as np
 import matplotlib.pyplot as plt
+import time
+import socialgood
 
 
 def analyze_network_entry_point():
@@ -47,9 +49,34 @@ def visualize_communicability():
     visualize_network(net.G, net.layout, name, node_size=node_size)
 
 
+def show_edit_distance():
+    if len(sys.argv) < 3:
+        print(f'Usage: {sys.argv[0]} <network 0> <network 1>')
+        return
+
+    start_time = time.time()
+    net0 = fio.read_network(sys.argv[1])
+    net1 = fio.read_network(sys.argv[2])
+    distance = nx.graph_edit_distance(net0.G, net1.G)
+    name0 = fio.get_network_name(sys.argv[1])
+    name1 = fio.get_network_name(sys.argv[2])
+    print(f'Distance between {name0} and {name1}: {distance} ({time.time()-start_time} s)')
+
+
+def show_social_good():
+    if len(sys.argv) < 2:
+        print(f'Usage {sys.argv[1]} <network>')
+        return
+
+    net = fio.read_network(sys.argv[1])
+    for k in np.linspace(.5, 1.5, 5):
+        sg_score = socialgood.rate_social_good(net, socialgood.DecayFunction(k))
+        print(f'{k:<6.3f}: {sg_score}')
+
+
 if __name__ == '__main__':
     try:
-        visualize_communicability()
+        show_social_good()
     except KeyboardInterrupt:
         print('\nGood bye.')
     except EOFError:
