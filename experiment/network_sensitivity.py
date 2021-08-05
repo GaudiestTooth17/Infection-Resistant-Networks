@@ -17,6 +17,7 @@ from tqdm import tqdm
 import itertools as it
 import os
 import csv
+import tarfile
 
 
 def elitist_experiment():
@@ -44,6 +45,7 @@ def choose_infected_node():
     r, fp = 2, .25
     disease = sd.Disease(4, .3)
     n_trials = 500
+    seed = 0
 
     def choose_by_centrality(net, centrality_measure, max_or_min):
         degrees = dict(centrality_measure(net.G))  # type: ignore
@@ -62,15 +64,15 @@ def choose_infected_node():
     networks: Tuple[MakeNetwork, ...] = (
         MakeConnectedCommunity(20, (15, 20), 25, (3, 6), rng),
         MakeConnectedCommunity(10, (5, 10), 50, (3, 6), rng),
-        MakeWattsStrogatz(500, 4, .01),
-        MakeWattsStrogatz(500, 4, .02),
-        MakeWattsStrogatz(500, 5, .01),
-        MakeBarabasiAlbert(500, 2),
-        MakeBarabasiAlbert(500, 3),
-        MakeBarabasiAlbert(500, 4),
-        MakeErdosRenyi(500, .01),
-        MakeErdosRenyi(500, .02),
-        MakeErdosRenyi(500, .03),
+        MakeWattsStrogatz(500, 4, .01, seed),
+        MakeWattsStrogatz(500, 4, .02, seed),
+        MakeWattsStrogatz(500, 5, .01, seed),
+        MakeBarabasiAlbert(500, 2, seed),
+        MakeBarabasiAlbert(500, 3, seed),
+        MakeBarabasiAlbert(500, 4, seed),
+        MakeErdosRenyi(500, .01, seed),
+        MakeErdosRenyi(500, .02, seed),
+        MakeErdosRenyi(500, .03, seed),
         MakeGrid(25, 20),
         MakeGrid(50, 10),
         MakeGrid(100, 5),
@@ -107,21 +109,21 @@ def choose_infected_node():
 
 
 def centrality_plots():
-    rng = np.random.default_rng()
-    centrality_name, calc_centrality = 'Eigenvector Centrality', nx.eigenvector_centrality_numpy
-    # centrality_name, calc_centrality = 'Degree Centrality', lambda G: dict(nx.degree_centrality(G))
+    seed = 1
+    centrality_name, calc_cntrlty = 'Eigenvector Centrality', nx.eigenvector_centrality_numpy
+    # centrality_name, calc_cntrlty = 'Degree Centrality', lambda G: dict(nx.degree_centrality(G))
     make_network_funcs = (
-        MakeConnectedCommunity(20, (15, 20), 25, (3, 6), rng),
-        MakeConnectedCommunity(10, (5, 10), 50, (3, 6), rng),
-        MakeWattsStrogatz(500, 4, .01),
-        MakeWattsStrogatz(500, 4, .02),
-        MakeWattsStrogatz(500, 5, .01),
-        MakeBarabasiAlbert(500, 2),
-        MakeBarabasiAlbert(500, 3),
-        MakeBarabasiAlbert(500, 4),
-        MakeErdosRenyi(500, .01),
-        MakeErdosRenyi(500, .02),
-        MakeErdosRenyi(500, .03),
+        MakeConnectedCommunity(20, (15, 20), 25, (3, 6), seed),
+        MakeConnectedCommunity(10, (5, 10), 50, (3, 6), seed),
+        MakeWattsStrogatz(500, 4, .01, seed),
+        MakeWattsStrogatz(500, 4, .02, seed),
+        MakeWattsStrogatz(500, 5, .01, seed),
+        MakeBarabasiAlbert(500, 2, seed),
+        MakeBarabasiAlbert(500, 3, seed),
+        MakeBarabasiAlbert(500, 4, seed),
+        MakeErdosRenyi(500, .01, seed),
+        MakeErdosRenyi(500, .02, seed),
+        MakeErdosRenyi(500, .03, seed),
         MakeGrid(25, 20),
         MakeGrid(50, 10),
         MakeGrid(100, 5)
@@ -129,7 +131,7 @@ def centrality_plots():
     n_top_nodes = 10
     class_to_centrality_dist = {}
     for make_network in tqdm(make_network_funcs, desc=centrality_name):
-        centralities = list(it.chain(*(sorted(calc_centrality(make_network().G).values(),
+        centralities = list(it.chain(*(sorted(calc_cntrlty(make_network().G).values(),
                                               reverse=True)[:n_top_nodes]
                                        for _ in range(1000))))
         class_to_centrality_dist[make_network.class_name] = centralities
@@ -149,5 +151,39 @@ def centrality_plots():
             writer.writerow(centrality_dist)
 
 
+def save_classes():
+    """Save many instances of the networks in a gunzipped tarball."""
+    seed = 777
+    n_instances = 500
+    make_network_funcs = (
+        MakeConnectedCommunity(20, (15, 20), 25, (3, 6), seed),
+        MakeConnectedCommunity(10, (5, 10), 50, (3, 6), seed),
+        MakeWattsStrogatz(500, 4, .01, seed),
+        MakeWattsStrogatz(500, 4, .02, seed),
+        MakeWattsStrogatz(500, 5, .01, seed),
+        MakeBarabasiAlbert(500, 2, seed),
+        MakeBarabasiAlbert(500, 3, seed),
+        MakeBarabasiAlbert(500, 4, seed),
+        MakeErdosRenyi(500, .01, seed),
+        MakeErdosRenyi(500, .02, seed),
+        MakeErdosRenyi(500, .03, seed)
+    )[1:]
+
+    for make_network in tqdm(make_network_funcs):
+        net_class = make_network.class_name
+        networks = ((f'instance-{i}', make_network()) for i in range(n_instances))
+
+        os.chdir('/tmp')
+        if not os.path.exists(net_class):
+            os.mkdir(net_class)
+        with open(f'{net_class}/configuration.txt', 'w') as f:
+            f.write(f'Seed = {make_network.seed}')
+        for name, net in networks:
+            fio.write_network(net.G, f'{net_class}/{name}', net.layout, net.communities)
+        tar_name = f'{net_class}.tar.gz'
+        with tarfile.open(tar_name, 'w:gz') as tar:
+            tar.add(net_class)
+
+
 if __name__ == '__main__':
-    choose_infected_node()
+    save_classes()
