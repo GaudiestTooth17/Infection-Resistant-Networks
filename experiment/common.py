@@ -342,27 +342,45 @@ class MakeNetwork(ABC):
     @property
     @abstractmethod
     def class_name(self) -> str:
+        """A description of the class of random network, or just a name for a non random network."""
         pass
+
+    @property
+    @abstractmethod
+    def seed(self) -> Optional[int]:
+        """
+        The seed used to make the random network. This will be the seed for
+        default_rng if it is a custom random network, or the seed passed to the
+        NetworkX function. None is returned for networks that aren't generated
+        randomly.
+        """
+        return None
 
     @abstractmethod
     def __call__(self) -> Network:
+        """Return the appropriate network."""
         pass
 
 
 class MakeConnectedCommunity(MakeNetwork):
     def __init__(self, community_size: int, inner_bounds: Tuple[int, int],
-                 num_comms: int, outer_bounds: Tuple[int, int], rng):
+                 num_comms: int, outer_bounds: Tuple[int, int], seed: int):
         self._community_size = community_size
         self._inner_bounds = inner_bounds
         self._num_comms = num_comms
         self._outer_bounds = outer_bounds
-        self._rng = rng
+        self._rng = np.random.default_rng(seed)
+        self._seed = seed
         self._class_name = f'ConnComm(N_comm={community_size},ib={inner_bounds},'\
                            f'num_comms={num_comms},ob={outer_bounds})'
 
     @property
     def class_name(self) -> str:
         return self._class_name
+
+    @property
+    def seed(self) -> int:
+        return self._seed
 
     def __call__(self) -> Network:
         id_dist = self._rng.integers(self._inner_bounds[0], self._inner_bounds[1],
@@ -381,7 +399,7 @@ class MakeConnectedCommunity(MakeNetwork):
 
 
 class MakeBarabasiAlbert(MakeNetwork):
-    def __init__(self, N: int, m: int, seed: Optional[int] = None):
+    def __init__(self, N: int, m: int, seed: int):
         self._N = N
         self._m = m
         self._seed = seed
@@ -391,14 +409,16 @@ class MakeBarabasiAlbert(MakeNetwork):
     def class_name(self) -> str:
         return self._class_name
 
+    @property
+    def seed(self) -> int:
+        return self._seed
+
     def __call__(self) -> Network:
-        if self._seed is not None:
-            return Network(nx.barabasi_albert_graph(self._N, self._m, self._seed))
-        return Network(nx.barabasi_albert_graph(self._N, self._m))
+        return Network(nx.barabasi_albert_graph(self._N, self._m, self._seed))
 
 
 class MakeWattsStrogatz(MakeNetwork):
-    def __init__(self, N: int, k: int, p: float, seed: Optional[int] = None):
+    def __init__(self, N: int, k: int, p: float, seed: int):
         self._N = N
         self._k = k
         self._p = p
@@ -409,14 +429,16 @@ class MakeWattsStrogatz(MakeNetwork):
     def class_name(self) -> str:
         return self._class_name
 
+    @property
+    def seed(self) -> int:
+        return self._seed
+
     def __call__(self) -> Network:
-        if self._seed is not None:
-            return Network(nx.watts_strogatz_graph(self._N, self._k, self._p, self._seed))
-        return Network(nx.watts_strogatz_graph(self._N, self._k, self._p))
+        return Network(nx.watts_strogatz_graph(self._N, self._k, self._p, self._seed))
 
 
 class MakeErdosRenyi(MakeNetwork):
-    def __init__(self, N: int, p: float, seed: Optional[int] = None) -> None:
+    def __init__(self, N: int, p: float, seed: int) -> None:
         self._N = N
         self._p = p
         self._seed = seed
@@ -425,6 +447,10 @@ class MakeErdosRenyi(MakeNetwork):
     @property
     def class_name(self) -> str:
         return self._class_name
+
+    @property
+    def seed(self) -> int:
+        return self._seed
 
     def __call__(self) -> Network:
         return Network(nx.erdos_renyi_graph(self._N, self._p, self._seed))
@@ -442,6 +468,10 @@ class MakeGrid(MakeNetwork):
     def class_name(self) -> str:
         return self._class_name
 
+    @property
+    def seed(self) -> None:
+        return None
+
     def __call__(self) -> Network:
         if self._net is None:
             self._net = Network(nx.grid_2d_graph(self._m, self._n))
@@ -458,6 +488,10 @@ class LoadNetwork(MakeNetwork):
     @property
     def class_name(self) -> str:
         return self._name
+
+    @property
+    def seed(self) -> None:
+        return None
 
     def __call__(self) -> Network:
         if self._net is None:
