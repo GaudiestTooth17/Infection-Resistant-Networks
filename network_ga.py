@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-import os
 import fileio as fio
 import itertools as it
 from partitioning import fluidc_partition
@@ -7,7 +6,7 @@ from sim_dynamic import Disease, StaticFlickerBehavior, make_starting_sir, simul
 from socialgood import DecayFunction, rate_social_good
 from customtypes import Number
 from network import Network
-from typing import Callable, List, Sequence, Tuple
+from typing import Callable, List, Sequence, Tuple, Union
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,17 +18,14 @@ import partitioning as part
 
 
 def main():
-    n_steps = 400
-    N = 250
+    n_steps = 500
     rng = np.random.default_rng()
-    for network_path in (os.path.join('networks', name)
-                         for name in ('cavemen-10-10.txt', 'elitist-100.txt')):
-        net = fio.read_network(network_path)
-        disp_name = fio.get_network_name(network_path)
-        print(f'{disp_name}: {low_communicability_objective(lib.network_to_edge_set(net.M))}')
+    # k = 1.5
+    # possible_target = Network(nx.star_graph(100))
+    # print(f'Target: {SocialGoodObjective(k)(lib.network_to_edge_set(possible_target.M)):.3f}')
     optimizer = ga.GAOptimizer(low_communicability_objective,
-                               NextGenFixedEdges(.0001, rng),
-                               new_fixed_edge_set_pop(24, 100, .03, rng),
+                               NextGenFixedEdges(.0001, ga.roulette_wheel_rank_selection, rng),
+                               new_fixed_edge_set_pop(24, 500, .03, rng),
                                True, 4)
     pbar = tqdm(range(n_steps))
     costs = np.zeros(n_steps)
@@ -41,7 +37,7 @@ def main():
         if global_best is None or local_best[0] < global_best[0]:
             global_best = local_best
         costs[step] = local_best[0]
-        diversities[step] = lib.calc_edge_set_population_diversity(cost_to_encoding)
+        diversities[step] = lib.calc_generic_population_diversity(cost_to_encoding)
         pbar.set_description(f'Cost: {local_best[0]:.3f} Diversity: {diversities[step]:.3f}')
     print(f'Total cache hits: {optimizer.num_cache_hits}')
 
@@ -122,6 +118,16 @@ class IRNObjective:
                            for _ in range(self._n_sims)]) / len(M)
         cost = 2-avg_sus-rate_social_good(net, self._decay_func)
         return cost
+
+
+class SocialGoodObjective:
+    def __init__(self, k: float) -> None:
+        self._decay_func = DecayFunction(k)
+
+    def __call__(self, encoding: np.ndarray) -> float:
+        """Expects an edgeset style encoding."""
+        net = lib.edge_set_to_network(encoding)
+        return 1 - rate_social_good(net, self._decay_func)
 
 
 class ClusteringObjective:
@@ -240,14 +246,19 @@ class NextNetworkGenEdgeSet:
 
 
 class NextGenFixedEdges:
-    def __init__(self, mutation_prob: float, rng) -> None:
+    def __init__(self, mutation_prob: float, selection_method, rng) -> None:
         self._mutation_prob = mutation_prob
+        self._selection_method = selection_method
         self._rng = rng
 
     def __call__(self, rated_pop: Sequence[Tuple[Number, np.ndarray]]) -> Sequence[np.ndarray]:
-        couples = ga.roulette_wheel_rank_selection(rated_pop)
-        children = tuple(it.chain(*(ga.bitset_cross_over(*couple) for couple in couples)))
+        couples = self._selection_method(rated_pop)
+        children = list(it.chain(*(ga.bitset_crossover(*couple)
+                        for couple in couples)))
 
+        child0_sum = np.sum(children[0])
+        assert all(np.sum(child) == child0_sum for child in children[1:]), 'Edge number changed after crossover!'
+        
         n_children = len(children)
         len_child = len(children[0])
         for i, j in it.product(range(n_children), range(len_child)):
@@ -257,15 +268,17 @@ class NextGenFixedEdges:
             if self._rng.random() < self._mutation_prob:
                 child = children[i]
                 old_value = child[j]
-                search_ind = (j+1) % len_child
+                search_ind = (j-1) % len_child
                 child[j] = 1 - child[j]
                 # swap another value to compensate
                 # it makes sense to start looking close to the old value because
                 # the mutation will stay more local that way.
                 while child[search_ind] == old_value:
-                    search_ind = (search_ind+1) % len_child
+                    search_ind = (search_ind-1) % len_child
                 child[search_ind] = 1 - child[search_ind]
 
+        child0_sum = np.sum(children[0])
+        assert all(np.sum(child) == child0_sum for child in children[1:]), 'Edge number changed after mutation!'
         return children
 
 
@@ -299,18 +312,48 @@ def new_edge_set_pop(size: int, N: int, rand) -> List[np.ndarray]:
     return population
 
 
-def new_fixed_edge_set_pop(size: int, N: int, approx_edge_density: float, rng) -> List[np.ndarray]:
+def new_fixed_edge_set_pop(size: int, N: int, edge_configuration: Union[float, int], rng)\
+        -> List[np.ndarray]:
     """
     Create a new population of 'bitsets' that represent whether an edge is off or on.
     Each genotype has the same number of edges which is calculated using
     approx_edge_density.
+
+    edge_configuration: If a float it is the approximate density. If it is an int,
+                        it is the number of edges.
     """
     possible_edges = (N**2 - N) // 2
-    n_edges = np.ceil(possible_edges*approx_edge_density)
+    if isinstance(edge_configuration, float):
+        n_edges = np.ceil(possible_edges*edge_configuration)
+    else:
+        n_edges = edge_configuration
     prototype = np.array([1 if i < n_edges else 0 for i in range(possible_edges)])
     population = [np.copy(prototype) for _ in range(size)]
     for edge_set in population:
         rng.shuffle(edge_set)
+    return population
+
+
+def population_from_network_fixed_edges(size: int, net: Network, mutation_prob: float, rng)\
+        -> List[np.ndarray]:
+    prototype = lib.network_to_edge_set(net.M)
+    population: List[np.ndarray] = [np.copy(prototype) for _ in range(size)]
+
+    # mutate population
+    for edge_set in population:
+        for i in range(edge_set.shape[0]):
+            if rng.random() < mutation_prob:
+                old_value = edge_set[i]
+                # flip value
+                edge_set[i] = 1 - old_value
+                # flip another value to keep it balanced
+                # iterate backwards to lower the chance of flipping an index twice
+                # and thus undoing the change
+                search_index = (i - 1) % len(edge_set)
+                while edge_set[search_index] == old_value:
+                    search_index = (search_index - 1) % len(edge_set)
+                edge_set[search_index] = 1 - edge_set[search_index]
+
     return population
 
 
