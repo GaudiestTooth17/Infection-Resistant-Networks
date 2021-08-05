@@ -257,8 +257,9 @@ class NextGenFixedEdges:
                         for couple in couples)))
 
         child0_sum = np.sum(children[0])
-        assert all(np.sum(child) == child0_sum for child in children[1:]), 'Edge number changed after crossover!'
-        
+        assert all(np.sum(child) == child0_sum for child in children[1:]),\
+            'Edge number changed after crossover!'
+
         n_children = len(children)
         len_child = len(children[0])
         for i, j in it.product(range(n_children), range(len_child)):
@@ -278,7 +279,8 @@ class NextGenFixedEdges:
                 child[search_ind] = 1 - child[search_ind]
 
         child0_sum = np.sum(children[0])
-        assert all(np.sum(child) == child0_sum for child in children[1:]), 'Edge number changed after mutation!'
+        assert all(np.sum(child) == child0_sum for child in children[1:]),\
+            'Edge number changed after mutation!'
         return children
 
 

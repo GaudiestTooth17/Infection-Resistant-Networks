@@ -1,7 +1,6 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 from networkgen import make_social_circles_network, Agent
-from network import Network
 import numpy as np
 
 
@@ -16,7 +15,7 @@ def main():
     # grid_dim = (int(N/.005), int(N/.005))  # the denominator is the desired density
     grid_dim = int(N*1.25), int(N*1.25)
     net, _ = make_social_circles_network(agents, grid_dim,
-                                               rand=np.random.default_rng(0))  # type: ignore
+                                         rand=np.random.default_rng(0))  # type: ignore
     colored_edges = net.intercommunity_edges
 
     def make_cmap():

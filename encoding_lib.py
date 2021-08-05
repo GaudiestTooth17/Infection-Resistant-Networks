@@ -103,7 +103,7 @@ def calc_generic_population_diversity(rated_population: Sequence[Tuple[Number, n
         -> float:
     """
     Take a general approach to calculating diversity that works with any sort of genotype.
-    
+
     Find the number of unique genotypes and divide this by the number of genotypes.
     """
     n_unique = len(set(cost_to_genotype[1].tobytes() for cost_to_genotype in rated_population))

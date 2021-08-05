@@ -9,15 +9,16 @@ class TestGenfuncs(TestCase):
         actual = tuple(identity(sequence))
 
         self.assertEqual(actual, sequence, f'Expected: {sequence}\nReceived: {actual}')
-    
+
     def test_scale(self):
         sequence = (1, 2, 3, 4)
         for c in range(10):
             scale = make_scaler(c)
             expected = tuple(c*x for x in sequence)
             actual = tuple(scale(sequence))
-            self.assertEqual(actual, expected, f'Failed with c == {c}.\nExpected: {expected}\nActual: {actual}')
-    
+            self.assertEqual(actual, expected, f'Failed with c == {c}.\n'
+                                               f'Expected: {expected}\nActual: {actual}')
+
     def test_right_shift(self):
         sequence = (1, 2, 0)
 

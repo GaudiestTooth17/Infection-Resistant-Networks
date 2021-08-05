@@ -149,7 +149,8 @@ class Visualize:
         plt.clf()
         nx.draw_networkx(G, pos=self._layout, with_labels=False,
                          node_color=node_colors, node_size=50)
-        plt.title(f'Step: {step}, S: {np.sum(sir[0, :] > 0)}, I: {np.sum(sir[1, :] > 0)}, R: {np.sum(sir[2, :] > 0)}')
+        plt.title(f'Step: {step}, S: {np.sum(sir[0, :] > 0)},'
+                  f'I: {np.sum(sir[1, :] > 0)}, R: {np.sum(sir[2, :] > 0)}')
         # plt.show()
         plt.pause(.5)  # type: ignore
 
@@ -376,10 +377,9 @@ class PressureFlickerBehavior:
             pressured_agents = (self._dm[infectious_agents] <= self._radius)[0]
             self._pressure[pressured_agents] += self._flicker_probability[pressured_agents]
 
-
         flicker_amount = self._pressure / self._pressure_to_flicker
-        current_flicker_prob = (1 -
-            np.minimum((1 - self._flicker_probability), self._flicker_probability) ** flicker_amount)
+        current_flicker_prob = 1 - np.minimum((1 - self._flicker_probability),
+                                              self._flicker_probability) ** flicker_amount
 
         flicker_agents = ((self._pressure > self._pressure_to_flicker) &
                           (self._rng.random(self._pressure.shape) < current_flicker_prob))

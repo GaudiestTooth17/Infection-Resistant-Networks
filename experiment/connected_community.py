@@ -143,8 +143,7 @@ def run_connected_community_trial(args: Tuple[ConnectedCommunityConfiguration, D
 
     inner_degrees = configuration.make_inner_degrees()
     outer_degrees = configuration.make_outer_degrees()
-    net = networkgen.make_connected_community_network(inner_degrees, outer_degrees,
-                                                             rand)
+    net = networkgen.make_connected_community_network(inner_degrees, outer_degrees, rand)
     # If a network couldn't be successfully generated, return None to signal the failure
     if net is None:
         return None

@@ -331,7 +331,8 @@ class PressureConfig:
     name: Optional[str] = None
 
     def make_behavior(self, net: Network) -> SimplePressureBehavior:
-        return SimplePressureBehavior(net, self.radius, self.flicker_probability, self.rng, self.name)
+        return SimplePressureBehavior(net, self.radius, self.flicker_probability,
+                                      self.rng, self.name)
 
 
 class MakeNetwork(ABC):
