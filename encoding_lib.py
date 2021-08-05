@@ -76,7 +76,12 @@ def edge_list_to_network(edge_list: np.ndarray) -> nx.Graph:
     return G
 
 
-def calc_edge_set_population_diversity(rated_population: Sequence[Tuple[Number, np.ndarray]]) -> float:
+def calc_edge_set_population_diversity(rated_population: Sequence[Tuple[Number, np.ndarray]])\
+        -> float:
+    """
+    I think my approach is flawed because the diversity is always so low, even
+    when the population is randomly generated.
+    """
     diversity = 0
     genotype_len = len(rated_population[0][1])
     pop_size = len(rated_population)
@@ -92,3 +97,14 @@ def calc_edge_set_population_diversity(rated_population: Sequence[Tuple[Number, 
     # subtract from 1 to change from uniformity to diversity
     diversity = 1 - diversity
     return diversity
+
+
+def calc_generic_population_diversity(rated_population: Sequence[Tuple[Number, np.ndarray]])\
+        -> float:
+    """
+    Take a general approach to calculating diversity that works with any sort of genotype.
+    
+    Find the number of unique genotypes and divide this by the number of genotypes.
+    """
+    n_unique = len(set(cost_to_genotype[1].tobytes() for cost_to_genotype in rated_population))
+    return n_unique / len(rated_population)
