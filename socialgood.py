@@ -10,6 +10,8 @@ from analysis import visualize_network
 import networkx as nx
 from matplotlib import pyplot as plt
 from network import Network
+import retworkx as rx
+import time
 T = TypeVar('T', Number, np.ndarray)
 TDecayFunc = Callable[[T], T]
 
@@ -28,7 +30,7 @@ class DecayFunction(Generic[T]):
         return result
 
 
-def get_distance_matrix(net: Network) -> np.ndarray:
+def get_distance_matrix_deprecated(net: Network) -> np.ndarray:
     """
     Returns the distance matrix of a given matrix with infinity value given.
     """
@@ -61,6 +63,14 @@ def get_distance_matrix(net: Network) -> np.ndarray:
     # Sets the self distance to zero before return.
     for n in range(num_nodes):
         dm[n, n] = 0
+    return dm
+
+
+def get_distance_matrix(net: Network) -> np.ndarray:
+    dm: np.ndarray = rx.distance_matrix(net.R).copy()  # type: ignore
+    dm[dm == 0] = np.inf
+    for u in range(len(dm)):
+        dm[u, u] = 0
     return dm
 
 
@@ -133,6 +143,15 @@ def main():
     for name, path in zip(networks, network_paths):
         net = fio.read_network(path)
         print(f'{name:<30} {rate_social_good(net, DecayFunction(.5)):>10.3f}')
+
+
+def speed_test():
+    # net = Network(nx.grid_2d_graph(100, 100))
+    net = Network(nx.caveman_graph(100, 100))
+    start_time = time.time()
+    dm = get_distance_matrix(net)
+    print(f'Finished retworkx implementation ({time.time()-start_time} s)')
+    print(dm[0, 200])
 
 
 if __name__ == '__main__':
