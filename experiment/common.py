@@ -352,7 +352,7 @@ class MakeNetwork(ABC):
         The seed used to make the random network. This will be the seed for
         default_rng if it is a custom random network, or the seed passed to the
         NetworkX function. None is returned for networks that aren't generated
-        randomly.
+        randomly or if the seed was not set.
         """
         return None
 
@@ -364,7 +364,7 @@ class MakeNetwork(ABC):
 
 class MakeConnectedCommunity(MakeNetwork):
     def __init__(self, community_size: int, inner_bounds: Tuple[int, int],
-                 num_comms: int, outer_bounds: Tuple[int, int], seed: int):
+                 num_comms: int, outer_bounds: Tuple[int, int], seed: Optional[int] = None):
         self._community_size = community_size
         self._inner_bounds = inner_bounds
         self._num_comms = num_comms
@@ -379,7 +379,7 @@ class MakeConnectedCommunity(MakeNetwork):
         return self._class_name
 
     @property
-    def seed(self) -> int:
+    def seed(self) -> Optional[int]:
         return self._seed
 
     def __call__(self) -> Network:
@@ -399,7 +399,7 @@ class MakeConnectedCommunity(MakeNetwork):
 
 
 class MakeBarabasiAlbert(MakeNetwork):
-    def __init__(self, N: int, m: int, seed: int):
+    def __init__(self, N: int, m: int, seed: Optional[int] = None):
         self._N = N
         self._m = m
         self._seed = seed
@@ -410,7 +410,7 @@ class MakeBarabasiAlbert(MakeNetwork):
         return self._class_name
 
     @property
-    def seed(self) -> int:
+    def seed(self) -> Optional[int]:
         return self._seed
 
     def __call__(self) -> Network:
@@ -418,7 +418,7 @@ class MakeBarabasiAlbert(MakeNetwork):
 
 
 class MakeWattsStrogatz(MakeNetwork):
-    def __init__(self, N: int, k: int, p: float, seed: int):
+    def __init__(self, N: int, k: int, p: float, seed: Optional[int] = None):
         self._N = N
         self._k = k
         self._p = p
@@ -430,7 +430,7 @@ class MakeWattsStrogatz(MakeNetwork):
         return self._class_name
 
     @property
-    def seed(self) -> int:
+    def seed(self) -> Optional[int]:
         return self._seed
 
     def __call__(self) -> Network:
@@ -438,7 +438,7 @@ class MakeWattsStrogatz(MakeNetwork):
 
 
 class MakeErdosRenyi(MakeNetwork):
-    def __init__(self, N: int, p: float, seed: int) -> None:
+    def __init__(self, N: int, p: float, seed: Optional[int] = None):
         self._N = N
         self._p = p
         self._seed = seed
@@ -449,7 +449,7 @@ class MakeErdosRenyi(MakeNetwork):
         return self._class_name
 
     @property
-    def seed(self) -> int:
+    def seed(self) -> Optional[int]:
         return self._seed
 
     def __call__(self) -> Network:
