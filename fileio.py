@@ -7,6 +7,8 @@ from customtypes import Layout, Communities
 import os.path as op
 import sys
 from colorama import Fore, Style
+import tarfile
+import time
 NETWORK_DIR = 'networks'
 
 
@@ -127,6 +129,25 @@ def network_names_to_paths(network_names: Sequence[str]) -> Sequence[str]:
         exit(1)
 
     return network_paths
+
+
+def open_network_class(class_name: str) -> Tuple[Network, ...]:
+    """
+    Return all the saved instances of the specified network class.
+
+    Files should be saved in the root of a gunzipped tarball.
+    """
+    archive_name = class_name+'.tar.gz'
+    extraction_dir = os.path.join('/tmp', class_name)
+
+    with tarfile.open(os.path.join('networks', archive_name)) as tar:
+        tar.extractall('/tmp')
+
+    paths = (path for path in (os.path.join(extraction_dir, name)
+                               for name in os.listdir(extraction_dir))
+             if 'instance' in os.path.split(path)[-1]
+             and os.path.isfile(path))
+    return tuple(read_network(path) for path in paths)
 
 
 def save_animation(net: Network, sirs: List[np.ndarray], output_name: str) -> None:

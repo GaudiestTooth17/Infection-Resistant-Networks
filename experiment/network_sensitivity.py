@@ -153,21 +153,20 @@ def centrality_plots():
 
 def save_classes():
     """Save many instances of the networks in a gunzipped tarball."""
-    seed = 777
     n_instances = 500
     make_network_funcs = (
-        MakeConnectedCommunity(20, (15, 20), 25, (3, 6), seed),
-        MakeConnectedCommunity(10, (5, 10), 50, (3, 6), seed),
-        MakeWattsStrogatz(500, 4, .01, seed),
-        MakeWattsStrogatz(500, 4, .02, seed),
-        MakeWattsStrogatz(500, 5, .01, seed),
-        MakeBarabasiAlbert(500, 2, seed),
-        MakeBarabasiAlbert(500, 3, seed),
-        MakeBarabasiAlbert(500, 4, seed),
-        MakeErdosRenyi(500, .01, seed),
-        MakeErdosRenyi(500, .02, seed),
-        MakeErdosRenyi(500, .03, seed)
-    )[1:]
+        MakeConnectedCommunity(20, (15, 20), 25, (3, 6)),
+        MakeConnectedCommunity(10, (5, 10), 50, (3, 6)),
+        MakeWattsStrogatz(500, 4, .01),
+        MakeWattsStrogatz(500, 4, .02),
+        MakeWattsStrogatz(500, 5, .01),
+        MakeBarabasiAlbert(500, 2),
+        MakeBarabasiAlbert(500, 3),
+        MakeBarabasiAlbert(500, 4),
+        MakeErdosRenyi(500, .01),
+        MakeErdosRenyi(500, .02),
+        MakeErdosRenyi(500, .03)
+    )
 
     for make_network in tqdm(make_network_funcs):
         net_class = make_network.class_name
@@ -176,8 +175,6 @@ def save_classes():
         os.chdir('/tmp')
         if not os.path.exists(net_class):
             os.mkdir(net_class)
-        with open(f'{net_class}/configuration.txt', 'w') as f:
-            f.write(f'Seed = {make_network.seed}')
         for name, net in networks:
             fio.write_network(net.G, f'{net_class}/{name}', net.layout, net.communities)
         tar_name = f'{net_class}.tar.gz'
