@@ -177,7 +177,7 @@ class HighBetweenessObjective:
 def low_communicability_objective(edges_present: np.ndarray) -> float:
     """Accept a bitset of edges and return the sum of the communicability values."""
     net = lib.edge_set_to_network(edges_present)
-    communicability = nx.communicability(net.G)
+    communicability = nx.communicability_exp(net.G)
     return sum(c for inner_values in communicability.values() for c in inner_values.values())
 
 

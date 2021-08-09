@@ -38,7 +38,7 @@ def visualize_communicability():
 
     net = fio.read_network(sys.argv[1])
     name = fio.get_network_name(sys.argv[1])
-    communicability = nx.communicability(net.G)
+    communicability = nx.communicability_exp(net.G)
     scores = np.array([sum(communicability[u].values()) for u in communicability.keys()])
     plt.title(f'{name}\nCommunicability')
     plt.hist(scores)  # type: ignore
