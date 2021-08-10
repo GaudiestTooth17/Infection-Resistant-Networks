@@ -19,11 +19,24 @@ from networkgen import make_connected_community_network
 from pathlib import Path
 import copy
 import fileio as fio
+from scipy.stats import entropy
 T = TypeVar('T')
+
+
+def calc_entropy(a: np.ndarray, bins: int) -> float:
+    hist, _ = np.histogram(a, bins=bins)
+    return entropy(hist)
 
 
 def _create_directory(directory: str):
     Path(directory).mkdir(parents=True, exist_ok=True)
+
+
+def run_sim_batch(net: Network, n_sims: int, disease: Disease,
+                  behavior: UpdateConnections, rng) -> np.ndarray:
+    """Run a batch of simulations and return the survival rate for each in an array."""
+    return np.array([simulate_return_survival_rate(net, disease, behavior, rng)
+                     for _ in range(n_sims)])
 
 
 class BasicExperimentResult:

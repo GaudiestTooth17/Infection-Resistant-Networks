@@ -4,20 +4,21 @@ is to which agent starts infectious.
 """
 import sys
 sys.path.append('')
-from typing import Tuple
+from typing import List, Tuple, Union
 import fileio as fio
 import numpy as np
 import matplotlib.pyplot as plt
 import sim_dynamic as sd
 from common import (LoadNetwork, MakeBarabasiAlbert, MakeConnectedCommunity,
                     MakeErdosRenyi, MakeGrid, MakeNetwork, MakeWattsStrogatz,
-                    simulate_return_survival_rate)
+                    calc_entropy, run_sim_batch, simulate_return_survival_rate)
 import networkx as nx
 from tqdm import tqdm
 import itertools as it
 import os
 import csv
 import tarfile
+import time
 
 
 def elitist_experiment():
@@ -151,6 +152,44 @@ def centrality_plots():
             writer.writerow(centrality_dist)
 
 
+def infection_entropy_vs_communicability():
+    classes = (
+        'BarabasiAlbert(N=500,m=2)',
+        'BarabasiAlbert(N=500,m=3)',
+        'BarabasiAlbert(N=500,m=4)',
+        'ConnComm(N_comm=10,ib=(5, 10),num_comms=50,ob=(3, 6))',
+        'ConnComm(N_comm=20,ib=(15, 20),num_comms=25,ob=(3, 6))',
+        'ErdosRenyi(N=500,p=0.01)',
+        'ErdosRenyi(N=500,p=0.02)',
+        'ErdosRenyi(N=500,p=0.03)',
+        'WattsStrogatz(N=500,k=4,p=0.01)',
+        'WattsStrogatz(N=500,k=4,p=0.02)',
+        'WattsStrogatz(N=500,k=5,p=0.01)'
+    )
+
+    csv_rows: List[Union[List[str], List[int], List[float]]] = []
+    for class_ in classes:
+        rng = np.random.default_rng(777)
+        nets = fio.open_network_class(class_)
+        communicabilities: List[int] = [sum(cell
+                                            for row in nx.communicability_exp(net.G).values()
+                                            for cell in row.values())
+                                        for net in tqdm(nets, desc='Communicability')]
+        entropies = [calc_entropy(run_sim_batch(net, 500, sd.Disease(4, .3),
+                                                sd.SimplePressureBehavior(net, 2, .25), rng),
+                                  1000)  # 1000 should be 1 dec. point of precision for percentages
+                     for net in tqdm(nets, 'Simulations & Entropy')]
+        csv_rows.append(['Network Class', class_])
+        csv_rows.append(['Communicability'])
+        csv_rows.append(communicabilities)
+        csv_rows.append(['Entropy'])
+        csv_rows.append(entropies)
+
+    with open('results/infection_entropy_vs_communicability.csv', 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerows(csv_rows)
+
+
 def save_classes():
     """Save many instances of the networks in a gunzipped tarball."""
     n_instances = 500
@@ -183,4 +222,4 @@ def save_classes():
 
 
 if __name__ == '__main__':
-    save_classes()
+    infection_entropy_vs_communicability()

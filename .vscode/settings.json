@@ -7,5 +7,5 @@
     ],
     "python.linting.pycodestyleEnabled": true,
     "python.linting.enabled": true,
-    // "python.pythonPath": "/home/alex/miniconda3/envs/py3.9/bin/python",
+    "python.pythonPath": "/home/alex/miniconda3/envs/py3.9/bin/python",
 }
