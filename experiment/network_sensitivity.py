@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sim_dynamic as sd
 from common import (LoadNetwork, MakeBarabasiAlbert, MakeConnectedCommunity,
-                    MakeErdosRenyi, MakeGrid, MakeNetwork, MakeWattsStrogatz,
+                    MakeErdosRenyi, MakeGrid, MakeNetwork, MakeWattsStrogatz, SimplePressureConfig,
                     calc_entropy, run_sim_batch, simulate_return_survival_rate)
 import networkx as nx
 from tqdm import tqdm
@@ -27,7 +27,8 @@ def elitist_experiment():
     name = fio.get_network_name(path)
     net = fio.read_network(path)
     r, fp = 2, .75
-    update_connections, uc_name = sd.SimplePressureBehavior(net, r, fp), f'Pressure(r={r}, fp={fp})'
+    update_connections, uc_name = (sd.SimplePressureBehavior(net, rng, r, fp),
+                                   f'Pressure(r={r}, fp={fp})')
     # update_connections, uc_name = sd.no_update, 'Static'
     disease = sd.Disease(4, .2)
     sir0 = sd.make_starting_sir(net.N, (0,), rng)
@@ -86,7 +87,7 @@ def choose_infected_node():
         survival_rates = []
         for _ in tqdm(range(n_trials), desc=f'{make_net.class_name} & {strat_name}'):
             net = make_net()
-            update_connections = sd.SimplePressureBehavior(net, r, fp)
+            update_connections = sd.SimplePressureBehavior(net, rng, r, fp)
             sir0 = sir_strat(net)
             survival_rate = simulate_return_survival_rate(net, disease, update_connections,
                                                           rng, sir0)
@@ -166,6 +167,7 @@ def infection_entropy_vs_communicability():
         'WattsStrogatz(N=500,k=4,p=0.02)',
         'WattsStrogatz(N=500,k=5,p=0.01)'
     )
+    n_bins = 100  # 1000 should be 1 decimal point of precision for percentages
 
     csv_rows: List[Union[List[str], List[int], List[float]]] = []
     for class_ in classes:
@@ -176,8 +178,8 @@ def infection_entropy_vs_communicability():
                                             for cell in row.values())
                                         for net in tqdm(nets, desc='Communicability')]
         entropies = [calc_entropy(run_sim_batch(net, 500, sd.Disease(4, .3),
-                                                sd.SimplePressureBehavior(net, 2, .25), rng),
-                                  1000)  # 1000 should be 1 dec. point of precision for percentages
+                                                sd.SimplePressureBehavior(net, rng, 2, .25), rng),
+                                  n_bins)
                      for net in tqdm(nets, 'Simulations & Entropy')]
         csv_rows.append(['Network Class', class_])
         csv_rows.append(['Communicability'])
@@ -185,7 +187,56 @@ def infection_entropy_vs_communicability():
         csv_rows.append(['Entropy'])
         csv_rows.append(entropies)
 
-    with open('results/infection_entropy_vs_communicability.csv', 'w', newline='') as csv_file:
+    with open(f'results/communicability-vs-infection-entropy-bins-{n_bins}.csv',
+              'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerows(csv_rows)
+
+
+def save_simulation_data(n_sims: int, seed: int, pressure_radius: int, flicker_prob: float):
+    classes = (
+        'BarabasiAlbert(N=500,m=2)',
+        'BarabasiAlbert(N=500,m=3)',
+        'BarabasiAlbert(N=500,m=4)',
+        'ConnComm(N_comm=10,ib=(5, 10),num_comms=50,ob=(3, 6))',
+        'ConnComm(N_comm=20,ib=(15, 20),num_comms=25,ob=(3, 6))',
+        'ErdosRenyi(N=500,p=0.01)',
+        'ErdosRenyi(N=500,p=0.02)',
+        'ErdosRenyi(N=500,p=0.03)',
+        'WattsStrogatz(N=500,k=4,p=0.01)',
+        'WattsStrogatz(N=500,k=4,p=0.02)',
+        'WattsStrogatz(N=500,k=5,p=0.01)'
+    )
+    # This is only for getting the name. It'll get recreated for each class of network.
+    behavior_config = SimplePressureConfig(pressure_radius, flicker_prob, None)
+    disease = sd.Disease(4, .3)
+    csv_rows: List[Union[List[str], np.ndarray]] = [
+        ['A default_rng instance is created fresh for each set of simulations. '
+         'It first gets passed into a SimplePressureConfig. Simulations were '
+         'run one after the other with that same default_rng instance '
+         'being repeatedly given to the simulate function. Each row of numbers are the '
+         'survival rates of a particular instance of a network class for sum number of '
+         'simulations.',
+         f'seed = {seed}',
+         f'sims = {n_sims}',
+         f'behavior = {behavior_config.name}'
+         f'disease = {disease}']
+    ]
+    for class_ in classes:
+        print(f'Running simulations for {class_}')
+        rng = np.random.default_rng(777)
+        # recreate the config here
+        behavior_config = SimplePressureConfig(pressure_radius, flicker_prob, rng)
+        nets = fio.open_network_class(class_)
+        csv_rows.append([class_])
+        for net in tqdm(nets):
+            behavior = behavior_config.make_behavior(net)
+            survival_rates = run_sim_batch(net, n_sims, sd.Disease(4, .3),
+                                           behavior, rng)
+            csv_rows.append(survival_rates)
+
+    with open(os.path.join('results', 'network-class-survival-rates.csv'),
+              'w', newline='') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerows(csv_rows)
 
@@ -222,4 +273,4 @@ def save_classes():
 
 
 if __name__ == '__main__':
-    infection_entropy_vs_communicability()
+    save_simulation_data(500, 777, 2, .25)

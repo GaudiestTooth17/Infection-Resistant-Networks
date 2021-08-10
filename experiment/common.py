@@ -290,7 +290,7 @@ def simulate_return_survival_rate(net: Network, disease: Disease,
                                   sir0: Optional[np.ndarray] = None) -> float:
     if sir0 is None:
         sir0 = make_starting_sir(net.N, 1, rng)
-    return np.sum(simulate(net.M, sir0, disease, behavior, 100, None, rng)[-1][0] > 0) / net.N
+    return np.sum(simulate(net.M, sir0, disease, behavior, 100, rng, None)[-1][0] > 0) / net.N
 
 
 class FlickerConfig(ABC):
@@ -337,15 +337,18 @@ class RandomFlickerConfig(FlickerConfig):
 
 
 @dataclass
-class PressureConfig:
+class SimplePressureConfig:
     radius: int
     flicker_probability: float
     rng: Any
-    name: Optional[str] = None
+
+    @property
+    def name(self) -> str:
+        return f'SimplePressure(radius={self.radius}, '\
+               f'flicker_probability={self.flicker_probability})'
 
     def make_behavior(self, net: Network) -> SimplePressureBehavior:
-        return SimplePressureBehavior(net, self.radius, self.flicker_probability,
-                                      self.rng, self.name)
+        return SimplePressureBehavior(net, self.rng, self.radius, self.flicker_probability)
 
 
 class MakeNetwork(ABC):
