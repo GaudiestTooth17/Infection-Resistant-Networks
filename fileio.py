@@ -8,7 +8,7 @@ import os.path as op
 import sys
 from colorama import Fore, Style
 import tarfile
-import time
+import re
 NETWORK_DIR = 'networks'
 
 
@@ -143,10 +143,14 @@ def open_network_class(class_name: str) -> Tuple[Network, ...]:
     with tarfile.open(os.path.join('networks', archive_name)) as tar:
         tar.extractall('/tmp')
 
+    allowed_names = re.compile(r'instance-\d+.txt')
+    id_num = re.compile(r'\d+')
+    sorted_files = sorted(filter(lambda fname: allowed_names.match(fname),
+                                 os.listdir(extraction_dir)),
+                          key=lambda fname: int(id_num.search(fname).group()))  # type: ignore
+
     paths = (path for path in (os.path.join(extraction_dir, name)
-                               for name in os.listdir(extraction_dir))
-             if 'instance' in os.path.split(path)[-1]
-             and os.path.isfile(path))
+                               for name in sorted_files))
     return tuple(read_network(path) for path in paths)
 
 
