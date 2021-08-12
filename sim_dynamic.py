@@ -244,7 +244,6 @@ class SimplePressureBehavior:
         Agents receive pressure when nearby agents become infectious. Agents
         with enough pressure will remove connections to nearby agents.
         """
-        self._net = net
         self._radius = radius
         self._dm = get_distance_matrix(net)
         self._name = f'SimplePressure(radius={radius}, flicker_probability={flicker_probability})'
