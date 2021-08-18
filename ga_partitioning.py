@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from analyzer import visualize_network
+from analysis import visualize_network
 from hcmioptim import ga
 import networkx as nx
 import numpy as np

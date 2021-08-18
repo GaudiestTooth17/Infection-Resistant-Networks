@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+import sys
+sys.path.append('')
 from networkgen._clique_gate import cgg_entry_point
 from networkgen._social_circles import social_circles_entry_point
 from networkgen._connected_community import connected_community_entry_point

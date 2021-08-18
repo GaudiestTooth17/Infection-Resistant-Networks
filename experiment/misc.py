@@ -1,11 +1,11 @@
 import sys
 sys.path.append('')
 from collections import defaultdict
-from common import (MakeBarabasiAlbert, MakeConnectedCommunity, MakeRandomNetwork,
-                    PressureComparisonResult, PressureConfig, RandomFlickerConfig,
+from common import (MakeBarabasiAlbert, MakeConnectedCommunity, MakeNetwork,
+                    PressureComparisonResult, SimplePressureConfig, RandomFlickerConfig,
                     simulate_return_survival_rate)
 from typing import Dict, Sequence, Callable, List
-from sim_dynamic import Disease, make_starting_sir, no_update, simulate, PressureBehavior
+from sim_dynamic import Disease, make_starting_sir, no_update, simulate, SimplePressureBehavior
 from network import Network
 from tqdm import tqdm
 import itertools as it
@@ -13,8 +13,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 import fileio as fio
-
-RNG = np.random.default_rng()
 
 
 def run_inf_prob_vs_perc_sus(name: str, diseases: Sequence[Disease],
@@ -80,16 +78,14 @@ def connected_community_entry_point():
 
 
 def pressure_test_entry_point():
-    G, layout, communities = fio.read_network('networks/cavemen-10-10.txt')
-    if layout is None or communities is None:
-        raise Exception('File is incomplete.')
-    net = Network(G, communities=communities)
-    simulate(net.M, make_starting_sir(net.N, (0,)), Disease(4, 0.3),
-             PressureBehavior(net, 1), 200, layout, RNG)
+    rng = np.random.default_rng()
+    net = fio.read_network('networks/cavemen-50-10.txt')
+    simulate(net.M, make_starting_sir(net.N, (0,), rng), Disease(4, 0.3),
+             SimplePressureBehavior(net, 1), 200, None, rng)
 
 
-def pressure_experiment(make_network: MakeRandomNetwork,
-                        pressure_configurations: Sequence[PressureConfig],
+def pressure_experiment(make_network: MakeNetwork,
+                        pressure_configurations: Sequence[SimplePressureConfig],
                         disease: Disease, num_trials: int, rng) -> None:
     pressure_type_to_survival_rates = {}
     static_survival_rates = np.array([simulate_return_survival_rate(make_network(), disease,
@@ -138,9 +134,13 @@ def cc_pressure_vs_none_entry_point():
     n_communities = 25
     make_ccn = MakeConnectedCommunity(community_size, inner_bounds, n_communities,
                                       outer_bounds, rng)
-    pressure_configurations = [PressureConfig(radius, prob, rng)
+    pressure_configurations = [SimplePressureConfig(radius, prob, rng)
                                for radius, prob in it.product((1, 2, 3), (.25, .5, .75))]
-    pressure_experiment(make_ccn, pressure_configurations, disease, num_trials, rng)
+    # pressure_experiment(make_ccn, pressure_configurations, disease, num_trials, rng)
+    net = make_ccn()
+    simulate(net.M, make_starting_sir(net.N, 1, rng), disease,
+             pressure_configurations[1].make_behavior(net),
+             100, nx.spring_layout(net.G))
 
 
 def ba_pressure_vs_none_entry_point():
@@ -150,11 +150,10 @@ def ba_pressure_vs_none_entry_point():
     N = 500
     m = 3
     make_ba = MakeBarabasiAlbert(N, m, 0xbeefee)
-    pressure_configurations = [PressureConfig(radius, prob, rng)
+    pressure_configurations = [SimplePressureConfig(radius, prob, rng)
                                for radius, prob in it.product((1, 2, 3), (.25, .5, .75))]
     pressure_experiment(make_ba, pressure_configurations, disease, num_trials, rng)
 
 
 if __name__ == '__main__':
-    # cc_pressure_vs_none_entry_point()
-    ba_pressure_vs_none_entry_point()
+    pressure_test_entry_point()

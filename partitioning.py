@@ -3,42 +3,10 @@ from itertools import takewhile
 from typing import Collection, Dict, Iterable, Sequence, Union, Tuple
 import networkx as nx
 import numpy as np
-import sys
 from networkx.algorithms.community import girvan_newman, asyn_fluidc
-from fileio import get_network_name, read_network
-from analyzer import (calc_prop_common_neighbors, make_meta_community_layout,
-                      make_meta_community_network, visualize_network)
+from analysis import calc_prop_common_neighbors
 from collections import Counter
-import time
 import itertools as it
-
-
-def main():
-    """
-    Initial testing indicates that this is a REALLY good community detection algorithm!!
-    It didn't do great on the elitist network, but perhaps with more time it could
-    get better results.
-
-    It was really crappy on Watts-Strogatz.
-    """
-    if len(sys.argv) < 3:
-        print(f'Usage: {sys.argv[0]} <network> <num labels/partitions>')
-        return
-
-    path = sys.argv[1]
-    G, layout, _ = read_network(path)
-    if layout is None:
-        raise Exception('Layout cannot be None.')
-    name = get_network_name(path)
-    n_communities = int(sys.argv[2])
-
-    start_time = time.time()
-    intercommunity_edges = fluidc_partition(G, n_communities)
-    meta_G, meta_node_size, meta_edge_width = make_meta_community_network(intercommunity_edges, G)
-    meta_layout = make_meta_community_layout(meta_G, layout)
-    print(f'Finished ({time.time()-start_time}).')
-    visualize_network(meta_G, meta_layout, f'{name} Meta Network',
-                      edge_width_func=lambda G: meta_edge_width, node_size=meta_node_size)
 
 
 def run_experiment(args) -> Tuple[int, int]:
@@ -207,12 +175,3 @@ def intercommunity_edges_to_communities(G: nx.Graph,
                          for comm_id, comm in id_to_community.items()
                          for node in comm}
     return node_to_community
-
-
-if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        print('\nGood bye.')
-    except EOFError:
-        print('\nGood bye.')

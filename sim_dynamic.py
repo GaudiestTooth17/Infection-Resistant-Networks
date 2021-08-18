@@ -6,7 +6,6 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 from customtypes import Layout
-RNG = np.random.default_rng()
 
 UpdateConnections = Callable[[np.ndarray, np.ndarray, int, np.ndarray], np.ndarray]
 """
@@ -22,8 +21,8 @@ class Disease:
 
 
 def pool_friendly_simulate(args):
-    M, n_to_infect, disease, behavior, max_steps = args
-    sir0 = make_starting_sir(M.shape[0], n_to_infect)
+    M, n_to_infect, disease, behavior, max_steps, rng = args
+    sir0 = make_starting_sir(M.shape[0], n_to_infect, rng)
     return simulate(M, sir0, disease, behavior, max_steps, None)[-1]
 
 
@@ -32,8 +31,8 @@ def simulate(M: np.ndarray,
              disease: Disease,
              update_connections: UpdateConnections,
              max_steps: int,
-             layout: Optional[Layout] = None,
-             rng=RNG) -> List[np.ndarray]:
+             rng,
+             layout: Optional[Layout] = None) -> List[np.ndarray]:
     """
     Simulate an infection on a dynamic network.
 
@@ -149,12 +148,13 @@ class Visualize:
         plt.clf()
         nx.draw_networkx(G, pos=self._layout, with_labels=False,
                          node_color=node_colors, node_size=50)
-        plt.title(f'Step: {step}, S: {np.sum(sir[0, :] > 0)}, I: {np.sum(sir[1, :] > 0)}, R: {np.sum(sir[2, :] > 0)}')
+        plt.title(f'Step: {step}, S: {np.sum(sir[0, :] > 0)},'
+                  f'I: {np.sum(sir[1, :] > 0)}, R: {np.sum(sir[2, :] > 0)}')
         # plt.show()
         plt.pause(.5)  # type: ignore
 
 
-def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rng=RNG) -> np.ndarray:
+def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rng) -> np.ndarray:
     """
     Make an initial SIR.
 
@@ -208,8 +208,8 @@ class RandomFlickerBehavior:
     def __init__(self, M: np.ndarray,
                  edges_to_flicker: Collection[Tuple[int, int]],
                  flicker_probability: float,
-                 name: Optional[str] = None,
-                 rng=RNG) -> None:
+                 rng,
+                 name: Optional[str] = None) -> None:
         """
         Flickers inter-community edges according to flicker_pattern.
 
@@ -235,21 +235,18 @@ class RandomFlickerBehavior:
         return self._edges_off_M
 
 
-class PressureBehavior:
+class SimplePressureBehavior:
     def __init__(self, net: Network,
+                 rng,
                  radius: int = 3,
-                 flicker_probability: float = .25,
-                 rng=RNG,
-                 name: Optional[str] = None):
+                 flicker_probability: float = .25):
         """
         Agents receive pressure when nearby agents become infectious. Agents
         with enough pressure will remove connections to nearby agents.
         """
-        self._net = net
         self._radius = radius
         self._dm = get_distance_matrix(net)
-        self._name = f'Pressure(radius={radius}, flicker_probability={flicker_probability})'\
-            if name is None else name
+        self._name = f'SimplePressure(radius={radius}, flicker_probability={flicker_probability})'
         self._pressure = np.zeros(net.N)
         self._flicker_probability = flicker_probability
         self._rng = rng
@@ -280,8 +277,8 @@ class PressureBehavior:
 
 class UnifiedPressureFlickerBehavior:
     def __init__(self, net: Network,
+                 rng,
                  radius: int = 3,
-                 rng=RNG,
                  name: Optional[str] = None):
         """
         Agents receive pressure when nearby agents become infectious. Agents
@@ -320,8 +317,8 @@ class UnifiedPressureFlickerBehavior:
 
 class PressureDecayBehavior:
     def __init__(self, net: Network,
+                 rng,
                  radius: int = 3,
-                 rng=RNG,
                  name: Optional[str] = None):
         """
         Agents receive pressure when nearby agents become infectious. Agents
@@ -355,8 +352,8 @@ class PressureDecayBehavior:
 
 class PressureFlickerBehavior:
     def __init__(self, net: Network,
+                 rng,
                  radius: int = 3,
-                 rng=RNG,
                  name: Optional[str] = None):
         """
         Agents receive pressure when nearby agents become infectious. Agents
@@ -381,10 +378,11 @@ class PressureFlickerBehavior:
             pressured_agents = (self._dm[infectious_agents] <= self._radius)[0]
             self._pressure[pressured_agents] += self._pressure_increase_rate[pressured_agents]
 
-        flicker_amount = self._pressure / self._flicker_pressure_multiplier
-        current_flicker_prob = (1 - (1 - self._flicker_probability) ** flicker_amount)
+        flicker_amount = self._pressure / self._pressure_to_flicker
+        current_flicker_prob = 1 - np.minimum((1 - self._flicker_probability),
+                                              self._flicker_probability) ** flicker_amount
 
-        flicker_agents = ((self._pressure > self._flicker_threshold) &
+        flicker_agents = ((self._pressure > self._pressure_to_flicker) &
                           (self._rng.random(self._pressure.shape) < current_flicker_prob))
         R = np.copy(M)
         R[flicker_agents, :] = 0

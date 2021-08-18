@@ -5,8 +5,7 @@ from typing import Optional, Tuple, Any
 from abc import ABC, abstractmethod
 from customtypes import Number
 import networkgen
-import networkx as nx
-from analyzer import COLORS, visualize_network
+from analysis import COLORS, visualize_network
 import sys
 sys.path.append('')
 from socialgood import rate_social_good
@@ -144,21 +143,18 @@ def run_connected_community_trial(args: Tuple[ConnectedCommunityConfiguration, D
 
     inner_degrees = configuration.make_inner_degrees()
     outer_degrees = configuration.make_outer_degrees()
-    cc_results = networkgen.make_connected_community_network(inner_degrees, outer_degrees,
-                                                             rand)
+    net = networkgen.make_connected_community_network(inner_degrees, outer_degrees, rand)
     # If a network couldn't be successfully generated, return None to signal the failure
-    if cc_results is None:
+    if net is None:
         return None
-    G, communities = cc_results
-    to_flicker = {(u, v) for u, v in G.edges if communities[u] != communities[v]}
-    proportion_flickering = len(to_flicker) / len(G.edges)
-    social_good = rate_social_good(G)
-    M = nx.to_numpy_array(G)
+    to_flicker = {(u, v) for u, v in net.edges if net.communities[u] != net.communities[v]}
+    proportion_flickering = len(to_flicker) / net.E
+    social_good = rate_social_good(net)
 
-    behavior = StaticFlickerBehavior(M, to_flicker, (True, False), "Probs don't change this")
-    avg_sus = np.mean([np.sum(simulate(M, make_starting_sir(len(M), 1),
+    behavior = StaticFlickerBehavior(net.M, to_flicker, (True, False), "Probs don't change this")
+    avg_sus = np.mean([np.sum(simulate(net.M, make_starting_sir(net.N, 1),
                                        disease, behavior, sim_len, None, rand)[-1][0] > 0)
-                       for _ in range(sims_per_trial)]) / len(M)
+                       for _ in range(sims_per_trial)]) / net.N
 
     return proportion_flickering, avg_sus, social_good
 
@@ -174,12 +170,11 @@ def visual_inspection():
     for i in range(10):
         inner_degrees = configuration.make_inner_degrees()
         outer_degrees = configuration.make_outer_degrees()
-        cc_results = networkgen.make_connected_community_network(inner_degrees, outer_degrees, rand)
-        if cc_results is None:
+        net = networkgen.make_connected_community_network(inner_degrees, outer_degrees, rand)
+        if net is None:
             print('Failure')
             continue
-        G, communities = cc_results
-        node_color = [COLORS[community] for community in communities.values()]
+        node_color = [COLORS[community] for community in net.communities.values()]
         visualize_network(G, None, name=str(i), block=False, node_color=node_color)  # type: ignore
     input('Done')
 

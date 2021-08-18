@@ -1,12 +1,8 @@
-from customtypes import Number
-from typing import Callable, Generic, Sequence, Tuple, TypeVar, Union
 import numpy as np
 import networkx as nx
 import fileio as fio
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-import csv
-from analyzer import visualize_network
 from networkgen import _connected_community as cc
 from sim_dynamic import *
 import networkx as nx
@@ -15,7 +11,6 @@ from matplotlib import pyplot as plt
 import socialgood as sg
 import analyzer
 from network import Network
-from scipy.stats import wasserstein_distance
 RNG = np.random.default_rng()
 
 
@@ -202,7 +197,7 @@ def generic_pressure_test():
         raise Exception('File is incomplete.')
     net = Network(G, communities=communities)
     simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
-             PressureBehavior(net, 1), 200, layout, RNG)
+             SimplePressureBehavior(net, 1), 200, layout, RNG)
 
 
 def pressure_decay_test():
@@ -236,7 +231,7 @@ def behavior_comparison():
             ('All Edges Sequential Flicker 1/4', StaticFlickerBehavior(net.M, net.edges, (True, False, False, False))),
             ('All Edges Random Flicker 0.25', RandomFlickerBehavior(net.M, net.edges, 0.25)),
             ('Collected Pressure Flicker 0.25, R=1', UnifiedPressureFlickerBehavior(net, 1, RNG)),
-            ('Generic Pressure Radius 3', PressureBehavior(net, 3)),
+            ('Generic Pressure Radius 3', SimplePressureBehavior(net, 3)),
             ('Pressure Decay Radius 3', PressureDecayBehavior(net, 3)),
             ('Pressure Flicker Radius 3', PressureFlickerBehavior(net, 3))
         )

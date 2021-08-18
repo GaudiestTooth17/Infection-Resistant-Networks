@@ -1,11 +1,14 @@
+from network import Network
 import os
 import networkx as nx
 import numpy as np
-from typing import Optional, Sequence, Union, Callable, Tuple, Dict, Any
+from typing import List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
 from customtypes import Layout, Communities
 import os.path as op
 import sys
 from colorama import Fore, Style
+import tarfile
+import re
 NETWORK_DIR = 'networks'
 
 
@@ -26,7 +29,7 @@ def write_network(G: nx.Graph,
 
 def read_network(file_name: str,
                  remove_self_loops: bool = True)\
-        -> Tuple[nx.Graph, Optional[Layout], Optional[Communities]]:
+        -> Network:
     G: nx.Graph = nx.read_gml(file_name, None)  # type: ignore
 
     layout = nx.get_node_attributes(G, 'layout')
@@ -42,7 +45,9 @@ def read_network(file_name: str,
     if remove_self_loops:
         G.remove_edges_from(nx.selfloop_edges(G))
 
-    return G, layout, node_to_community
+    if layout is not None:
+        return Network(G, communities=node_to_community, layout=layout)
+    return Network(G, communities=node_to_community)
 
 
 def old_output_network(G: nx.Graph, network_name: str,
@@ -124,3 +129,31 @@ def network_names_to_paths(network_names: Sequence[str]) -> Sequence[str]:
         exit(1)
 
     return network_paths
+
+
+def open_network_class(class_name: str) -> Tuple[Network, ...]:
+    """
+    Return all the saved instances of the specified network class.
+
+    Files should be saved in the root of a gunzipped tarball.
+    """
+    archive_name = class_name+'.tar.gz'
+    extraction_dir = os.path.join('/tmp', class_name)
+
+    with tarfile.open(os.path.join('networks', archive_name)) as tar:
+        tar.extractall('/tmp')
+
+    allowed_names = re.compile(r'instance-\d+.txt')
+    id_num = re.compile(r'\d+')
+    sorted_files = sorted(filter(lambda fname: allowed_names.match(fname),
+                                 os.listdir(extraction_dir)),
+                          key=lambda fname: int(id_num.search(fname).group()))  # type: ignore
+
+    paths = (path for path in (os.path.join(extraction_dir, name)
+                               for name in sorted_files))
+    return tuple(read_network(path) for path in paths)
+
+
+def save_animation(net: Network, sirs: List[np.ndarray], output_name: str) -> None:
+    """Save an animation of the the sirs on the network."""
+    pass

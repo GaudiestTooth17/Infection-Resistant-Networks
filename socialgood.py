@@ -6,10 +6,12 @@ import fileio as fio
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import csv
-from analyzer import visualize_network
+from analysis import visualize_network
 import networkx as nx
 from matplotlib import pyplot as plt
 from network import Network
+import retworkx as rx
+import time
 T = TypeVar('T', Number, np.ndarray)
 TDecayFunc = Callable[[T], T]
 
@@ -28,7 +30,7 @@ class DecayFunction(Generic[T]):
         return result
 
 
-def get_distance_matrix(net: Network) -> np.ndarray:
+def get_distance_matrix_deprecated(net: Network) -> np.ndarray:
     """
     Returns the distance matrix of a given matrix with infinity value given.
     """
@@ -43,7 +45,7 @@ def get_distance_matrix(net: Network) -> np.ndarray:
     M = net.M
     num_nodes = len(M)
     m = np.copy(M)
-    dm = np.copy(M)
+    dm = np.copy(M).astype(np.float64)
     dm[dm < 1] = np.inf
     x = np.copy(M)
 
@@ -61,6 +63,14 @@ def get_distance_matrix(net: Network) -> np.ndarray:
     # Sets the self distance to zero before return.
     for n in range(num_nodes):
         dm[n, n] = 0
+    return dm
+
+
+def get_distance_matrix(net: Network) -> np.ndarray:
+    dm: np.ndarray = rx.distance_matrix(net.R).copy()  # type: ignore
+    dm[dm == 0] = np.inf
+    for u in range(len(dm)):
+        dm[u, u] = 0
     return dm
 
 
@@ -106,8 +116,7 @@ def save_social_good_csv(networks: Sequence[str], network_paths: Sequence[str]):
         for name, path in tqdm(tuple(zip(networks, network_paths))):
             scores = []
             for decay_func in decay_functions:
-                G, _, _ = fio.read_network(path)
-                net = Network(G)
+                net = fio.read_network(path)
                 social_good_score = rate_social_good(net, decay_func)
                 scores.append(f'{social_good_score:.3f}')
             writer.writerow([name] + scores)
@@ -115,13 +124,13 @@ def save_social_good_csv(networks: Sequence[str], network_paths: Sequence[str]):
 
 def visualize_social_good(networks: Sequence[str], network_paths: Sequence[str]):
     for name, path in zip(networks, network_paths):
-        G, layout, _ = fio.read_network(path)
-        node_size = node_size_from_social_good(G, DecayFunction(1))
+        net = fio.read_network(path)
+        node_size = node_size_from_social_good(net.G, DecayFunction(1))
         plt.title(f'{name} Node Size')
         plt.hist(node_size, bins=None)
         plt.figure()
         print(f'{name} min = {np.min(node_size):.2f} max = {np.max(node_size):.2f}')
-        visualize_network(G, layout, name, node_size=node_size, block=False)
+        visualize_network(net.G, net.layout, name, node_size=node_size, block=False)
 
     input('Done.')
 
@@ -132,9 +141,17 @@ def main():
                 'connected-comm-50-10', 'spatial-network', 'watts-strogatz-500-4-.1')
     network_paths = fio.network_names_to_paths(networks)
     for name, path in zip(networks, network_paths):
-        G, _, _ = fio.read_network(path)
-        net = Network(G)
+        net = fio.read_network(path)
         print(f'{name:<30} {rate_social_good(net, DecayFunction(.5)):>10.3f}')
+
+
+def speed_test():
+    # net = Network(nx.grid_2d_graph(100, 100))
+    net = Network(nx.caveman_graph(100, 100))
+    start_time = time.time()
+    dm = get_distance_matrix(net)
+    print(f'Finished retworkx implementation ({time.time()-start_time} s)')
+    print(dm[0, 200])
 
 
 if __name__ == '__main__':

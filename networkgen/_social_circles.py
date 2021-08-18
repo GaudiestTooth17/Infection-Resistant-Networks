@@ -1,14 +1,15 @@
+from network import Network
 import sys
 sys.path.append('')
 from typing import Union, Tuple, Dict, Optional
 from dataclasses import dataclass
-from customtypes import Number, Layout, NodeColors
+from customtypes import Number, NodeColors
 import time
-from analyzer import visualize_network
+from analysis import visualize_network
 from scipy.sparse import dok_matrix
 import numpy as np
 import networkx as nx
-from partitioning import intercommunity_edges_to_communities, fluidc_partition
+from partitioning import fluidc_partition
 from tqdm import tqdm
 import itertools as it
 RAND = np.random.default_rng()
@@ -42,16 +43,16 @@ def social_circles_entry_point():
         if social_circles_result is None:
             print('Generation failed.')
             exit(1)
-        G, layout, _ = social_circles_result
+        net, _ = social_circles_result
         print(f'Finished social circles network ({time.time() - start_time}s).')
-        visualize_network(G, layout, 'Social Circles', block=False)
-        num_communities = len(G) // 20
+        visualize_network(net.G, net.layout, 'Social Circles', block=False)
+        num_communities = net.N // 20
         print(f'Aiming for {num_communities} communities.')
-        to_remove = fluidc_partition(G, num_communities)
-        # somehow this frequently splits G into more components than I request
-        G.remove_edges_from(to_remove)
-        print(f'G has {nx.number_connected_components(G)} connected components.')
-        visualize_network(G, layout, 'Partitioned')
+        to_remove = fluidc_partition(net.G, num_communities)
+        H = nx.Graph(net.G)
+        H.remove_edges_from(to_remove)
+        print(f'G has {nx.number_connected_components(H)} connected components.')
+        visualize_network(H, net.layout, 'Partitioned')
         print('\n\n')
 
 
@@ -61,7 +62,7 @@ def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
                                 verbose: bool = False,
                                 max_tries: int = 5,
                                 rand=RAND)\
-        -> Optional[Tuple[nx.Graph, Layout, NodeColors]]:
+        -> Optional[Tuple[Network, NodeColors]]:
     """Return a social circles network or None on timeout."""
     for attempt in range(max_tries):
         agents = sorted(agent_type_to_quantity.items(),
@@ -109,7 +110,7 @@ def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
         if (not none_on_disconnected) or nx.is_connected(G):
             if verbose:
                 print(f'Success after {attempt+1} tries.')
-            return G, layout, colors
+            return Network(G, layout=layout), colors
         elif verbose:
             print(f'Finished {attempt+1} tries.')
 

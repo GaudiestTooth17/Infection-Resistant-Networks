@@ -1,6 +1,7 @@
-from typing import Union, Optional, Collection, Tuple, Iterable
-from customtypes import Communities
+from typing import Callable, Union, Optional, Collection, Tuple, Iterable
+from customtypes import Communities, Layout
 import networkx as nx
+import retworkx as rx
 import numpy as np
 from partitioning import fluidc_partition, intercommunity_edges_to_communities
 
@@ -9,7 +10,8 @@ class Network:
     def __init__(self, data: Union[nx.Graph, np.ndarray],
                  intercommunity_edges: Optional[Collection[Tuple[int, int]]] = None,
                  communities: Optional[Communities] = None,
-                 community_size: int = 25) -> None:
+                 community_size: int = 25,
+                 layout: Union[Layout, Callable[[nx.Graph], Layout]] = nx.kamada_kawai_layout):
         """
         Holds both the NetworkX and NumPy representation of a network. It starts
         off with just one and lazily creates the other representation.
@@ -19,6 +21,10 @@ class Network:
         Does not support selfloops or multiedges.
         """
         if isinstance(data, nx.Graph):
+            # make sure that nodes are identified by integers
+            if not isinstance(next(iter(data.nodes)), int):
+                data = nx.Graph(data)
+                nx.relabel_nodes(data, {old: new for new, old in enumerate(data.nodes)})
             self._G = data
             self._M = None
         else:
@@ -27,6 +33,9 @@ class Network:
         self._intercommunity_edges = intercommunity_edges
         self._communities = communities
         self._community_size = community_size
+        self._layout = layout
+        self._edge_density = None
+        self._R = None
 
     @property
     def G(self) -> nx.Graph:
@@ -41,6 +50,13 @@ class Network:
         return self._M
 
     @property
+    def R(self):
+        """Return a retworkx PyGraph"""
+        if self._R is None:
+            self._R = rx.networkx_converter(self.G)
+        return self._R
+
+    @property
     def N(self) -> int:
         return self.__len__()
 
@@ -49,6 +65,12 @@ class Network:
         if self._G is not None:
             return len(self._G.edges)
         return np.sum(self._M > 0) // 2  # type: ignore
+
+    @property
+    def edge_density(self) -> float:
+        if self._edge_density is None:
+            self._edge_density = self.E / ((self.N**2 - self.N)//2)
+        return self._edge_density
 
     @property
     def edges(self) -> Iterable[Tuple[int, int]]:
@@ -70,6 +92,12 @@ class Network:
             self._communities = intercommunity_edges_to_communities(self.G,
                                                                     self.intercommunity_edges)
         return self._communities
+
+    @property
+    def layout(self) -> Layout:
+        if callable(self._layout):
+            self._layout = self._layout(self.G)
+        return self._layout
 
     def __len__(self) -> int:
         if self._M is not None:

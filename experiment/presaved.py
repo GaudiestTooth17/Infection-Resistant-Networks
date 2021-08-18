@@ -29,14 +29,10 @@ def main():
                         StaticFlickerConfig((True, False), 'Static .5'))
 
     for net_name, path in zip(names, paths):
-        G, _, communities = fio.read_network(path)
-        net = Network(G)
-        if communities is None:
-            print(f'No community data for {net_name}. Skipping.', file=sys.stderr)
-            continue
-        to_flicker = tuple((u, v) for u, v in G.edges
-                           if communities[u] != communities[v])
-        proportion_flickering = len(to_flicker) / len(G.edges)
+        net = fio.read_network(path)
+        to_flicker = tuple((u, v) for u, v in net.edges
+                           if net.communities[u] != net.communities[v])
+        proportion_flickering = len(to_flicker) / net.E
         social_good = rate_social_good(net)
         trial_to_pf = tuple(proportion_flickering for _ in range(n_trials))
         trial_to_sg = tuple(social_good for _ in range(n_trials))
@@ -119,35 +115,28 @@ def run_experiments(args: Tuple[str, int, int, Disease, Sequence[FlickerConfig],
            the name of the baseline flicker to compare the other results to)
     """
     network_path, num_sims, sim_len, disease, flicker_configs, baseline_flicker_name = args
-    G, layout, communities = fio.read_network(network_path)
-    if layout is None:
-        print(f'{fio.get_network_name(network_path)} has no layout.')
-        return None
-    if communities is None:
-        print(f'{fio.get_network_name(network_path)} has no community data.')
-        return None
-    M = nx.to_numpy_array(G)
-    intercommunity_edges = {(u, v) for u, v in G.edges if communities[u] != communities[v]}
-    N = M.shape[0]
+    net = fio.read_network(network_path)
+    intercommunity_edges = {(u, v) for u, v in net.edges
+                            if net.communities[u] != net.communities[v]}
 
     behavior_to_results: Dict[str, Sequence[float]] = {}
     for config in flicker_configs:
-        behavior = config.make_behavior(M, intercommunity_edges)
+        behavior = config.make_behavior(net.M, intercommunity_edges)
         # The tuple comprehension is pretty arcane, so here is an explanation.
         # Each entry is the sum of the number of entries in the final SIR where
         # the days in S are greater than 0. That is to say, the number of
         # susceptible agents at the end of the simulation.
-        perc_sus = tuple(np.sum(simulate(M,
-                                         make_starting_sir(N, 1),
+        perc_sus = tuple(np.sum(simulate(net.M,
+                                         make_starting_sir(net.N, 1),
                                          disease,
                                          behavior,
                                          sim_len,
-                                         None)[-1][0] > 0) / N
+                                         None)[-1][0] > 0) / net.N
                          for _ in range(num_sims))
         behavior_to_results[behavior.name] = perc_sus
 
     return FlickerComparisonResult(fio.get_network_name(network_path), num_sims, sim_len,
-                                   len(intercommunity_edges)/len(G.edges), behavior_to_results,
+                                   len(intercommunity_edges)/net.E, behavior_to_results,
                                    baseline_flicker_name)
 
 
