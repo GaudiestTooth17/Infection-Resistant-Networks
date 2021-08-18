@@ -172,7 +172,7 @@ def infection_entropy_vs_communicability():
     csv_rows: List[Union[List[str], List[int], List[float]]] = []
     for class_ in classes:
         rng = np.random.default_rng(777)
-        nets = fio.open_network_class(class_)
+        nets = fio.read_network_class(class_)
         communicabilities: List[int] = [sum(cell
                                             for row in nx.communicability_exp(net.G).values()
                                             for cell in row.values())
@@ -227,7 +227,7 @@ def save_simulation_data(n_sims: int, seed: int, pressure_radius: int, flicker_p
         rng = np.random.default_rng(777)
         # recreate the config here
         behavior_config = SimplePressureConfig(pressure_radius, flicker_prob, rng)
-        nets = fio.open_network_class(class_)
+        nets = fio.read_network_class(class_)
         csv_rows.append([class_])
         for net in tqdm(nets):
             behavior = behavior_config.make_behavior(net)

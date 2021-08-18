@@ -131,7 +131,7 @@ def network_names_to_paths(network_names: Sequence[str]) -> Sequence[str]:
     return network_paths
 
 
-def open_network_class(class_name: str) -> Tuple[Network, ...]:
+def read_network_class(class_name: str) -> Tuple[Network, ...]:
     """
     Return all the saved instances of the specified network class.
 
