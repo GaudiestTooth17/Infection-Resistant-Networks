@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 import fileio as fio
+import csv
 
 
 def run_inf_prob_vs_perc_sus(name: str, diseases: Sequence[Disease],
@@ -153,6 +154,35 @@ def ba_pressure_vs_none_entry_point():
     pressure_configurations = [SimplePressureConfig(radius, prob, rng)
                                for radius, prob in it.product((1, 2, 3), (.25, .5, .75))]
     pressure_experiment(make_ba, pressure_configurations, disease, num_trials, rng)
+
+
+def save_communicabilities():
+    network_classes = (
+        'BarabasiAlbert(N=500,m=2)',
+        'BarabasiAlbert(N=500,m=3)',
+        'BarabasiAlbert(N=500,m=4)',
+        'ConnComm(N_comm=10,ib=(5, 10),num_comms=50,ob=(3, 6))',
+        'ConnComm(N_comm=20,ib=(15, 20),num_comms=25,ob=(3, 6))',
+        'ErdosRenyi(N=500,p=0.01)',
+        'ErdosRenyi(N=500,p=0.02)',
+        'ErdosRenyi(N=500,p=0.03)',
+        'WattsStrogatz(N=500,k=4,p=0.01)',
+        'WattsStrogatz(N=500,k=4,p=0.02)',
+        'WattsStrogatz(N=500,k=5,p=0.01)'
+    )
+    rows = []
+    for class_name in network_classes:
+        nets = fio.read_network_class(class_name)
+        communicabilties = (sum(c
+                                for inner_values in nx.communicability_exp(net.G).values()
+                                for c in inner_values.values())
+                            for net in nets)
+        rows.append([class_name])
+        rows.append(list(map(str, communicabilties)))
+
+    with open('communicabilities.csv', 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerows(rows)
 
 
 if __name__ == '__main__':
