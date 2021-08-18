@@ -341,14 +341,15 @@ class PressureDecayBehavior:
             pressured_agents = (self._dm[infectious_agents] <= self._radius)[0]
             self._pressure[pressured_agents] += self._flicker_probability[pressured_agents]
 
-        self._pressure = self._pressure * self._flicker_probability
-
         flicker_agents = ((self._pressure >= .5) & (self._rng.random(self._pressure.shape)
                                                     < self._flicker_probability))
         R = np.copy(M)
         R[flicker_agents, :] = 0
         R[:, flicker_agents] = 0
         # print('Edges Removed', (np.sum(M) - np.sum(R)) / 2)
+
+        self._pressure = self._pressure * self._flicker_probability
+
         return R
 
 
@@ -366,27 +367,29 @@ class PressureFlickerBehavior:
         self._name = f'Pressure(radius={radius})' if name is None else name
         self._dm = get_distance_matrix(net)
         self._pressure = np.zeros(net.N)
-        self._flicker_probability = rng.random(net.N)
-        self._pressure_to_flicker = rng.random(net.N)
+        # self._flicker_probability = rng.random(net.N)
+        self._flicker_probability = rng.power(9, net.N)
+        self._flicker_threshold = (1 - rng.power(4, net.N))
+        self._flicker_pressure_multiplier = self._flicker_probability
+        self._pressure_increase_rate = self._flicker_probability
+        self._pressure_decay = self._flicker_probability
         self._rng = rng
 
     def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
         infectious_agents = sir[1] > 0
         if infectious_agents.any():
             pressured_agents = (self._dm[infectious_agents] <= self._radius)[0]
-            self._pressure[pressured_agents] += self._flicker_probability[pressured_agents]
+            self._pressure[pressured_agents] += self._pressure_increase_rate[pressured_agents]
 
+        flicker_amount = self._pressure / self._flicker_pressure_multiplier
+        current_flicker_prob = (1 - (1 - self._flicker_probability) ** flicker_amount)
 
-        flicker_amount = self._pressure / self._pressure_to_flicker
-        current_flicker_prob = (1 -
-            np.minimum((1 - self._flicker_probability), self._flicker_probability) ** flicker_amount)
-
-        flicker_agents = ((self._pressure > self._pressure_to_flicker) &
+        flicker_agents = ((self._pressure > self._flicker_threshold) &
                           (self._rng.random(self._pressure.shape) < current_flicker_prob))
         R = np.copy(M)
         R[flicker_agents, :] = 0
         R[:, flicker_agents] = 0
 
-        self._pressure = self._pressure * self._flicker_probability
+        self._pressure = self._pressure * self._pressure_decay
 
         return R

@@ -205,22 +205,13 @@ def generic_pressure_test():
              PressureBehavior(net, 1), 200, layout, RNG)
 
 
-def decay_pressure_test():
-    G, layout, communities = fio.read_network('networks/elitist-100.txt')
-    if layout is None or communities is None:
-        raise Exception('File is incomplete.')
-    net = Network(G, communities=communities)
-    simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
-             PressureDecayBehavior(net, 3), 200, layout, RNG)
-
-
-def pressure_flicker_test():
+def pressure_decay_test():
     G, layout, communities = fio.read_network('networks/elitist-500.txt')
     if layout is None or communities is None:
         raise Exception('File is incomplete.')
     net = Network(G, communities=communities)
     simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
-             PressureFlickerBehavior(net, 3), 200, layout, RNG)
+             PressureDecayBehavior(net, 3), 200, layout, RNG)
 
 
 def behavior_comparison():
@@ -269,6 +260,21 @@ def behavior_comparison():
     print(averages)
 
 
+def pressure_flicker_test(display=True):
+    G, layout, communities = fio.read_network('networks/elitist-500.txt')
+    if not display:
+        layout = None
+    net = Network(G, communities=communities)
+    sirs = simulate(net.M, make_starting_sir(net.N, 5, RNG), Disease(4, 0.3),
+             PressureFlickerBehavior(net, 3), 200, layout, RNG)
+    return np.sum(sirs[-1][0, :] > 0) / net.N
+
+
 if __name__ == '__main__':
-    behavior_comparison()
+    num_sims = 1000
+    s = []
+    for _ in tqdm(range(num_sims)):
+        s.append(pressure_flicker_test(display=False))
+    plt.hist(s)
+    plt.show()
 
