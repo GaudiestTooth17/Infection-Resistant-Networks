@@ -15,14 +15,15 @@ NETWORK_DIR = 'networks'
 def write_network(G: nx.Graph,
                   network_name: str,
                   layout: Layout,
-                  communities: Communities) -> None:
+                  communities: Optional[Communities]) -> None:
     G = nx.Graph(G)
     # sometimes non tuple types slip through the cracks
     if not isinstance(layout[0], tuple):
         layout = {node: (location[0], location[1]) for node, location in layout.items()}
 
     nx.set_node_attributes(G, layout, 'layout')
-    nx.set_node_attributes(G, communities, 'community')
+    if communities is not None:
+        nx.set_node_attributes(G, communities, 'community')
 
     nx.write_gml(G, network_name+'.txt')
 
@@ -154,6 +155,27 @@ def read_network_class(class_name: str) -> Tuple[Network, ...]:
     return tuple(read_network(path) for path in paths)
 
 
+def write_network_class(class_name: str, nets: Sequence[Network]) -> None:
+    tmp_dir = f'/tmp/{class_name}'
+    if not os.path.exists(tmp_dir):
+        os.mkdir(tmp_dir)
+    target = os.path.join('networks', class_name + '.tar.gz')
+    if os.path.exists(target):
+        raise Exception(f'{target} already exists. Delete and try again.')
+    with tarfile.open(target, 'x:gz') as tar:
+        for i, net in enumerate(nets):
+            tmp_name = f'instance-{i}'
+            path_to_net = os.path.join(tmp_dir, tmp_name)
+            write_network(net.G, path_to_net, net.layout, None)
+            tar.add(path_to_net+'.txt', tmp_name+'.txt')
+
+
 def save_animation(net: Network, sirs: List[np.ndarray], output_name: str) -> None:
     """Save an animation of the the sirs on the network."""
     pass
+
+
+if __name__ == '__main__':
+    write_network_class('ErdosRenyi(N=500,p=.05)',
+                        [Network(nx.erdos_renyi_graph(500, .05))
+                         for _ in range(10)])
