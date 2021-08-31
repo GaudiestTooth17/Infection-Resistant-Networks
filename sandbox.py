@@ -210,13 +210,10 @@ def pressure_decay_test():
 
 
 def behavior_comparison():
-    ccG, _, _ = fio.read_network('networks/cavemen-50-10.txt')
-    eG, _, _ = fio.read_network('networks/elitist-500.txt')
-    cgg, _, _ = fio.read_network('networks/cgg-500.txt')
     networks = (
-        ('Caveman-50-10', Network(ccG)),
-        ('Elitist-500', Network(eG)),
-        ('CGG-500', Network(cgg))
+        ('Caveman-50-10', fio.read_network('networks/cavemen-50-10.txt')),
+        ('Elitist-500', fio.read_network('networks/elitist-500.txt')),
+        ('CGG-500', fio.read_network('networks/cgg-500.txt'))
     )
 
     num_sims = 1000
@@ -227,20 +224,32 @@ def behavior_comparison():
     for i, (n_name, net) in enumerate(networks):
 
         behaviors = (
-            ('No Mitigations', NoMitigation()),
-            ('All Edges Sequential Flicker 1/4', StaticFlickerBehavior(net.M, net.edges, (True, False, False, False))),
-            ('All Edges Random Flicker 0.25', RandomFlickerBehavior(net.M, net.edges, 0.25)),
-            ('Collected Pressure Flicker 0.25, R=1', UnifiedPressureFlickerBehavior(net, 1, RNG)),
-            ('Generic Pressure Radius 3', SimplePressureBehavior(net, 3)),
-            ('Pressure Decay Radius 3', PressureDecayBehavior(net, 3)),
-            ('Pressure Flicker Radius 3', PressureFlickerBehavior(net, 3))
+            ('No Mitigations',
+             NoMitigation()),
+            ('Generic Pressure R=3',
+             SimplePressureBehavior(net, 3)),
+            ('Edge Pressure R=3',
+             SimplePressureBehavior(net, 3))
+            # ('All Edges Sequential Flicker 1/4',
+            #  StaticFlickerBehavior(net.M, net.edges, (True, False, False, False))),
+            # ('All Edges Random Flicker 0.25',
+            #  RandomFlickerBehavior(net.M, net.edges, 0.25)),
+            # ('Collected Pressure Flicker 0.25, R=1',
+            #  UnifiedPressureFlickerBehavior(net, 1, RNG)),
+            # ('Generic Pressure Radius 3',
+            #  SimplePressureBehavior(net, 3)),
+            # ('Pressure Decay Radius 3',
+            #  PressureDecayBehavior(net, 3)),
+            # ('Pressure Flicker Radius 3',
+            #  PressureFlickerBehavior(net, 3))
         )
 
         for j, (b_name, behavior) in enumerate(behaviors):
             s_scores = []
             for _ in range(num_sims):
                 loop.set_description(f'{n_name}, {b_name}')
-                end_sir = simulate(net.M, make_starting_sir(net.N, 1), Disease(4, 0.3), behavior, 200, rng=RNG)[-1]
+                end_sir = simulate(net.M, make_starting_sir(net.N, 1), Disease(4, 0.3),
+                                   behavior, 200, rng=RNG)[-1]
                 s_scores.append(np.sum(end_sir[0, :] > 0)/net.N)
                 loop.update()
             # plt.title(f'{n_name}, {b_name}, Avg: {sum(s_scores)/len(s_scores)}')
@@ -261,15 +270,14 @@ def pressure_flicker_test(display=True):
         layout = None
     net = Network(G, communities=communities)
     sirs = simulate(net.M, make_starting_sir(net.N, 5, RNG), Disease(4, 0.3),
-             PressureFlickerBehavior(net, 3), 200, layout, RNG)
+                    PressureFlickerBehavior(net, 3), 200, layout, RNG)
     return np.sum(sirs[-1][0, :] > 0) / net.N
 
 
 if __name__ == '__main__':
-    num_sims = 1000
-    s = []
-    for _ in tqdm(range(num_sims)):
-        s.append(pressure_flicker_test(display=False))
-    plt.hist(s)
-    plt.show()
-
+    # net = Network(np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]]))
+    # net = Network(nx.connected_caveman_graph(5, 5))
+    # layout = nx.spring_layout(net.G)
+    # sirs = simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
+    #                 SimpleEdgePressureBehavior(net, RNG, 1), 200, rng=RNG, layout=layout)
+    behavior_comparison()
