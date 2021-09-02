@@ -301,6 +301,7 @@ class SimpleEdgePressureBehavior:
         if infectious_agents.any():
             pressured_edges = zip(*np.where(self._edm[infectious_agents] <= self._radius)[1:])
             for edge in pressured_edges:
+                # print(edge)
                 self._pressure[edge] += 1
 
         recovered_agents = sir[2] == 1

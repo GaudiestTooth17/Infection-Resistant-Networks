@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 import socialgood as sg
 import analyzer
 from network import Network
+from scipy.stats import wasserstein_distance
 RNG = np.random.default_rng()
 
 
@@ -216,8 +217,8 @@ def behavior_comparison():
         ('CGG-500', fio.read_network('networks/cgg-500.txt'))
     )
 
-    num_sims = 1000
-    num_behaviors = 7
+    num_sims = 50
+    num_behaviors = 3
     distributions = []
     averages = np.zeros((len(networks), num_behaviors))
     loop = tqdm(total=len(networks) * num_behaviors * num_sims)
@@ -226,10 +227,10 @@ def behavior_comparison():
         behaviors = (
             ('No Mitigations',
              NoMitigation()),
-            ('Generic Pressure R=3',
-             SimplePressureBehavior(net, 3)),
-            ('Edge Pressure R=3',
-             SimplePressureBehavior(net, 3))
+            ('Generic Pressure R=1',
+             SimplePressureBehavior(net, rng=RNG, radius=1)),
+            ('Edge Pressure R=1',
+             SimpleEdgePressureBehavior(net, rng=RNG, radius=1))
             # ('All Edges Sequential Flicker 1/4',
             #  StaticFlickerBehavior(net.M, net.edges, (True, False, False, False))),
             # ('All Edges Random Flicker 0.25',
@@ -248,8 +249,11 @@ def behavior_comparison():
             s_scores = []
             for _ in range(num_sims):
                 loop.set_description(f'{n_name}, {b_name}')
-                end_sir = simulate(net.M, make_starting_sir(net.N, 1), Disease(4, 0.3),
-                                   behavior, 200, rng=RNG)[-1]
+                end_sir = simulate(net.M, sir0=make_starting_sir(net.N, 1, rng=RNG),
+                                   disease=Disease(4, 0.3),
+                                   update_connections=behavior,
+                                   max_steps=200,
+                                   rng=RNG)[-1]
                 s_scores.append(np.sum(end_sir[0, :] > 0)/net.N)
                 loop.update()
             # plt.title(f'{n_name}, {b_name}, Avg: {sum(s_scores)/len(s_scores)}')
@@ -257,11 +261,13 @@ def behavior_comparison():
             # plt.figure()
             averages[i, j] = sum(s_scores)/len(s_scores)
             distributions.append(s_scores)
-    # print(wasserstein_distance(distributions[0], distributions[2]))
-    # print(wasserstein_distance(distributions[1], distributions[3]))
+    print(wasserstein_distance(distributions[1], distributions[2]))
+    print(wasserstein_distance(distributions[4], distributions[5]))
+    print(wasserstein_distance(distributions[7], distributions[8]))
     # plt.show()
     np.set_printoptions(precision=3, suppress=True)
     print(averages)
+    # print(descriptions)
 
 
 def pressure_flicker_test(display=True):
