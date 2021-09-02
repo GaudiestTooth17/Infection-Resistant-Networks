@@ -293,6 +293,10 @@ def simulate_return_survival_rate(net: Network, disease: Disease,
     return np.sum(simulate(net.M, sir0, disease, behavior, 100, rng, None)[-1][0] > 0) / net.N
 
 
+def calc_survival_rate(sirs: List[np.ndarray]) -> float:
+    return np.sum(sirs[-1][0] > 0) / sirs[-1].shape[1]
+
+
 class FlickerConfig(ABC):
     @abstractmethod
     def make_behavior(self, M: np.ndarray,
