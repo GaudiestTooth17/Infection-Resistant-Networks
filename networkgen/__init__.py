@@ -4,3 +4,5 @@ from networkgen._clique_gate import make_complete_clique_gate_network
 from networkgen._agent_based import (make_agent_generated_network,
                                      TimeBasedBehavior,
                                      AgentBehavior)
+from networkgen._lazy_spatial import (MakeLazySpatialNetwork, SpatialConfiguration,
+                                      make_random_spatial_configuration)
