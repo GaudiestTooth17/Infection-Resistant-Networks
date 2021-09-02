@@ -271,7 +271,49 @@ class SimplePressureBehavior:
         R = np.copy(M)
         R[flicker_agents, :] = 0
         R[:, flicker_agents] = 0
-        # print('Edges Removed', (np.sum(M) - np.sum(R)) / 2)
+        return R
+
+
+class SimpleEdgePressureBehavior:
+    def __init__(self, net: Network,
+                 rng,
+                 radius: int = 3,
+                 flicker_probability: float = .25):
+        """
+        Edges recieve pressure when nearby agents become infectious. Edges with enough pressure
+        will "dissapear".
+        """
+        self._radius = radius
+        self._name = f'SimplePressure(radius={radius}, flicker_probability={flicker_probability})'
+        self._pressure = {}
+        self._pressure.update({(a, b): 0 for a, b in net.edges})
+        self._pressure.update({(b, a): 0 for a, b in net.edges})
+        self._flicker_probability = flicker_probability
+        self._rng = rng
+        self._edm = net.edm
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
+        infectious_agents = sir[1] == 1
+        if infectious_agents.any():
+            pressured_edges = zip(*np.where(self._edm[infectious_agents] <= self._radius)[1:])
+            for edge in pressured_edges:
+                # print(edge)
+                self._pressure[edge] += 1
+
+        recovered_agents = sir[2] == 1
+        if recovered_agents.any():
+            unpressured_edges = zip(*np.where(self._edm[recovered_agents] <= self._radius)[1:])
+            for edge in unpressured_edges:
+                self._pressure[edge] -= 1
+        R = np.copy(M)
+        for (a, b), p in self._pressure.items():
+            if p > 0 and self._rng.random() < self._flicker_probability:
+                R[a, b] = 0
+                R[b, a] = 0
         return R
 
 

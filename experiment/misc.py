@@ -171,12 +171,12 @@ def save_communicabilities():
         'WattsStrogatz(N=500,k=5,p=0.01)'
     )
     rows = []
-    for class_name in network_classes:
+    for class_name in tqdm(network_classes):
         nets = fio.read_network_class(class_name)
         communicabilties = (sum(c
                                 for inner_values in nx.communicability_exp(net.G).values()
                                 for c in inner_values.values())
-                            for net in nets)
+                            for net in tqdm(nets))
         rows.append([class_name])
         rows.append(list(map(str, communicabilties)))
 
@@ -186,4 +186,4 @@ def save_communicabilities():
 
 
 if __name__ == '__main__':
-    pressure_test_entry_point()
+    save_communicabilities()

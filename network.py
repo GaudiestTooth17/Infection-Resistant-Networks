@@ -35,6 +35,8 @@ class Network:
         self._layout = layout
         self._edge_density = None
         self._R = None
+        self._dm = None
+        self._edm = None  # Edge distance matrix (distance to attached edges is 1)
 
     @property
     def G(self) -> nx.Graph:
@@ -97,6 +99,32 @@ class Network:
         if callable(self._layout):
             self._layout = self._layout(self.G)
         return self._layout
+
+    @property
+    def dm(self):
+        if self._dm is None:
+            m: np.ndarray = rx.distance_matrix(self.R).copy()  # type: ignore
+            m[m == 0] = np.inf
+            for u in range(len(m)):
+                m[u, u] = 0
+            self._dm = m
+        return self._dm
+
+    @property
+    def edm(self):
+        if self._edm is None:
+            m = np.zeros((self.N, self.N, self.N))
+            for node in range(self.N):
+                for d in range(0, int(np.amax(self.dm) + 1)):
+                    nodes = np.where(self.dm[node] == d)[0]
+                    nodes_edges = [edge for n in nodes for edge in self.edges(n)]
+                    for a, b in nodes_edges:
+                        if m[node, a, b] == 0:
+                            m[node, a, b] = d + 1
+                            m[node, b, a] = d + 1
+            m[m == 0] = np.inf
+            self._edm = m
+        return self._edm
 
     def __len__(self) -> int:
         if self._M is not None:
