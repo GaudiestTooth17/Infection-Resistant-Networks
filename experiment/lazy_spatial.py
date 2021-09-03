@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from networkgen import MakeLazySpatialNetwork, make_random_spatial_configuration
-from analysis import visualize_network
 from sim_dynamic import Disease, simulate, make_starting_sir, no_update
 from common import calc_survival_rate
 import itertools as it
@@ -32,7 +31,7 @@ def sensitivity_to_initial_configuration():
         all_avg_degrees.append([np.average(d) for d in degrees])
         all_max_degrees.append([max(d) for d in degrees])
 
-    fig, axs = plt.subplots(2)
+    _, axs = plt.subplots(2)
     ax1, ax2 = axs[0], axs[1]
     ps = [all_num_comps, all_min_degrees, all_avg_degrees, all_max_degrees]
     for i, p in enumerate(ps):
