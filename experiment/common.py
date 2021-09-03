@@ -527,7 +527,7 @@ class RawDataCSV:
         self.distributions = distributions
 
     def save(self):
-        with open(self.title+'.csv', 'w', newline='') as csv_file:
+        with open(os.path.join('results', self.title+'.csv'), 'w', newline='') as csv_file:
             writer = csv.writer(csv_file)
             rows = it.chain(*[([dist_title], dist_data)
                               for dist_title, dist_data in self.distributions.items()])
@@ -540,7 +540,7 @@ class RawDataCSV:
             plt.title(self.title)
             plt.xlabel(dist_title)
             plt.boxplot(dist)
-            plt.savefig(dist_title+'.png', format='png')
+            plt.savefig(os.path.join('results', dist_title+'.png'), format='png')
         return self
 
     @staticmethod
@@ -571,3 +571,9 @@ class RawDataCSV:
             else:
                 num_list.append(int(s))
         return num_list
+
+    @staticmethod
+    def union(title: str, x: 'RawDataCSV', y: 'RawDataCSV') -> 'RawDataCSV':
+        new_data = copy.deepcopy(x.distributions)
+        new_data.update(y.distributions)
+        return RawDataCSV(title, new_data)

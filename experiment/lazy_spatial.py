@@ -1,14 +1,54 @@
 import sys
 sys.path.append('')
-from typing import List
+from network import Network
+from socialgood import get_distance_matrix
+from typing import Any, Callable, List, Sequence
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from networkgen import MakeLazySpatialNetwork, make_random_spatial_configuration
-from sim_dynamic import Disease, simulate, make_starting_sir, no_update
-from common import calc_survival_rate
+from sim_dynamic import (Disease, SimplePressureBehavior, UpdateConnections,
+                         simulate, make_starting_sir, no_update)
+from common import calc_survival_rate, RawDataCSV
 import itertools as it
+
+
+class SpatialContraction:
+    def __init__(self, normal_net: Network,
+                 contracted_net: Network,
+                 pressure_radius: int,
+                 flicker_prob: float,
+                 rng):
+        self._normal_net = normal_net
+        self._contracted_net = contracted_net
+        self._pressure_radius = pressure_radius
+        self._flicker_prob = flicker_prob
+        self._rng = rng
+        # TODO: consider replacing this with the distance matrix from a MakeLazySpatial instance
+        # because that matrix represents how close "socially" two people are.
+        # The downside to using that is that then the behavior won't correspond as closely
+        # to SimplePressureBehavior
+        self._dm = get_distance_matrix(normal_net)
+        self._pressure = np.zeros(normal_net.N, dtype=np.uint32)
+
+    def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
+        infectious_agents = sir[1] == 1
+        if infectious_agents.any():
+            pressured_agents = (self._dm[infectious_agents] <= self._pressure_radius)[0]
+            self._pressure[pressured_agents] += 1
+
+        recovered_agents = sir[2] == 1
+        if recovered_agents.any():
+            unpressured_agents = (self._dm[recovered_agents] <= self._pressure_radius)[0]
+            self._pressure[unpressured_agents] -= 1
+
+        flicker_agents = ((self._pressure > 0) & (self._rng.random(self._pressure.shape)
+                                                  < self._flicker_prob))
+        R = np.copy(M)
+        R[flicker_agents, :] = self._contracted_net.M[flicker_agents, :]
+        R[:, flicker_agents] = self._contracted_net.M[:, flicker_agents]
+        return R
 
 
 def sensitivity_to_initial_configuration():
@@ -53,48 +93,74 @@ def sensitivity_to_initial_configuration():
     plt.show()
 
 
-def two_reach_survival_rates():
-    lazy_networks = [
-        MakeLazySpatialNetwork(make_random_spatial_configuration((500, 500), 500,
-                                                                 np.random.default_rng(seed)))
-        for seed in tqdm(range(100))
-    ]
-    high_reach = 60
-    low_reach = 30
-    disease = Disease(4, .2)
-    # list of (high_reach_survival_rate, high_reach_sim_time,
-    #          low_reach_survival_rate, low_reach_sim_time)
+def two_reach_sim(lazy_networks: Sequence[MakeLazySpatialNetwork], sims_per_network: int,
+                  disease: Disease, high_reach: int, low_reach: int, sim_len_cap: int,
+                  make_behavior: Callable[[int, MakeLazySpatialNetwork, Any], UpdateConnections],
+                  behavior_name: str) -> RawDataCSV:
 
-    def experiment(make_network):
-        rng = np.random.default_rng(0)
+    def experiment(make_network, seed):
+        """
+        return: list of (high_reach_survival_rate, high_reach_sim_time,
+                         low_reach_survival_rate, low_reach_sim_time)
+        """
+        rng = np.random.default_rng(seed)
         hr_net = make_network(high_reach)
         lr_net = make_network(low_reach)
         sir0 = make_starting_sir(hr_net.N, 1, rng)
-        hr_sirs = simulate(hr_net.M, sir0, disease, no_update, 300, rng, None)
-        lr_sirs = simulate(lr_net.M, sir0, disease, no_update, 300, rng, None)
+        hr_sirs = simulate(hr_net.M, sir0, disease, make_behavior(high_reach, make_network, rng),
+                           sim_len_cap, rng, None)
+        lr_sirs = simulate(lr_net.M, sir0, disease, make_behavior(low_reach, make_network, rng),
+                           sim_len_cap, rng, None)
         return (calc_survival_rate(hr_sirs), len(hr_sirs),
                 calc_survival_rate(lr_sirs), len(lr_sirs))
 
-    data = [experiment(make_network) for make_network in tqdm(lazy_networks)]
+    data = [experiment(make_network, seed)
+            for make_network, seed
+            in tqdm(tuple(it.product(lazy_networks, range(sims_per_network))))]
     hr_survival_rates, hr_sim_times, lr_survival_rates, lr_sim_times = zip(*data)
 
-    def plot_hist(data, title, y_max):
-        plt.ylim((0, y_max))
-        plt.title(title)
-        plt.hist(data, bins=None)
-        plt.figure()
+    distributions = {
+        f'Reach {high_reach} {behavior_name} Survival Rates': hr_survival_rates,
+        f'Reach {high_reach} {behavior_name} Simulation Times': hr_sim_times,
+        f'Reach {low_reach} {behavior_name} Survival Rates': lr_survival_rates,
+        f'Reach {low_reach} {behavior_name} Simulation Times': lr_sim_times
+    }
+    return RawDataCSV(f'spatial-nets-sim_len={sim_len_cap}-{disease}',
+                      distributions)  # type: ignore
 
-    sim_time_max = max(it.chain(hr_sim_times, lr_sim_times))
-    plot_hist(hr_survival_rates, 'High Reach Survival Rates', 1)
-    plot_hist(hr_sim_times, 'High Reach Sim Times', sim_time_max)
-    plot_hist(lr_survival_rates, 'Low Reach Survival Rates', 1)
-    plot_hist(lr_sim_times, 'Low Reach Sim Times', sim_time_max)
-    plt.show()
+
+def generate_all_data_for_two_reach():
+    num_networks = 1000
+    sims_per_network = 25
+    high_reach = 60
+    low_reach = 30
+    contracted_reach = 20
+    sim_len_cap = 300
+    disease = Disease(4, .2)
+    lazy_networks = [
+        MakeLazySpatialNetwork(make_random_spatial_configuration((500, 500), 500,
+                                                                 np.random.default_rng(seed)))
+        for seed in tqdm(range(num_networks))
+    ]
+
+    behaviors = ((lambda reach, mknet, rng: no_update, 'Static Network'),
+                 (lambda reach, mknet, rng: SimplePressureBehavior(mknet(reach), rng, 2, .5),
+                  'SimplePressure(radius=2, flicker_prob=.5)'),
+                 (lambda reach, mknet, rng: SpatialContraction(mknet(reach),
+                                                               mknet(contracted_reach),
+                                                               2, .5, rng),
+                  'SpatialContraction(radius=2, contraction_prob=.5)'))
+    all_data = RawDataCSV(f'spatial nets\nsim_len={sim_len_cap} {disease}', {})
+    for mkbeh, beh_name in behaviors:
+        temp_data = two_reach_sim(lazy_networks, sims_per_network, disease, high_reach,
+                                  low_reach, sim_len_cap, mkbeh, beh_name)
+        all_data = RawDataCSV.union(all_data.title, all_data, temp_data)
+    all_data.save().save_boxplots()
 
 
 if __name__ == '__main__':
     try:
-        two_reach_survival_rates()
+        generate_all_data_for_two_reach()
     except KeyboardInterrupt:
         print('\nGood bye.')
     except EOFError:
