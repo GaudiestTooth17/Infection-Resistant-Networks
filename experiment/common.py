@@ -532,6 +532,16 @@ class RawDataCSV:
             rows = it.chain(*[([dist_title], dist_data)
                               for dist_title, dist_data in self.distributions.items()])
             writer.writerows(rows)
+        return self
+
+    def save_boxplots(self):
+        for dist_title, dist in self.distributions.items():
+            plt.figure()
+            plt.title(self.title)
+            plt.xlabel(dist_title)
+            plt.boxplot(dist)
+            plt.savefig(dist_title+'.png', format='png')
+        return self
 
     @staticmethod
     def load_from_file(file_name: str) -> 'RawDataCSV':
