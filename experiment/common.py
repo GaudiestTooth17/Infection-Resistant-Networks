@@ -5,7 +5,7 @@ from network import Network
 from sim_dynamic import (Disease, SimplePressureBehavior, RandomFlickerBehavior,
                          StaticFlickerBehavior, UpdateConnections, make_starting_sir, simulate)
 from typing import (Any, Callable, Collection, List, Optional, Tuple, TypeVar,
-                    Sequence, Dict)
+                    Sequence, Dict, Union)
 from abc import ABC, abstractmethod
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -20,6 +20,7 @@ from pathlib import Path
 import copy
 import fileio as fio
 from scipy.stats import entropy
+import itertools as it
 T = TypeVar('T')
 
 
@@ -518,3 +519,45 @@ class LoadNetwork(MakeNetwork):
             path = fio.network_names_to_paths((self._name,))[0]
             self._net = fio.read_network(path)
         return self._net
+
+
+class RawDataCSV:
+    def __init__(self, title: str, distributions: Dict[str, Sequence[Number]]):
+        self.title = title
+        self.distributions = distributions
+
+    def save(self):
+        with open(self.title+'.csv', 'w', newline='') as csv_file:
+            writer = csv.writer(csv_file)
+            rows = it.chain(*[([dist_title], dist_data)
+                              for dist_title, dist_data in self.distributions.items()])
+            writer.writerows(rows)
+
+    @staticmethod
+    def load_from_file(file_name: str) -> 'RawDataCSV':
+        with open(file_name, 'r', newline='') as csv_file:
+            reader = csv.reader(csv_file)
+        raw_rows = tuple(reader)
+        title = raw_rows[0][0]
+
+        distributions: Dict[str, Sequence[Number]] = {}
+        for i in range(1, len(raw_rows), 2):
+            dist_title = raw_rows[i][0]
+            dist_data = RawDataCSV._str_list_to_number_list(raw_rows[i+1])
+            distributions[dist_title] = dist_data
+
+        return RawDataCSV(title, distributions)
+
+    @staticmethod
+    def _str_list_to_number_list(str_list: List[str]) -> Union[List[int], List[float]]:
+        num_list = []
+        are_floats = False
+        for s in str_list:
+            if not are_floats and '.' in s:
+                num_list = list(map(float, num_list))
+                are_floats = True
+            if are_floats:
+                num_list.append(float(s))
+            else:
+                num_list.append(int(s))
+        return num_list
