@@ -38,8 +38,6 @@ def sensitivity_to_initial_configuration():
         num_comp_data = np.array(p)
         quartiles = np.quantile(num_comp_data, (.25, .75), axis=0, interpolation='midpoint')
         y_coords = np.mean(num_comp_data, axis=0)
-        # plt.figure()
-        # plt.title(str(i))
         if i == 0:
             ax1.set(ylabel='Num Components')
             # ax1.xlabel('Reach')
@@ -52,9 +50,6 @@ def sensitivity_to_initial_configuration():
             # ax2.ylabel('Degree')
             ax2.plot(reaches, y_coords)
             ax2.fill_between(reaches, quartiles[0], quartiles[1], alpha=.4)
-    # plt.plot(all_min_degrees)
-    # plt.plot(all_avg_degrees)
-    # plt.plot(all_max_degrees)
     plt.show()
 
 
