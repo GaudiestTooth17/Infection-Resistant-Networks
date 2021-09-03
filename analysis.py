@@ -190,6 +190,7 @@ def visualize_network(G: nx.Graph, layout: Optional[Layout], name='', save=False
                 width=edge_width, with_labels=False)
     if save:
         plt.savefig(f'vis-{name}.png', dpi=300, format='png')
+        plt.figure()
     else:
         plt.show(block=block)
         if not block:
