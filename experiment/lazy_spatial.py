@@ -135,14 +135,15 @@ def generate_all_data_for_two_reach():
     high_reach = 60
     low_reach = 30
     contracted_reach = 20
-    sim_len_cap = 300
-    disease = Disease(4, .2)
+    sim_len_cap = 1000
+    disease = Disease(4, .3)
     lazy_networks = [
         MakeLazySpatialNetwork(make_random_spatial_configuration((500, 500), 500,
                                                                  np.random.default_rng(seed)))
         for seed in tqdm(range(num_networks))
     ]
 
+    # TODO: add flicker and run
     behaviors = ((lambda reach, mknet, rng: no_update, 'Static Network'),
                  (lambda reach, mknet, rng: SimplePressureBehavior(mknet(reach), rng, 2, .5),
                   'SimplePressure(radius=2, flicker_prob=.5)'),
