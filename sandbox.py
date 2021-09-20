@@ -12,6 +12,7 @@ import socialgood as sg
 import analyzer
 from network import Network
 from scipy.stats import wasserstein_distance
+import behavior
 RNG = np.random.default_rng()
 
 
@@ -137,7 +138,7 @@ def social_good_giant_component_watts_strogatz():
     y_ = [y for x, y, z in p_list]
     z_ = [z for x, y, z in p_list]
     ax.scatter3D(x_, y_, z_, color='red')
-    
+
     plt.xlabel('Number of Neighbors Connected Too')
     plt.ylabel('Probability of Rewiring')
     plt.title('Watts-Strogatz Social Good Analysis')
@@ -198,7 +199,7 @@ def generic_pressure_test():
         raise Exception('File is incomplete.')
     net = Network(G, communities=communities)
     simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
-             SimplePressureBehavior(net, 1), 200, layout, RNG)
+             behavior.SimplePressureBehavior(net, 1), 200, layout, RNG)
 
 
 def pressure_decay_test():
@@ -207,7 +208,7 @@ def pressure_decay_test():
         raise Exception('File is incomplete.')
     net = Network(G, communities=communities)
     simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
-             PressureDecayBehavior(net, 3), 200, layout, RNG)
+             behavior.PressureDecayBehavior(net, 3), 200, layout, RNG)
 
 
 def behavior_comparison():
@@ -226,11 +227,11 @@ def behavior_comparison():
 
         behaviors = (
             ('No Mitigations',
-             NoMitigation()),
+             behavior.NoMitigation()),
             ('Generic Pressure R=1',
-             SimplePressureBehavior(net, rng=RNG, radius=1)),
+             behavior.SimplePressureBehavior(net, rng=RNG, radius=1)),
             ('Edge Pressure R=1',
-             SimpleEdgePressureBehavior(net, rng=RNG, radius=1))
+             behavior.SimpleEdgePressureBehavior(net, rng=RNG, radius=1))
             # ('All Edges Sequential Flicker 1/4',
             #  StaticFlickerBehavior(net.M, net.edges, (True, False, False, False))),
             # ('All Edges Random Flicker 0.25',
@@ -270,13 +271,50 @@ def behavior_comparison():
     # print(descriptions)
 
 
+class SimGenerator:
+    def __init__(self, net_fn: Callable[[], Network],
+                 pressure_handler_fn: Callable[[], Network],
+                 make_behavior_fn: Callable[[behavior.PressureHandler], behavior.UpdateConnections],
+                 starting_sir_fn: Callable[[], np.ndarray],
+                 disease_fn: Callable[[], Disease],
+                 max_steps: int,
+                 rng) -> None:
+        self.net_fn = net_fn
+        self.pressure_handler_fn = pressure_handler_fn
+        self.make_behavior_fn = make_behavior_fn
+        self.starting_sir_fn = starting_sir_fn
+        self.disease_fn = disease_fn
+        self.max_steps = max_steps
+        self.rng = rng
+
+    def __call__(self, display=False):
+        if display:
+            net = self.net_fn()
+            return lambda: simulate(net, self.starting_sir_fn(), self.disease_fn(),
+                                    self.make_behavior_fn(self.pressure_handler_fn),
+                                    self.max_steps, self.rng, net.layout)
+        return lambda: simulate(self.net_fn(), self.starting_sir_fn(), self.disease_fn(),
+                                self.make_behavior_fn(self.pressure_handler_fn),
+                                self.max_steps, self.rng, layout=None)
+
+
 def pressure_flicker_test(display=True):
-    G, layout, communities = fio.read_network('networks/elitist-500.txt')
-    if not display:
-        layout = None
-    net = Network(G, communities=communities)
-    sirs = simulate(net.M, make_starting_sir(net.N, 5, RNG), Disease(4, 0.3),
-                    PressureFlickerBehavior(net, 3), 200, layout, RNG)
+    net = fio.read_network('networks/elitist-500.txt')
+    # pressure_handler = behavior.DistancePressureHandler(net.dm, 3)
+    pressure_handler = behavior.AllPressureHandler()
+    update_behavior = behavior.FlickerPressureBehavior(net, RNG, pressure_handler, 0.25)
+    sirs = simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG), disease=Disease(4, 0.3),
+                    update_connections=update_behavior,
+                    max_steps=200, rng=RNG, layout=None)
+    print('Pressured Nodes')
+    print(f'Total: {sum(pressure_handler.num_pressured_nodes)}, Average: '
+          f'{sum(pressure_handler.num_pressured_nodes)/len(pressure_handler.num_pressured_nodes)}')
+    print('Edges Removed')
+    print(f'Total: {sum(update_behavior.removed_edges)}, Average: '
+          f'{sum(update_behavior.removed_edges)/len(update_behavior.removed_edges)}')
+    print('Survival')
+    print(f'Rate: {np.sum(sirs[-1][0, :] > 0) / net.N}, Max Infectious: '
+          f'{np.amax(np.sum(np.array(sirs) > 0, axis=2), axis=0)[1]}')
     return np.sum(sirs[-1][0, :] > 0) / net.N
 
 
@@ -286,4 +324,5 @@ if __name__ == '__main__':
     # layout = nx.spring_layout(net.G)
     # sirs = simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
     #                 SimpleEdgePressureBehavior(net, RNG, 1), 200, rng=RNG, layout=layout)
-    behavior_comparison()
+    # behavior_comparison()
+    pressure_flicker_test(False)
