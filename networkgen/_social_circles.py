@@ -127,10 +127,17 @@ def choose_empty_spot(grid, rand) -> Tuple[int, int]:
 
 def search_for_neighbors(grid, x, y):
     reach = grid[x, y]
-    min_x = max(0, x-reach)
-    max_x = min(grid.shape[0]-1, x+reach)
-    min_y = max(0, y-reach)
-    max_y = min(grid.shape[1]-1, y+reach)
+    # The connections on the grid need to wrap around,
+    # so we mod the values by the grid  dims
+    min_x = (x-reach) % grid.shape[0]
+    max_x = (x+reach) % grid.shape[0]
+    min_y = (y-reach) % grid.shape[1]
+    max_y = (y+reach) % grid.shape[1]
+    # Because the values got modded, the mins might actually be higher than the maxes,
+    # so we reassign the values here to make sure that the values are properly labeled
+    min_x, max_x = sorted((min_x, max_x))
+    min_y, max_y = sorted((min_y, max_y))
+
     neighbors = {(i, j)
                  for (i, j) in it.product(range(min_x, max_x),
                                           range(min_y, max_y))
