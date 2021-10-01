@@ -6,6 +6,7 @@ import numpy as np
 from customtypes import Layout
 from network import Network
 from socialgood import get_distance_matrix
+from abc import ABC, abstractmethod, abstractproperty
 
 
 UpdateConnections = Callable[[np.ndarray, np.ndarray, int, np.ndarray], np.ndarray]
@@ -19,6 +20,76 @@ PressureHandler = Callable[[np.ndarray], np.ndarray]
 Gets the pressured nodes.
 Parameters are current sir array.
 """
+
+
+class PressureHandler(ABC):
+
+    @abstractproperty
+    def name(self) -> str:
+        pass
+
+    @abstractmethod
+    def last_pressured_nodes(self) -> np.ndarray:
+        pass
+
+    @abstractmethod
+    def __call__(self, sir: np.ndarray) -> np.ndarray:
+        pass
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class UpdateConnections(ABC):
+
+    @abstractproperty
+    def name(self) -> str:
+        pass
+
+    @abstractproperty
+    def last_pressured_nodes(self) -> np.ndarray:
+        pass
+
+    @abstractproperty
+    def last_removed_edges(self) -> np.ndarray:
+        """
+        As a matrix where 0 isn't touched but 1 is removed.
+        """
+        pass
+
+    def last_num_removed_edges(self) -> int:
+        return len(self.last_removed_edges)
+
+    @abstractproperty
+    def last_diameter(self) -> int:
+        pass
+
+    @abstractproperty
+    def last_comps(self) -> List[List[int]]:
+        """
+        List of components (which are a list of nodes)
+        """
+        pass
+
+    def last_comp_sizes(self) -> List[int]:
+        """
+        List of ints as sizes of components
+        """
+        return map(lambda x: len(x))
+
+    def last_avg_comp_size(self) -> int:
+        sizes = self.last_comp_sizes
+        return sum(sizes) / len(sizes)
+
+    def last_num_comps(self) -> int:
+        return len(self.last_comps)
+
+    @abstractmethod
+    def __call__(self, sir: np.ndarray) -> np.ndarray:
+        pass
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class NoMitigation:
