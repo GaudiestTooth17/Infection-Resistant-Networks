@@ -325,4 +325,4 @@ if __name__ == '__main__':
     # sirs = simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
     #                 SimpleEdgePressureBehavior(net, RNG, 1), 200, rng=RNG, layout=layout)
     # behavior_comparison()
-    pressure_flicker_test(False)
+    pressure_flicker_test(True)
