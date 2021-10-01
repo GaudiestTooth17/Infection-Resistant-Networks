@@ -56,9 +56,9 @@ def simulate(M: np.ndarray,
         vis_func(nx.Graph(D), sirs[0], 0)
 
     # Needed data
-    num_egdes_removed = []
-    current_edge_removal_durations = np.zeros(D.shape)
-    total_edge_removal_durations = []
+    # num_egdes_removed = []
+    # current_edge_removal_durations = np.zeros(D.shape)
+    # total_edge_removal_durations = []
     # old[np.where((new == 0) * (old != 0))]
 
     for step in range(1, max_steps):
@@ -66,11 +66,11 @@ def simulate(M: np.ndarray,
         D = update_connections(D, M, step, sirs[step - 1])
 
         # Gather the needed data
-        num_egdes_removed.append(update_connections.last_num_removed_edges)
-        current_removed_edges = update_connections.last_removed_edges
-        # Keeps only the currently_removed_edges, then adds one to each
-        new_edge_removal_durations = (current_edge_removal_durations * current_removed_edges) + current_removed_edges
-        total_edge_removal_durations.extend(current_edge_removal_durations[(current_edge_removal_durations != 0) * (current_removed_edges == 0)])
+        # num_egdes_removed.append(update_connections.last_num_removed_edges)
+        # current_removed_edges = update_connections.last_removed_edges
+        # # Keeps only the currently_removed_edges, then adds one to each
+        # new_edge_removal_durations = (current_edge_removal_durations * current_removed_edges) + current_removed_edges
+        # total_edge_removal_durations.extend(current_edge_removal_durations[(current_edge_removal_durations != 0) * (current_removed_edges == 0)])
 
         # next_sir is the workhorse of the simulation because it is responsible
         # for simulating the disease spread
@@ -137,7 +137,7 @@ class SimResults:
     def __init__(self,
                  M: np.ndarray,
                  sir: List[np.ndarray],
-                 num_steps: int,
+                 num_steps: int
 
                  ) -> None:
         """

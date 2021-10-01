@@ -170,8 +170,6 @@ class FlickerPressureBehavior:
         R[flicker_agents, :] = 0
         R[:, flicker_agents] = 0
 
-        self.removed_edges.append(flicker_agents)
-
         self._last_num_removed_edges = int(np.sum(M - R) / 2)
 
         return R
