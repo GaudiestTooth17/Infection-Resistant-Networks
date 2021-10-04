@@ -303,9 +303,16 @@ def pressure_flicker_test(pressure_distance, display=True):
     pressure_handler = behavior.DistancePressureHandler(net.dm, pressure_distance)
     # pressure_handler = behavior.AllPressureHandler()
     update_behavior = behavior.FlickerPressureBehavior(net, RNG, pressure_handler, 0.25)
-    sirs = simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG), disease=Disease(4, 0.3),
-                    update_connections=update_behavior,
-                    max_steps=200, rng=RNG, layout=None)
+    if display:
+        sirs = simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
+                        disease=Disease(4, 0.3),
+                        update_connections=update_behavior,
+                        max_steps=200, rng=RNG, layout=net.layout)
+    else:
+        sirs = simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
+                        disease=Disease(4, 0.3),
+                        update_connections=update_behavior,
+                        max_steps=200, rng=RNG, layout=None)
     # print('Pressured Nodes')
     # print(f'Total: {sum(pressure_handler.num_pressured_nodes)}, Average: '
     #       f'{sum(pressure_handler.num_pressured_nodes)/len(pressure_handler.num_pressured_nodes)}')
@@ -326,7 +333,7 @@ if __name__ == '__main__':
     #                 SimpleEdgePressureBehavior(net, RNG, 1), 200, rng=RNG, layout=layout)
     # behavior_comparison()
 
-    distance_to_survival_rates = [[pressure_flicker_test(i) for _ in tqdm(range(1000))] for i in tqdm(range(3))]
+    distance_to_survival_rates = [[pressure_flicker_test(i) for _ in tqdm(range(1))] for i in tqdm(range(3))]
 
     emd = np.zeros((3, 3))
     for i in range(3):

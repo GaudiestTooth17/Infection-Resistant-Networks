@@ -240,7 +240,7 @@ class FlickerPressureBehavior(UpdateConnections):
         R[flicker_agents, :] = 0
         R[:, flicker_agents] = 0
 
-        self._last_removed_edges = M > 0 & R == 0  # TODO: verify accuracy
+        self._last_removed_edges = (M > 0) * (R == 0)  # TODO: verify accuracy
 
         return R
 
