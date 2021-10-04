@@ -65,7 +65,7 @@ def simulate(M: np.ndarray,
         # Get the adjacency matrix to use at this step
         D = update_connections(D, M, step, sirs[step - 1])
 
-        # Gather the needed data
+        # # Gather the needed data
         # num_egdes_removed.append(update_connections.last_num_removed_edges)
         # current_removed_edges = update_connections.last_removed_edges
         # # Keeps only the currently_removed_edges, then adds one to each

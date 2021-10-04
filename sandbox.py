@@ -298,23 +298,23 @@ class SimGenerator:
                                 self.max_steps, self.rng, layout=None)
 
 
-def pressure_flicker_test(display=True):
+def pressure_flicker_test(pressure_distance, display=True):
     net = fio.read_network('networks/elitist-500.txt')
-    # pressure_handler = behavior.DistancePressureHandler(net.dm, 3)
-    pressure_handler = behavior.AllPressureHandler()
+    pressure_handler = behavior.DistancePressureHandler(net.dm, pressure_distance)
+    # pressure_handler = behavior.AllPressureHandler()
     update_behavior = behavior.FlickerPressureBehavior(net, RNG, pressure_handler, 0.25)
     sirs = simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG), disease=Disease(4, 0.3),
                     update_connections=update_behavior,
                     max_steps=200, rng=RNG, layout=None)
-    print('Pressured Nodes')
-    print(f'Total: {sum(pressure_handler.num_pressured_nodes)}, Average: '
-          f'{sum(pressure_handler.num_pressured_nodes)/len(pressure_handler.num_pressured_nodes)}')
-    print('Edges Removed')
-    print(f'Total: {sum(update_behavior.removed_edges)}, Average: '
-          f'{sum(update_behavior.removed_edges)/len(update_behavior.removed_edges)}')
-    print('Survival')
-    print(f'Rate: {np.sum(sirs[-1][0, :] > 0) / net.N}, Max Infectious: '
-          f'{np.amax(np.sum(np.array(sirs) > 0, axis=2), axis=0)[1]}')
+    # print('Pressured Nodes')
+    # print(f'Total: {sum(pressure_handler.num_pressured_nodes)}, Average: '
+    #       f'{sum(pressure_handler.num_pressured_nodes)/len(pressure_handler.num_pressured_nodes)}')
+    # print('Edges Removed')
+    # print(f'Total: {sum(update_behavior.removed_edges)}, Average: '
+    #       f'{sum(update_behavior.removed_edges)/len(update_behavior.removed_edges)}')
+    # print('Survival')
+    # print(f'Rate: {np.sum(sirs[-1][0, :] > 0) / net.N}, Max Infectious: '
+    #       f'{np.amax(np.sum(np.array(sirs) > 0, axis=2), axis=0)[1]}')
     return np.sum(sirs[-1][0, :] > 0) / net.N
 
 
@@ -325,4 +325,17 @@ if __name__ == '__main__':
     # sirs = simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
     #                 SimpleEdgePressureBehavior(net, RNG, 1), 200, rng=RNG, layout=layout)
     # behavior_comparison()
-    pressure_flicker_test(True)
+
+    distance_to_survival_rates = [[pressure_flicker_test(i) for _ in tqdm(range(1000))] for i in tqdm(range(3))]
+
+    emd = np.zeros((3, 3))
+    for i in range(3):
+        plt.hist(distance_to_survival_rates[i])
+        plt.title(f'Distance {i} - Avg: {sum(distance_to_survival_rates[i]) / len(distance_to_survival_rates[i])}')
+        plt.figure()
+        for j in range(i, 3):
+            ed = wasserstein_distance(distance_to_survival_rates[i], distance_to_survival_rates[j])
+            emd[i, j] = ed
+            emd[j, i] = ed
+    print(emd)
+    plt.show()
