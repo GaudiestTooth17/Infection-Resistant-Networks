@@ -262,7 +262,7 @@ class Visualize:
         plt.title(f'Step: {step}, S: {np.sum(sir[0, :] > 0)},'
                   f'I: {np.sum(sir[1, :] > 0)}, R: {np.sum(sir[2, :] > 0)}')
         # plt.show()
-        plt.pause(.5)  # type: ignore
+        plt.pause(.001)  # type: ignore
 
 
 def make_starting_sir(N: int, to_infect: Union[int, Tuple[int, ...]], rng) -> np.ndarray:

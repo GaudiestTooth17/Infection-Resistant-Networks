@@ -1,25 +1,13 @@
 from dataclasses import dataclass
-from typing import Callable, Collection, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Set, List, Optional, Sequence, Tuple, Union
 import matplotlib.pyplot as plt
 import networkx as nx
+import retworkx as rx
 import numpy as np
 from customtypes import Layout
 from network import Network
 from socialgood import get_distance_matrix
 from abc import ABC, abstractmethod, abstractproperty
-
-
-# UpdateConnections = Callable[[np.ndarray, np.ndarray, int, np.ndarray], np.ndarray]
-# """
-# Update the dynamic matrix D.
-# Parameters are D, M, current step, current sir array
-# """
-
-# PressureHandler = Callable[[np.ndarray], np.ndarray]
-# """
-# Gets the pressured nodes.
-# Parameters are current sir array.
-# """
 
 
 class PressureHandler(ABC):
@@ -33,10 +21,6 @@ class PressureHandler(ABC):
         pass
 
     @abstractmethod
-    def last_pressured_nodes(self) -> np.ndarray:
-        pass
-
-    @abstractmethod
     def __call__(self, sir: np.ndarray) -> np.ndarray:
         pass
 
@@ -46,40 +30,45 @@ class PressureHandler(ABC):
 
 class UpdateConnections(ABC):
 
-    @abstractproperty
-    def name(self) -> str:
-        pass
+    def __init__(self, pressure_handler: PressureHandler) -> None:
+        self._pressure_handler = pressure_handler
+        self._last_pressured_nodes = None
+        self._last_removed_edges = None
+        self._last_diameter = None
+        self._last_comps = None
 
-    @abstractproperty
+    @property
     def last_pressured_nodes(self) -> np.ndarray:
-        pass
+        return self._last_pressured_nodes
 
-    @abstractproperty
+    @property
     def last_removed_edges(self) -> np.ndarray:
         """
         As a matrix where 0 isn't touched but 1 is removed.
         """
-        pass
+        return self.last_removed_edges
 
+    @property
     def last_num_removed_edges(self) -> int:
         return len(self.last_removed_edges)
 
-    @abstractproperty
+    @property
     def last_diameter(self) -> int:
-        pass
+        return self._last_diameter
 
-    @abstractproperty
+    @property
     def last_comps(self) -> List[List[int]]:
         """
         List of components (which are a list of nodes)
         """
-        pass
+        return self._last_comps
 
+    @property
     def last_comp_sizes(self) -> List[int]:
         """
         List of ints as sizes of components
         """
-        return map(lambda x: len(x))
+        return map(lambda x: len(x), self.last_comps)
 
     def last_avg_comp_size(self) -> int:
         sizes = self.last_comp_sizes
@@ -88,12 +77,29 @@ class UpdateConnections(ABC):
     def last_num_comps(self) -> int:
         return len(self.last_comps)
 
-    @abstractmethod
     def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
-        pass
+        pressured_nodes = self._pressure_handler(sir)
+        R = self._call(D, M, time_step, pressured_nodes)
+
+        # Collect Data
+        self._last_pressured_nodes = pressured_nodes
+        self._last_removed_edges = (M > 0) * (R == 0)
+        G = nx.from_numpy_array(R)
+        self._last_comps = tuple(nx.connected_components(G))
+        self._last_diameter = np.max(rx.distance_matrix(rx.networkx_converter(G)))
+
+        return R
 
     def __str__(self) -> str:
         return self.name
+
+    @abstractproperty
+    def name(self) -> str:
+        pass
+
+    @abstractmethod
+    def _call(self, D: np.ndarray, M: np.ndarray, time_step: int, pressured_nodes: np.ndarray) -> np.ndarray:
+        pass
 
 
 """
@@ -102,66 +108,38 @@ This is where the actual behaviors and pressure_handlers go.
 
 
 class NoMitigation(UpdateConnections):
+
+    class NoPressure(PressureHandler):
+
+        @property
+        def name(self):
+            return 'No Pressure'
+
+        def __call__(self, sir: np.ndarray):
+            return np.zeros(sir.shape[1])
+
     def __init__(self):
-        self._last_pressured_nodes = None
-        self._last_removed_edges = None
-        self._last_diameter = None
-        self._last_comps = None
+        super().__init__(NoMitigation.NoPressure())
 
     @property
     def name(self) -> str:
         return 'No Mitigation'
 
-    @property
-    def last_pressured_nodes(self) -> np.ndarray:
-        return self._last_pressured_nodes
-
-    @property
-    def last_removed_edges(self) -> np.ndarray:
-        """
-        As a matrix where 0 isn't touched but 1 is removed.
-        """
-        return self._last_removed_edges
-
-    @property
-    def last_diameter(self) -> int:
-        pass  # TODO:
-
-    @property
-    def last_comps(self) -> List[List[int]]:
-        """
-        List of components (which are lists of nodes)
-        """
-        pass  # TODO:
-
-    def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
-        self._last_pressured_nodes = np.zeros(len(M))
-        self._last_removed_edges = np.zeros(M.shape)
+    def _call(self, D: np.ndarray, M: np.ndarray, time_step: int, pressure_nodes: np.ndarray) -> np.ndarray:
         return M
 
 
 class AllPressureHandler(PressureHandler):
-    def __init__(self) -> None:
-        """
-        Pressures all nodes.
-        """
-        self._last_pressured_nodes = None
 
     @property
     def name(self) -> str:
         return 'All Pressure Handler'
 
-    def last_pressured_nodes(self) -> np.ndarray:
-        return self._last_pressured_nodes
-
     def __call__(self, sir: np.ndarray) -> np.ndarray:
         """
         Returns every node as a true/false ndarray.
         """
-        self.num_pressured_nodes.append(sir.shape[1])
-        pressured_nodes = np.ones(sir.shape[1])
-        self._last_pressured_nodes = pressured_nodes
-        return pressured_nodes
+        return np.ones(sir.shape[1])
 
 
 class DistancePressureHandler(PressureHandler):
@@ -171,14 +149,10 @@ class DistancePressureHandler(PressureHandler):
         """
         self.DM = DM
         self.distance = distance
-        self._last_pressured_nodes = None
 
     @property
     def name(self) -> str:
         return 'Distance Pressure Handler'
-
-    def last_pressured_nodes(self) -> np.ndarray:
-        return self._last_pressured_nodes
 
     def __call__(self, sir: np.ndarray) -> np.ndarray:
         """
@@ -186,61 +160,32 @@ class DistancePressureHandler(PressureHandler):
         infectious node as a true/false ndarray.
         """
         infectious_agents = sir[1] > 0
-        pressured_nodes = np.sum(self.DM[infectious_agents] <= self.distance, axis=0) > 0
-        self._last_pressured_nodes = pressured_nodes
-        return pressured_nodes
+        return np.sum(self.DM[infectious_agents] <= self.distance, axis=0) > 0
 
 
 class FlickerPressureBehavior(UpdateConnections):
-    def __init__(self, net: Network,
-                 rng,
+    def __init__(self, rng,
                  pressure_handler: PressureHandler,
                  flicker_probability: float = .25):
         """
         Agents receive pressure when nearby agents become infectious. Agents
         with enough pressure will flicker connections to nearby agents.
         """
-        self._pressure_handler = pressure_handler
+        super().__init__(pressure_handler)
         self._rng = rng
         self._flicker_probability = flicker_probability
-        self._last_removed_edges = None
 
     @property
     def name(self) -> str:
         return f'Flicker Pressure Behavior ({self._pressure_handler.name})'
 
-    @property
-    def last_pressured_nodes(self) -> np.ndarray:
-        return self._pressure_handler.last_pressured_nodes
-
-    @property
-    def last_removed_edges(self) -> np.ndarray:
-        """
-        As a matrix where 0 isn't touched but 1 is removed.
-        """
-        return self._last_removed_edges
-
-    @property
-    def last_diameter(self) -> int:
-        pass  # TODO: this
-
-    @property
-    def last_comps(self) -> List[List[int]]:
-        """
-        List of components (which are a list of nodes)
-        """
-        pass  # TODO: this
-
-    def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
-        pressured_nodes = self._pressure_handler(sir)
-        self._last_num_pressured_nodes = np.sum(pressured_nodes)
+    def _call(self, D: np.ndarray, M: np.ndarray, time_step: int,
+              pressured_nodes: np.ndarray) -> np.ndarray:
 
         flicker_agents = (pressured_nodes & (self._rng.random(len(D)) < self._flicker_probability))
         R = np.copy(M)
         R[flicker_agents, :] = 0
         R[:, flicker_agents] = 0
-
-        self._last_removed_edges = (M > 0) * (R == 0)  # TODO: verify accuracy
 
         return R
 

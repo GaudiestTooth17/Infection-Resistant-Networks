@@ -302,7 +302,7 @@ def pressure_flicker_test(pressure_distance, display=True):
     net = fio.read_network('networks/elitist-500.txt')
     pressure_handler = behavior.DistancePressureHandler(net.dm, pressure_distance)
     # pressure_handler = behavior.AllPressureHandler()
-    update_behavior = behavior.FlickerPressureBehavior(net, RNG, pressure_handler, 0.25)
+    update_behavior = behavior.FlickerPressureBehavior(RNG, pressure_handler, 0.25)
     if display:
         sirs = simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
                         disease=Disease(4, 0.3),
