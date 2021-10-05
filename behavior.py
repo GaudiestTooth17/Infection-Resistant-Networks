@@ -1,12 +1,8 @@
-from dataclasses import dataclass
-from typing import Callable, Set, List, Optional, Sequence, Tuple, Union
+from typing import Set, Tuple
 import matplotlib.pyplot as plt
 import networkx as nx
 import retworkx as rx
 import numpy as np
-from customtypes import Layout
-from network import Network
-from socialgood import get_distance_matrix
 from abc import ABC, abstractmethod, abstractproperty
 
 
@@ -17,7 +13,7 @@ class PressureHandler(ABC):
     """
 
     @abstractproperty
-    def name(self) -> str:
+    def name(self) -> str:  # type: ignore
         pass
 
     @abstractmethod
@@ -39,7 +35,7 @@ class UpdateConnections(ABC):
 
     @property
     def last_pressured_nodes(self) -> np.ndarray:
-        return self._last_pressured_nodes
+        return self._last_pressured_nodes  # type: ignore
 
     @property
     def last_removed_edges(self) -> np.ndarray:
@@ -54,23 +50,23 @@ class UpdateConnections(ABC):
 
     @property
     def last_diameter(self) -> int:
-        return self._last_diameter
+        return self._last_diameter  # type: ignore
 
     @property
-    def last_comps(self) -> List[List[int]]:
+    def last_comps(self) -> Tuple[Set[int]]:
         """
         List of components (which are a list of nodes)
         """
-        return self._last_comps
+        return self._last_comps  # type: ignore
 
     @property
-    def last_comp_sizes(self) -> List[int]:
+    def last_comp_sizes(self) -> Tuple[int, ...]:
         """
         List of ints as sizes of components
         """
-        return map(lambda x: len(x), self.last_comps)
+        return tuple(map(lambda x: len(x), self.last_comps))
 
-    def last_avg_comp_size(self) -> int:
+    def last_avg_comp_size(self) -> float:
         sizes = self.last_comp_sizes
         return sum(sizes) / len(sizes)
 
@@ -94,11 +90,12 @@ class UpdateConnections(ABC):
         return self.name
 
     @abstractproperty
-    def name(self) -> str:
+    def name(self) -> str:  # type: ignore
         pass
 
     @abstractmethod
-    def _call(self, D: np.ndarray, M: np.ndarray, time_step: int, pressured_nodes: np.ndarray) -> np.ndarray:
+    def _call(self, D: np.ndarray, M: np.ndarray, time_step: int,
+              pressured_nodes: np.ndarray) -> np.ndarray:
         pass
 
 
@@ -125,7 +122,8 @@ class NoMitigation(UpdateConnections):
     def name(self) -> str:
         return 'No Mitigation'
 
-    def _call(self, D: np.ndarray, M: np.ndarray, time_step: int, pressure_nodes: np.ndarray) -> np.ndarray:
+    def _call(self, D: np.ndarray, M: np.ndarray, time_step: int,
+              pressure_nodes: np.ndarray) -> np.ndarray:
         return M
 
 
