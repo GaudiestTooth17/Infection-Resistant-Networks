@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from analysis import visualize_network
-from hcmioptim import ga
+from krug import ga
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
