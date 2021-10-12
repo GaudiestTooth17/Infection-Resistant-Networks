@@ -1,3 +1,5 @@
+import sys
+sys.path.append('')
 from unittest import TestCase
 from networkgen import make_affiliation_network
 import itertools as it
@@ -14,7 +16,7 @@ class TestAssociationNetwork(TestCase):
         Test that 1 group with 100% membership will create a complete network
         """
         group_to_membership = [1.0]
-        expected_edges = set(it.combinations(range(self.N)))
+        expected_edges = set(it.combinations(range(self.N), 2))
         net = make_affiliation_network(group_to_membership, self.N, self.rng)
 
         self.assertEqual(net.N, self.N, f'Expected {self.N} nodes, got {net.N} nodes')
@@ -36,15 +38,15 @@ class TestAssociationNetwork(TestCase):
     def test_right_number_of_edges(self):
         """
         """
-        leeway = 25
         membership_perc = .25
         group_to_membership = [membership_perc]
-        total_possible_edges = (self.N**2 - self.N) // 2
-        expected_edges = int(membership_perc * total_possible_edges)
-        net = make_affiliation_network(group_to_membership)
+        expected_edges = int((1/32)*(self.N**2) - (1/8)*self.N)
+        net = make_affiliation_network(group_to_membership, self.N, self.rng)
 
         self.assertEqual(net.N, self.N, f'Expected {self.N} nodes, got {net.N} nodes')
 
         actual_edges = len(tuple(net.G.edges))
+        leeway = expected_edges // 100  # Expected result can be 1% off in either direction
         self.assertTrue(expected_edges-leeway <= actual_edges <= expected_edges+leeway,
-                        f'Expected about {expected_edges}, got {actual_edges}')
+                        f'Expected about {expected_edges} +/- {leeway} edges, '
+                        f'got {actual_edges} edges')

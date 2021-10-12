@@ -7,8 +7,8 @@ sys.path.append('')
 from network import Network
 
 
-def flatten(list_):
-    return tuple(it.chain(*list_))
+def flatten(sequence):
+    return tuple(it.chain(*sequence))
 
 
 def make_affiliation_network(group_to_membership_percentage: List[float],
@@ -26,9 +26,9 @@ def make_affiliation_network(group_to_membership_percentage: List[float],
     rng: an np.random.default_rng instance
     """
     agents = tuple(range(N))
-    group_memberships = [rng.choice(agents, size=np.round(N*perc), replace=False)
+    group_memberships = [rng.choice(agents, size=int(np.round(N*perc)), replace=False)
                          for perc in group_to_membership_percentage]
-    edges = flatten(tuple(it.combinations(membership)) for membership in group_memberships)
+    edges = flatten(tuple(it.combinations(membership, 2)) for membership in group_memberships)
     # If the graph is construct solely from the edge list, some nodes might be left out.
     # So, construct an empty graph and then add the edges
     G: nx.Graph = nx.empty_graph(N)
