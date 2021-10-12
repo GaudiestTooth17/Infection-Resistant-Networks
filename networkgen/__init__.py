@@ -6,3 +6,4 @@ from networkgen._agent_based import (make_agent_generated_network,
                                      AgentBehavior)
 from networkgen._lazy_spatial import (MakeLazySpatialNetwork, SpatialConfiguration,
                                       make_random_spatial_configuration)
+from networkgen._affiliation_network import make_association_network
