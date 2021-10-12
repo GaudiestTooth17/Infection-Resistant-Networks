@@ -4,6 +4,7 @@ from unittest import TestCase
 from networkgen import make_affiliation_network
 import itertools as it
 import numpy as np
+import networkx as nx
 
 
 class TestAssociationNetwork(TestCase):
@@ -35,12 +36,14 @@ class TestAssociationNetwork(TestCase):
         self.assertEqual(net.N, self.N, f'Expected {self.N} nodes, got {net.N} nodes')
         self.assertTrue(len(edges) == 0, f'Expected no edges, got {len(edges)} edges')
 
-    def test_right_number_of_edges(self):
+    def test_partial_membership(self):
         """
+        Test that having one group with less than full membership will result
+        in the correct network.
         """
         membership_perc = .25
         group_to_membership = [membership_perc]
-        expected_edges = int((1/32)*(self.N**2) - (1/8)*self.N)
+        expected_edges = int((1/2) * ((membership_perc*self.N)**2 - membership_perc*self.N))
         net = make_affiliation_network(group_to_membership, self.N, self.rng)
 
         self.assertEqual(net.N, self.N, f'Expected {self.N} nodes, got {net.N} nodes')
@@ -50,3 +53,6 @@ class TestAssociationNetwork(TestCase):
         self.assertTrue(expected_edges-leeway <= actual_edges <= expected_edges+leeway,
                         f'Expected about {expected_edges} +/- {leeway} edges, '
                         f'got {actual_edges} edges')
+
+        expected_components = self.N - int(membership_perc*self.N) + 1
+        self.assertEqual(expected_components, nx.number_connected_components(net.G))
