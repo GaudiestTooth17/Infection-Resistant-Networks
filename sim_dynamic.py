@@ -135,10 +135,8 @@ def remove_dead_agents(D: np.ndarray, M: np.ndarray, time_step: int, sir: np.nda
 
 class SimResults:
     def __init__(self,
-                 M: np.ndarray,
-                 sir: List[np.ndarray],
-                 num_steps: int
-
+                 n_edges_removed_at_step: Sequence[int],
+                 matrices_of_edges_removed_at_step: Sequence[np.ndarray]
                  ) -> None:
         """
         Invasiveness
