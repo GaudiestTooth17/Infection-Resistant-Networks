@@ -304,45 +304,37 @@ def pressure_flicker_test(pressure_distance, display=True):
     # pressure_handler = behavior.AllPressureHandler()
     update_behavior = behavior.FlickerPressureBehavior(RNG, pressure_handler, 0.25)
     if display:
-        sirs = simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
+        return simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
                         disease=Disease(4, 0.3),
                         update_connections=update_behavior,
                         max_steps=200, rng=RNG, layout=net.layout)
     else:
-        sirs = simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
+        return simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
                         disease=Disease(4, 0.3),
                         update_connections=update_behavior,
                         max_steps=200, rng=RNG, layout=None)
-    # print('Pressured Nodes')
-    # print(f'Total: {sum(pressure_handler.num_pressured_nodes)}, Average: '
-    #       f'{sum(pressure_handler.num_pressured_nodes)/len(pressure_handler.num_pressured_nodes)}')
-    # print('Edges Removed')
-    # print(f'Total: {sum(update_behavior.removed_edges)}, Average: '
-    #       f'{sum(update_behavior.removed_edges)/len(update_behavior.removed_edges)}')
-    # print('Survival')
-    # print(f'Rate: {np.sum(sirs[-1][0, :] > 0) / net.N}, Max Infectious: '
-    #       f'{np.amax(np.sum(np.array(sirs) > 0, axis=2), axis=0)[1]}')
-    return np.sum(sirs[-1][0, :] > 0) / net.N
 
 
 if __name__ == '__main__':
     # net = Network(np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]]))
-    # net = Network(nx.connected_caveman_graph(5, 5))
+    # # net = Network(nx.connected_caveman_graph(5, 5))
     # layout = nx.spring_layout(net.G)
     # sirs = simulate(net.M, make_starting_sir(net.N, 1, RNG), Disease(4, 0.3),
     #                 SimpleEdgePressureBehavior(net, RNG, 1), 200, rng=RNG, layout=layout)
     # behavior_comparison()
 
-    distance_to_survival_rates = [[pressure_flicker_test(i) for _ in tqdm(range(1))] for i in tqdm(range(3))]
+    # distance_to_survival_rates = [[pressure_flicker_test(i) for _ in tqdm(range(1))] for i in tqdm(range(3))]
 
-    emd = np.zeros((3, 3))
-    for i in range(3):
-        plt.hist(distance_to_survival_rates[i])
-        plt.title(f'Distance {i} - Avg: {sum(distance_to_survival_rates[i]) / len(distance_to_survival_rates[i])}')
-        plt.figure()
-        for j in range(i, 3):
-            ed = wasserstein_distance(distance_to_survival_rates[i], distance_to_survival_rates[j])
-            emd[i, j] = ed
-            emd[j, i] = ed
-    print(emd)
-    plt.show()
+    pressure_flicker_test(1)
+
+    # emd = np.zeros((3, 3))
+    # for i in range(3):
+    #     plt.hist(distance_to_survival_rates[i], bins=None)
+    #     plt.title(f'Distance {i} - Avg: {sum(distance_to_survival_rates[i]) / len(distance_to_survival_rates[i])}')
+    #     plt.figure()
+    #     for j in range(i, 3):
+    #         ed = wasserstein_distance(distance_to_survival_rates[i], distance_to_survival_rates[j])
+    #         emd[i, j] = ed
+    #         emd[j, i] = ed
+    # print(emd)
+    # plt.show()

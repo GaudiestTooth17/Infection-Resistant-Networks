@@ -32,9 +32,15 @@ class UpdateConnections(ABC):
         self._last_removed_edges = None
         self._last_diameter = None
         self._last_comps = None
+        self._last_removed_edges = None
+        self._last_perc_edges_removed: np.ndarray = None  # type: ignore
 
     @property
     def last_pressured_nodes(self) -> np.ndarray:
+        """
+        Return a True/False array where entries are True iff the node was
+        pressured during the last step
+        """
         return self._last_pressured_nodes  # type: ignore
 
     @property
@@ -42,7 +48,7 @@ class UpdateConnections(ABC):
         """
         As a matrix where 0 isn't touched but 1 is removed.
         """
-        return self.last_removed_edges
+        return self._last_removed_edges  # type: ignore
 
     @property
     def last_num_removed_edges(self) -> int:
@@ -66,25 +72,37 @@ class UpdateConnections(ABC):
         """
         return tuple(map(lambda x: len(x), self.last_comps))
 
+    @property
+    def last_perc_edges_removed(self) -> np.ndarray:
+        """
+        Return an array where each entry is the percentage of that node's edges
+        that were removed the last time the object was called
+        """
+        return self._last_perc_edges_removed
+
+    @property
     def last_avg_comp_size(self) -> float:
         sizes = self.last_comp_sizes
         return sum(sizes) / len(sizes)
 
+    @property
     def last_num_comps(self) -> int:
         return len(self.last_comps)
 
     def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
         pressured_nodes = self._pressure_handler(sir)
-        R = self._call(D, M, time_step, pressured_nodes)
+        D = self._call(D, M, time_step, pressured_nodes)
+        R = M - D
 
         # Collect Data
         self._last_pressured_nodes = pressured_nodes
-        self._last_removed_edges = (M > 0) * (R == 0)
-        G = nx.from_numpy_array(R)
+        self._last_removed_edges = R
+        G = nx.from_numpy_array(D)
         self._last_comps = tuple(nx.connected_components(G))
         self._last_diameter = np.max(rx.distance_matrix(rx.networkx_converter(G)))
+        self._last_perc_edges_removed = np.sum(R, axis=0) / np.sum(M, axis=0)
 
-        return R
+        return D
 
     def __str__(self) -> str:
         return self.name

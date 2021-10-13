@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Callable, Collection, List, Optional, Sequence, Tuple, Union
 import matplotlib.pyplot as plt
 import networkx as nx
+from networkx.algorithms.distance_measures import diameter
 import numpy as np
 from customtypes import Layout
 from network import Network
@@ -15,19 +16,13 @@ class Disease:
     trans_prob: float
 
 
-def pool_friendly_simulate(args):
-    M, n_to_infect, disease, behavior, max_steps, rng = args
-    sir0 = make_starting_sir(M.shape[0], n_to_infect, rng)
-    return simulate(M, sir0, disease, behavior, max_steps, None)[-1]
-
-
 def simulate(M: np.ndarray,
              sir0: np.ndarray,
              disease: Disease,
              update_connections: behavior.UpdateConnections,
              max_steps: int,
              rng,
-             layout: Optional[Layout] = None) -> List[np.ndarray]:
+             layout: Optional[Layout] = None) -> 'SimResults':
     """
     Simulate an infection on a dynamic network.
 
@@ -47,8 +42,7 @@ def simulate(M: np.ndarray,
     max_steps: The maximum number of steps to run the simulation for before returning.
     layout: If you want visualization, provide a layout to use. Pass None for no visualization.
     """
-    sirs: List[np.ndarray] = [None] * max_steps  # type: ignore
-    sirs[0] = np.copy(sir0)
+    sirs: List[np.ndarray] = [np.copy(sir0)]
     D = np.copy(M)
     N = M.shape[0]
     vis_func = Visualize(layout) if layout is not None else None
@@ -56,44 +50,55 @@ def simulate(M: np.ndarray,
         vis_func(nx.Graph(D), sirs[0], 0)
 
     # Needed data
-    # num_egdes_removed = []
-    # current_edge_removal_durations = np.zeros(D.shape)
-    # total_edge_removal_durations = []
-    # old[np.where((new == 0) * (old != 0))]
+    num_edges_removed = []
+    current_edge_removal_durations = np.zeros(D.shape)
+    total_edge_removal_durations = []
+    num_pressured_nodes_at_step: List[int] = []
+    diameter_at_step = []
+    num_comps_at_step = []
+    avg_comp_size_at_step = []
+    last_perc_edges_removed_at_step = []
 
     for step in range(1, max_steps):
         # Get the adjacency matrix to use at this step
         D = update_connections(D, M, step, sirs[step - 1])
 
-        # # Gather the needed data
-        # num_egdes_removed.append(update_connections.last_num_removed_edges)
-        # current_removed_edges = update_connections.last_removed_edges
-        # # Keeps only the currently_removed_edges, then adds one to each
-        # new_edge_removal_durations = (current_edge_removal_durations * current_removed_edges) + current_removed_edges
-        # total_edge_removal_durations.extend(current_edge_removal_durations[(current_edge_removal_durations != 0) * (current_removed_edges == 0)])
+        # Gather the needed data
+        num_edges_removed.append(update_connections.last_num_removed_edges)
+        current_removed_edges = update_connections.last_removed_edges
+        num_pressured_nodes_at_step.append(np.sum(update_connections.last_pressured_nodes))
+        diameter_at_step.append(update_connections.last_diameter)
+        num_comps_at_step.append(update_connections.last_num_comps)
+        avg_comp_size_at_step.append(update_connections.last_avg_comp_size)
+        last_perc_edges_removed_at_step.append(update_connections.last_perc_edges_removed)
+
+        # Keeps only the currently_removed_edges, then adds one to each
+        # old[np.where((new_rmvd == 0) * (old != 0))]
+        # old -> current_edge_removal durations; new_rmvd -> current_removed_edges
+        total_edge_removal_durations.extend(
+            current_edge_removal_durations[(current_edge_removal_durations != 0)
+                                           * (current_removed_edges == 0)]
+        )
+        current_edge_removal_durations = (current_edge_removal_durations * current_removed_edges)\
+            + current_removed_edges
 
         # next_sir is the workhorse of the simulation because it is responsible
         # for simulating the disease spread
-        sirs[step], states_changed = next_sir(sirs[step - 1], D, disease, rng)
+        sir, states_changed = next_sir(sirs[step - 1], D, disease, rng)
+        sirs.append(sir)
         if vis_func is not None:
             vis_func(nx.Graph(D), sirs[step], step)
 
-        # find all the agents that are in the removed state. If that number is N,
-        # the simulation is done.
-        all_nodes_infected = len(np.where(sirs[step][2] > 0)[0]) == N
-        if (not states_changed) and all_nodes_infected:
-            return sirs[:step]
-
-        # If there aren't any exposed or infectious agents, the disease is gone and we
-        # can take a short cut to finish the simulation.
+        # If there aren't any infectious agents, the disease is gone
+        # and the simulation is done.
         disease_gone = np.sum(sirs[step][1]) == 0
         if (not states_changed) and disease_gone:
-            for i in range(step, max_steps):
-                sirs[i] = np.copy(sirs[step])
-            return sirs
+            break
 
-    return sirs
-    # return SimResults(M, sirs, pressured_nodes, removed_nodes, len(pressured_nodes))
+    return SimResults(sirs, np.array(num_edges_removed), np.array(total_edge_removal_durations),
+                      np.array(num_pressured_nodes_at_step), np.array(diameter_at_step),
+                      np.array(num_comps_at_step), np.array(avg_comp_size_at_step),
+                      last_perc_edges_removed_at_step)
 
 
 def next_sir(old_sir: np.ndarray, M: np.ndarray, disease: Disease, rng) -> Tuple[np.ndarray, bool]:
@@ -135,106 +140,94 @@ def remove_dead_agents(D: np.ndarray, M: np.ndarray, time_step: int, sir: np.nda
 
 class SimResults:
     def __init__(self,
-                 n_edges_removed_at_step: Sequence[int],
-                 matrices_of_edges_removed_at_step: Sequence[np.ndarray]
-                 ) -> None:
+                 sirs: Sequence[np.ndarray],
+                 num_edges_removed_per_step: np.ndarray,
+                 edge_removal_durations: np.ndarray,
+                 pressured_nodes_at_step: np.ndarray,
+                 diameter_at_step: np.ndarray,
+                 num_comps_at_step: np.ndarray,
+                 avg_comp_size_at_step: np.ndarray,
+                 percent_edges_node_loses_at_step: Sequence[np.ndarray]
+                 ):
         """
         Invasiveness
             Temporal average edges removed.
                 Each step in behavior.last_num_removed_edges, aggregate in simulate
-            Average edge removal duration TODO: in simulate using behavior.last_removed_edges
+            Average edge removal duration in simulate using behavior.last_removed_edges
             Max number of edges removed at any given time
-                during the simulation TODO: in simulate using behavior.last_num_removed_edges
+                during the simulation in simulate using behavior.last_num_removed_edges
         Isolation
-            Diameter at each time step TODO: each step in behavior.last_diameter
-            Number of components TODO: each step in behavior.last_num_comps
-            Average component size TODO: each step in behavior.last_avg_comp_size
-            % edges a node loses TODO: each step in behavior
+            Diameter at each time step each step in behavior.last_diameter
+            Number of components each step in behavior.last_num_comps
+            Average component size each step in behavior.last_avg_comp_size
+            % edges a node loses each step in behavior
         Survival
-            survival rate: % of susceptible nodes at the end of the simulation TODO:
-            Max number of infectious nodes at any given time during the simulation TODO:
+            survival rate: % of susceptible nodes at the end of the simulation
+            Max number of infectious nodes at any given time during the simulation
         """
-        self.M = M
-        self.sir = sir
-        self.num_steps = num_steps
-        self.num_edges_removed = None  # TODO:
-        self.edge_removal_durations = None  # TODO:
-
-        self._temporal_average_edges_removed = None
-        self._avg_edge_removal_duration = None
-        self._max_num_edges_removed = None
-        self._avg_pressured_nodes = None
-        self._diameter_at_step = None
-        self._num_comps_at_step = None
-        self._avg_comp_size_at_step = None
-        self._percent_edges_node_loses_at_step = None
-        self._survival_rate = None
-        self._max_num_infectious = None
+        self.num_steps = len(sirs)
+        self.num_edges_removed_per_step = num_edges_removed_per_step
+        self.edge_removal_durations = edge_removal_durations
+        self.pressured_nodes_at_step = pressured_nodes_at_step
+        self._diameter_at_step = diameter_at_step
+        self._num_comps_at_step = num_comps_at_step
+        self._avg_comp_size_at_step = avg_comp_size_at_step
+        self._survival_rate = np.sum(sirs[-1][0] > 0) / sirs[-1].shape[1]
+        self._max_num_infectious = max(np.sum(sir[1] > 0) for sir in sirs)
+        self._percent_edges_node_loses_at_step = percent_edges_node_loses_at_step
 
     # Invasiveness
 
     @property
-    def temporal_average_edges_removed(self):
+    def temporal_average_edges_removed(self) -> float:
         if self._temporal_average_edges_removed is None:
-            self._temporal_average_edges_removed = sum(self.num_edges_removed) / len(self.num_edges_removed)
+            self._temporal_average_edges_removed = np.average(self.num_edges_removed_per_step)
         return self._temporal_average_edges_removed
 
-    @property  # TODO:
-    def avg_edge_removal_duration(self):
+    @property
+    def avg_edge_removal_duration(self) -> float:
         if self._avg_edge_removal_duration is None:
-            self._avg_edge_removal_duration = None  # TODO:
+            self._avg_edge_removal_duration = np.average(self.edge_removal_durations)
         return self._avg_edge_removal_duration
 
     @property
-    def max_num_edges_removed(self):
+    def max_num_edges_removed(self) -> int:
         if self._max_num_edges_removed is None:
-            self._max_num_edges_removed = max(self.num_edges_removed)
+            self._max_num_edges_removed = np.max(self.num_edges_removed_per_step)
         return self._max_num_edges_removed
 
     @property
-    def avg_pressured_nodes(self):
+    def avg_num_pressured_nodes(self) -> float:
         if self._avg_pressured_nodes is None:
-            self._avg_pressured_nodes = np.sum(self.pressured_nodes) / self.num_steps
+            self._avg_pressured_nodes = np.average(self.pressured_nodes_at_step)
         return self._avg_pressured_nodes
 
     # Isolation
 
-    @property  # TODO:
-    def diameter_at_step(self):
-        if self._diameter_at_step is None:
-            self._diameter_at_step = None  # TODO:
+    @property
+    def diameter_at_step(self) -> np.ndarray:
         return self._diameter_at_step
 
-    @property  # TODO:
+    @property
     def num_comps_at_step(self):
-        if self._num_comps_at_step is None:
-            self._num_comps_at_step = None  # TODO:
         return self._num_comps_at_step
 
-    @property  # TODO:
+    @property
     def avg_comp_size_at_step(self):
-        if self._avg_comp_size_at_step is None:
-            self._avg_comp_size_at_step = None  # TODO:
         return self._avg_comp_size_at_step
 
-    @property  # TODO:
+    @property
     def percent_edges_node_loses_at_step(self):
-        if self._percent_edges_node_loses_at_step is None:
-            self._percent_edges_node_loses_at_step = None  # TODO:
         return self._percent_edges_node_loses_at_step
 
     # Surival
 
-    @property  # TODO:
+    @property
     def survival_rate(self):
-        if self._survival_rate is None:
-            self._survival_rate = None  # TODO:
         return self._survival_rate
 
-    @property  # TODO:
+    @property
     def max_num_infectious(self):
-        if self._max_num_infectious is None:
-            self._max_num_infectious = None  # TODO:
         return self._max_num_infectious
 
 
