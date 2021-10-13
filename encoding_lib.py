@@ -108,3 +108,16 @@ def calc_generic_population_diversity(rated_population: Sequence[Tuple[Number, n
     """
     n_unique = len(set(cost_to_genotype[1].tobytes() for cost_to_genotype in rated_population))
     return n_unique / len(rated_population)
+
+
+def calc_float_pop_diversity(rated_population: Sequence[Tuple[Number, np.ndarray]]) -> float:
+    """
+    Return the percentage of array comparisons that are approximately equal
+    """
+    num_same = 0
+    for i, genotype0 in enumerate(g[1] for g in rated_population):
+        for genotype1 in (g[1] for g in rated_population[i:]):
+            if np.allclose(genotype0, genotype1):
+                num_same += 1
+    possible_comparisons = (len(rated_population)**2 - len(rated_population)) // 2
+    return 1 - num_same / possible_comparisons
