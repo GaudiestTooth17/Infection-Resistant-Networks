@@ -3,12 +3,16 @@ import os
 import networkx as nx
 import numpy as np
 from typing import List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
-from customtypes import Layout, Communities
+from customtypes import Layout, Communities, Number
+import csv
+import itertools as it
+import copy
 import os.path as op
 import sys
 from colorama import Fore, Style
 import tarfile
 import re
+import matplotlib.pyplot as plt
 NETWORK_DIR = 'networks'
 
 
@@ -173,6 +177,64 @@ def write_network_class(class_name: str, nets: Sequence[Network]) -> None:
 def save_animation(net: Network, sirs: List[np.ndarray], output_name: str) -> None:
     """Save an animation of the the sirs on the network."""
     pass
+
+
+class RawDataCSV:
+    def __init__(self, title: str, distributions: Dict[str, Sequence[Number]]):
+        self.title = title
+        self.distributions = distributions
+
+    def save(self):
+        with open(os.path.join('results', self.title+'.csv'), 'w', newline='') as csv_file:
+            writer = csv.writer(csv_file)
+            rows = it.chain(*[([dist_title], dist_data)
+                              for dist_title, dist_data in self.distributions.items()])
+            writer.writerows(rows)
+        return self
+
+    def save_boxplots(self):
+        for dist_title, dist in self.distributions.items():
+            plt.figure()
+            plt.title(self.title)
+            plt.xlabel(dist_title)
+            plt.boxplot(dist)
+            plt.savefig(os.path.join('results', dist_title+'.png'), format='png')
+        return self
+
+    @staticmethod
+    def load_from_file(file_name: str) -> 'RawDataCSV':
+        with open(file_name, 'r', newline='') as csv_file:
+            reader = csv.reader(csv_file)
+        raw_rows = tuple(reader)
+        title = raw_rows[0][0]
+
+        distributions: Dict[str, Sequence[Number]] = {}
+        for i in range(1, len(raw_rows), 2):
+            dist_title = raw_rows[i][0]
+            dist_data = RawDataCSV._str_list_to_number_list(raw_rows[i+1])
+            distributions[dist_title] = dist_data
+
+        return RawDataCSV(title, distributions)
+
+    @staticmethod
+    def _str_list_to_number_list(str_list: List[str]) -> Union[List[int], List[float]]:
+        num_list = []
+        are_floats = False
+        for s in str_list:
+            if not are_floats and '.' in s:
+                num_list = list(map(float, num_list))
+                are_floats = True
+            if are_floats:
+                num_list.append(float(s))
+            else:
+                num_list.append(int(s))
+        return num_list
+
+    @staticmethod
+    def union(title: str, x: 'RawDataCSV', y: 'RawDataCSV') -> 'RawDataCSV':
+        new_data = copy.deepcopy(x.distributions)
+        new_data.update(y.distributions)
+        return RawDataCSV(title, new_data)
 
 
 if __name__ == '__main__':

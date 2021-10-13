@@ -299,6 +299,9 @@ class SimGenerator:
 
 
 def pressure_flicker_test(pressure_distance, display=True):
+    """
+    A basic test to use for visualizing simulations
+    """
     net = fio.read_network('networks/elitist-500.txt')
     pressure_handler = behavior.DistancePressureHandler(net.dm, pressure_distance)
     # pressure_handler = behavior.AllPressureHandler()
