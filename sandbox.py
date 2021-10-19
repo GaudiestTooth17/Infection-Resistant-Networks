@@ -318,6 +318,35 @@ def pressure_flicker_test(pressure_distance, display=True):
                         max_steps=200, rng=RNG, layout=None)
 
 
+def multi_behavior_test(display=True):
+    """
+    A basic test to visualize the multi-behavior.
+    """
+    net = fio.read_network('networks/elitist-500.txt')
+    ph1 = behavior.BetweenDistancePressureHandler(net.dm, 0, 1)
+    ph2 = behavior.BetweenDistancePressureHandler(net.dm, 1, 2)
+    ph3 = behavior.BetweenDistancePressureHandler(net.dm, 2, 3)
+    ph4 = behavior.BetweenDistancePressureHandler(net.dm, 10, 40)
+
+    behaviors = [
+        behavior.FlickerPressureBehavior(RNG, ph1, .1),
+        behavior.FlickerPressureBehavior(RNG, ph2, .2),
+        behavior.FlickerPressureBehavior(RNG, ph3, .8),
+        behavior.FlickerPressureBehavior(RNG, ph4, 1)
+    ]
+    update_behavior = behavior.MultiPressureBehavior(RNG, behaviors)
+    if display:
+        return simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
+                        disease=Disease(4, .3),
+                        update_connections=update_behavior,
+                        max_steps=200, rng=RNG, layout=net.layout)
+    else:
+        return simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
+                        disease=Disease(4, .3),
+                        update_connections=update_behavior,
+                        max_steps=200, rng=RNG, layout=None)
+
+
 if __name__ == '__main__':
     # net = Network(np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]]))
     # # net = Network(nx.connected_caveman_graph(5, 5))
@@ -328,7 +357,8 @@ if __name__ == '__main__':
 
     # distance_to_survival_rates = [[pressure_flicker_test(i) for _ in tqdm(range(1))] for i in tqdm(range(3))]
 
-    pressure_flicker_test(1)
+    multi_behavior_test()
+    # pressure_flicker_test(1)
 
     # emd = np.zeros((3, 3))
     # for i in range(3):
