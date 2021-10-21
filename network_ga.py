@@ -11,7 +11,7 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-import hcmioptim.ga as ga
+import krug.ga as ga
 from analysis import all_same, visualize_network
 import encoding_lib as lib
 import partitioning as part
