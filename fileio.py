@@ -2,7 +2,7 @@ from network import Network
 import os
 import networkx as nx
 import numpy as np
-from typing import List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
+from typing import DefaultDict, List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
 from customtypes import Layout, Communities, Number
 import csv
 import itertools as it
@@ -13,6 +13,8 @@ from colorama import Fore, Style
 import tarfile
 import re
 import matplotlib.pyplot as plt
+from collections import defaultdict
+import analysis as an
 NETWORK_DIR = 'networks'
 
 
@@ -53,6 +55,58 @@ def read_network(file_name: str,
     if layout is not None:
         return Network(G, communities=node_to_community, layout=layout)
     return Network(G, communities=node_to_community)
+
+
+def read_socio_patterns_network(file_name: str,
+                                steps_to_form_edge: int) -> Network:
+    """
+    Read a network stored in the SocioPatterns format (http://www.sociopatterns.org/datasets/test/)
+
+
+    file_name: Ends in '.dat'
+    steps_to_form_edge: It is how many time steps (of 20s) two people need to spend
+                        next to each other to have an edge between them in the
+                        network
+    """
+    with open(file_name, 'r') as f:
+        lines = f.readlines()
+
+    def line_to_time_and_edge(line: str) -> Tuple[int, Tuple[int, int]]:
+        fields = line.split()
+        t = int(fields[0])
+        e = (int(fields[1]), int(fields[2]))
+        # This is just in case the edges aren't always sorted the way the first
+        # few appear to be. It will mess up the algorithm to have both
+        # (u, v) and (v, u) present and this check makes sure that doesn't
+        # happen.
+        if e[0] > e[1]:
+            e = (e[1], e[0])
+        return t, e
+
+    step_to_edges = [line_to_time_and_edge(line) for line in lines]
+    step_to_edges.sort(key=lambda te: te[0])
+
+    edge_to_longest_streak = {}
+    edge_to_current_streak = defaultdict(lambda: 0)
+    last_step_updated: DefaultDict[Tuple[int, int], Optional[int]] = defaultdict(lambda: None)
+    for step, edge in step_to_edges:
+        if edge not in edge_to_longest_streak:
+            edge_to_longest_streak[edge] = -1
+        if last_step_updated[edge] != step-20:
+            edge_to_longest_streak[edge] = max(edge_to_longest_streak[edge],
+                                               edge_to_current_streak[edge])
+            edge_to_current_streak[edge] = 1
+        else:
+            edge_to_current_streak[edge] += 1
+        last_step_updated[edge] = step
+    edge_to_longest_streak = {edge: max(edge_to_longest_streak[edge], streak)
+                              for edge, streak in edge_to_current_streak.items()}
+
+    edges_to_keep = filter(lambda x: x[1] >= steps_to_form_edge, edge_to_longest_streak.items())
+    G: nx.Graph = nx.empty_graph()
+    G.add_edges_from(map(lambda x: x[0], edges_to_keep))
+
+    return Network(G)
 
 
 def old_output_network(G: nx.Graph, network_name: str,
@@ -238,6 +292,5 @@ class RawDataCSV:
 
 
 if __name__ == '__main__':
-    write_network_class('ErdosRenyi(N=500,p=.05)',
-                        [Network(nx.erdos_renyi_graph(500, .05))
-                         for _ in range(10)])
+    net = read_socio_patterns_network('networks/workplace_2nd_deployment.dat', 5)
+    an.visualize_network(net.G, net.layout)

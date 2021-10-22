@@ -3,7 +3,6 @@ import collections
 import networkx as nx
 import numpy as np
 from tqdm import tqdm
-import sys
 from itertools import takewhile
 from typing import Callable, Counter, Dict, Iterable, List, Sequence, Set, Optional, Tuple, Union
 from customtypes import Layout, Number, CircularList
