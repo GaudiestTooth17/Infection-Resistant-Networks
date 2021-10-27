@@ -57,6 +57,9 @@ def read_network(file_name: str,
     return Network(G, communities=node_to_community)
 
 
+# TODO: Instead of the cut off being for the longest stretch of time that two people
+# are close to each other, maybe it should be for the total amount they are next to
+# each other. This would match the elementary school data.
 def read_socio_patterns_network(file_name: str,
                                 steps_to_form_edge: int) -> Network:
     """
@@ -73,6 +76,10 @@ def read_socio_patterns_network(file_name: str,
 
     def line_to_time_and_edge(line: str) -> Tuple[int, Tuple[int, int]]:
         fields = line.split()
+        if len(fields) < 3:
+            raise Exception(f'Bad line: {line}')
+        # There are some SocioPatterns networks that contain extra data on each line,
+        # but the base format is always (time, u, v), I think.
         t = int(fields[0])
         e = (int(fields[1]), int(fields[2]))
         # This is just in case the edges aren't always sorted the way the first
@@ -106,6 +113,14 @@ def read_socio_patterns_network(file_name: str,
     G: nx.Graph = nx.empty_graph()
     G.add_edges_from(map(lambda x: x[0], edges_to_keep))
 
+    return Network(G)
+
+
+def read_socio_patterns_gexf(file_name: str, steps_to_form_edge: int) -> Network:
+    G: nx.Graph = nx.read_gexf(file_name)
+    edges_to_remove = filter(lambda ea: ea[1]['duration'] < steps_to_form_edge*20,
+                             G.edges.items())
+    G.remove_edges_from(edge[0] for edge in edges_to_remove)
     return Network(G)
 
 
@@ -289,8 +304,3 @@ class RawDataCSV:
         new_data = copy.deepcopy(x.distributions)
         new_data.update(y.distributions)
         return RawDataCSV(title, new_data)
-
-
-if __name__ == '__main__':
-    net = read_socio_patterns_network('networks/workplace_2nd_deployment.dat', 5)
-    an.visualize_network(net.G, net.layout)
