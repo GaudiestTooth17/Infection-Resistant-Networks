@@ -230,7 +230,7 @@ class FlickerPressureBehavior(UpdateConnections):
 
 class MultiPressureBehavior(UpdateConnections):
     def __init__(self, rng,
-                 behaviors: Tuple[UpdateConnections]):
+                 behaviors: Tuple[UpdateConnections, ...]):
         super().__init__(None)
         self._rng = rng
         self._behaviors = behaviors
