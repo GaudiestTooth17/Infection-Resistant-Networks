@@ -178,6 +178,29 @@ class DistancePressureHandler(PressureHandler):
         return np.sum(self.DM[infectious_agents] <= self.distance, axis=0) > 0
 
 
+class MultiPressureHandler(PressureHandler):
+    def __init__(self, pressure_handlers: Tuple[PressureHandler]):
+        self.pressure_handlers = pressure_handlers
+        """
+        Takes multiple pressure handlers and returns all of the pressured nodes among any of them
+        as a true/false ndarray.
+        """
+    
+    @property
+    def name(self) -> str:
+        n = 'OrPressureHandler: '
+        for p in self.pressure_handlers:
+            n += p.name + ' '
+        return n
+
+    def __call__(self, sir: np.ndarray) -> np.ndarray:
+
+        pressured_nodes = np.zeros(sir.shape[1])
+        for p in self.pressure_handlers:
+            pressured_nodes += p(sir)
+        return pressured_nodes > 0
+
+
 class BetweenDistancePressureHandler(PressureHandler):
     def __init__(self, DM: np.ndarray, min_distance: int, max_distance):
         """
