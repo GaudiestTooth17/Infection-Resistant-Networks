@@ -2,7 +2,7 @@ from network import Network
 import os
 import networkx as nx
 import numpy as np
-from typing import List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
+from typing import Counter, DefaultDict, List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
 from customtypes import Layout, Communities, Number
 import csv
 import itertools as it
@@ -13,6 +13,8 @@ from colorama import Fore, Style
 import tarfile
 import re
 import matplotlib.pyplot as plt
+from collections import defaultdict
+import analysis as an
 NETWORK_DIR = 'networks'
 
 
@@ -53,6 +55,67 @@ def read_network(file_name: str,
     if layout is not None:
         return Network(G, communities=node_to_community, layout=layout)
     return Network(G, communities=node_to_community)
+
+
+# TODO: Instead of the cut off being for the longest stretch of time that two people
+# are close to each other, maybe it should be for the total amount they are next to
+# each other. This would match the elementary school data.
+def read_socio_patterns_network(file_name: str,
+                                seconds_to_form_edge: int) -> Network:
+    """
+    Read a network stored in the SocioPatterns format (http://www.sociopatterns.org/datasets/test/)
+
+
+    file_name: Ends in '.dat' or '.sp'
+    steps_to_form_edge: It is how many time steps (of 20s) two people need to spend
+                        next to each other to have an edge between them in the
+                        network
+    """
+    extension = op.splitext(file_name)[1]
+    if extension == '.gexf':
+        return _read_socio_patterns_gexf(file_name, seconds_to_form_edge)
+    elif extension == '.sp':
+        return _read_sociopatterns_sp(file_name, seconds_to_form_edge)
+    raise ValueError(f'read_socio_patterns_network expected a .gexf or .sp file. Got: {file_name}')
+
+
+def _read_socio_patterns_gexf(file_name: str, seconds_to_form_edge: int) -> Network:
+    G: nx.Graph = nx.read_gexf(file_name)
+    edges_to_remove = filter(lambda ea: ea[1]['duration'] < seconds_to_form_edge,
+                             G.edges.items())
+    G.remove_edges_from(edge[0] for edge in edges_to_remove)
+    return Network(G)
+
+
+def _read_sociopatterns_sp(file_name: str, seconds_to_form_edge: int) -> Network:
+    with open(file_name, 'r') as f:
+        lines = f.readlines()
+
+    def line_to_time_and_edge(line: str) -> Tuple[int, Tuple[int, int]]:
+        fields = line.split()
+        if len(fields) < 3:
+            raise Exception(f'Bad line: {line}')
+        # There are some SocioPatterns networks that contain extra data on each line,
+        # but the base format is always (time, u, v), I think.
+        time_ = int(fields[0])
+        edge = (int(fields[1]), int(fields[2]))
+        # This is just in case the edges aren't always sorted the way the first
+        # few appear to be. It will mess up the algorithm to have both
+        # (u, v) and (v, u) present and this check makes sure that doesn't
+        # happen.
+        if edge[0] > edge[1]:
+            edge = (edge[1], edge[0])
+        return time_, edge
+
+    step_to_edges = [line_to_time_and_edge(line) for line in lines]
+    edge_to_time_active = Counter(x[1] for x in step_to_edges)
+
+    # the magic number 20 is because each step is 20 seconds
+    edges_to_keep = filter(lambda x: x[1]*20 >= seconds_to_form_edge, edge_to_time_active.items())
+    G: nx.Graph = nx.empty_graph()
+    G.add_edges_from(map(lambda x: x[0], edges_to_keep))
+
+    return Network(G)
 
 
 def old_output_network(G: nx.Graph, network_name: str,
@@ -235,9 +298,3 @@ class RawDataCSV:
         new_data = copy.deepcopy(x.distributions)
         new_data.update(y.distributions)
         return RawDataCSV(title, new_data)
-
-
-if __name__ == '__main__':
-    write_network_class('ErdosRenyi(N=500,p=.05)',
-                        [Network(nx.erdos_renyi_graph(500, .05))
-                         for _ in range(10)])
