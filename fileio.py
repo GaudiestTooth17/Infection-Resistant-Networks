@@ -66,11 +66,28 @@ def read_socio_patterns_network(file_name: str,
     Read a network stored in the SocioPatterns format (http://www.sociopatterns.org/datasets/test/)
 
 
-    file_name: Ends in '.dat'
+    file_name: Ends in '.dat' or '.sp'
     steps_to_form_edge: It is how many time steps (of 20s) two people need to spend
                         next to each other to have an edge between them in the
                         network
     """
+    extension = op.splitext(file_name)[1]
+    if extension == '.gexf':
+        return _read_socio_patterns_gexf(file_name, steps_to_form_edge)
+    elif extension == '.sp':
+        return _read_sociopatterns_sp(file_name, steps_to_form_edge)
+    raise ValueError(f'read_socio_patterns_network expected a .gexf or .sp file. Got: {file_name}')
+
+
+def _read_socio_patterns_gexf(file_name: str, steps_to_form_edge: int) -> Network:
+    G: nx.Graph = nx.read_gexf(file_name)
+    edges_to_remove = filter(lambda ea: ea[1]['duration'] < steps_to_form_edge*20,
+                             G.edges.items())
+    G.remove_edges_from(edge[0] for edge in edges_to_remove)
+    return Network(G)
+
+
+def _read_sociopatterns_sp(file_name: str, steps_to_form_edge: int) -> Network:
     with open(file_name, 'r') as f:
         lines = f.readlines()
 
@@ -80,15 +97,15 @@ def read_socio_patterns_network(file_name: str,
             raise Exception(f'Bad line: {line}')
         # There are some SocioPatterns networks that contain extra data on each line,
         # but the base format is always (time, u, v), I think.
-        t = int(fields[0])
-        e = (int(fields[1]), int(fields[2]))
+        time_ = int(fields[0])
+        edge = (int(fields[1]), int(fields[2]))
         # This is just in case the edges aren't always sorted the way the first
         # few appear to be. It will mess up the algorithm to have both
         # (u, v) and (v, u) present and this check makes sure that doesn't
         # happen.
-        if e[0] > e[1]:
-            e = (e[1], e[0])
-        return t, e
+        if edge[0] > edge[1]:
+            edge = (edge[1], edge[0])
+        return time_, edge
 
     step_to_edges = [line_to_time_and_edge(line) for line in lines]
     step_to_edges.sort(key=lambda te: te[0])
@@ -113,14 +130,6 @@ def read_socio_patterns_network(file_name: str,
     G: nx.Graph = nx.empty_graph()
     G.add_edges_from(map(lambda x: x[0], edges_to_keep))
 
-    return Network(G)
-
-
-def read_socio_patterns_gexf(file_name: str, steps_to_form_edge: int) -> Network:
-    G: nx.Graph = nx.read_gexf(file_name)
-    edges_to_remove = filter(lambda ea: ea[1]['duration'] < steps_to_form_edge*20,
-                             G.edges.items())
-    G.remove_edges_from(edge[0] for edge in edges_to_remove)
     return Network(G)
 
 
