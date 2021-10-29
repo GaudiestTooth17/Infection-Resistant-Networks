@@ -2,7 +2,7 @@ from network import Network
 import os
 import networkx as nx
 import numpy as np
-from typing import DefaultDict, List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
+from typing import Counter, DefaultDict, List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
 from customtypes import Layout, Communities, Number
 import csv
 import itertools as it
@@ -61,7 +61,7 @@ def read_network(file_name: str,
 # are close to each other, maybe it should be for the total amount they are next to
 # each other. This would match the elementary school data.
 def read_socio_patterns_network(file_name: str,
-                                steps_to_form_edge: int) -> Network:
+                                seconds_to_form_edge: int) -> Network:
     """
     Read a network stored in the SocioPatterns format (http://www.sociopatterns.org/datasets/test/)
 
@@ -73,21 +73,21 @@ def read_socio_patterns_network(file_name: str,
     """
     extension = op.splitext(file_name)[1]
     if extension == '.gexf':
-        return _read_socio_patterns_gexf(file_name, steps_to_form_edge)
+        return _read_socio_patterns_gexf(file_name, seconds_to_form_edge)
     elif extension == '.sp':
-        return _read_sociopatterns_sp(file_name, steps_to_form_edge)
+        return _read_sociopatterns_sp(file_name, seconds_to_form_edge)
     raise ValueError(f'read_socio_patterns_network expected a .gexf or .sp file. Got: {file_name}')
 
 
-def _read_socio_patterns_gexf(file_name: str, steps_to_form_edge: int) -> Network:
+def _read_socio_patterns_gexf(file_name: str, seconds_to_form_edge: int) -> Network:
     G: nx.Graph = nx.read_gexf(file_name)
-    edges_to_remove = filter(lambda ea: ea[1]['duration'] < steps_to_form_edge*20,
+    edges_to_remove = filter(lambda ea: ea[1]['duration'] < seconds_to_form_edge,
                              G.edges.items())
     G.remove_edges_from(edge[0] for edge in edges_to_remove)
     return Network(G)
 
 
-def _read_sociopatterns_sp(file_name: str, steps_to_form_edge: int) -> Network:
+def _read_sociopatterns_sp(file_name: str, seconds_to_form_edge: int) -> Network:
     with open(file_name, 'r') as f:
         lines = f.readlines()
 
@@ -108,25 +108,10 @@ def _read_sociopatterns_sp(file_name: str, steps_to_form_edge: int) -> Network:
         return time_, edge
 
     step_to_edges = [line_to_time_and_edge(line) for line in lines]
-    step_to_edges.sort(key=lambda te: te[0])
+    edge_to_time_active = Counter(x[1] for x in step_to_edges)
 
-    edge_to_longest_streak = {}
-    edge_to_current_streak = defaultdict(lambda: 0)
-    last_step_updated: DefaultDict[Tuple[int, int], Optional[int]] = defaultdict(lambda: None)
-    for step, edge in step_to_edges:
-        if edge not in edge_to_longest_streak:
-            edge_to_longest_streak[edge] = -1
-        if last_step_updated[edge] != step-20:
-            edge_to_longest_streak[edge] = max(edge_to_longest_streak[edge],
-                                               edge_to_current_streak[edge])
-            edge_to_current_streak[edge] = 1
-        else:
-            edge_to_current_streak[edge] += 1
-        last_step_updated[edge] = step
-    edge_to_longest_streak = {edge: max(edge_to_longest_streak[edge], streak)
-                              for edge, streak in edge_to_current_streak.items()}
-
-    edges_to_keep = filter(lambda x: x[1] >= steps_to_form_edge, edge_to_longest_streak.items())
+    # the magic number 20 is because each step is 20 seconds
+    edges_to_keep = filter(lambda x: x[1]*20 >= seconds_to_form_edge, edge_to_time_active.items())
     G: nx.Graph = nx.empty_graph()
     G.add_edges_from(map(lambda x: x[0], edges_to_keep))
 
