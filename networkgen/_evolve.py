@@ -125,23 +125,24 @@ def new_membership_population(n_groups: int, pop_size: int, rng) -> Sequence[np.
     return tuple(rng.random(n_groups) for _ in range(pop_size))
 
 
-def test_consistancy():
-    # TODO: find the entropy for random group memberships that only contain low values
-    group_membership = np.array([0.2337656, 0.30522161, 0.40644384, 0.14117652,
-                                 0.21550407, 0.16917761, 0.29178833, 0.1564601,
-                                 0.44323018, 0.70752711, 0.34885096, 0.55909792,
-                                 0.1700208, 0.22228515, 0.36972174, 0.38646901,
-                                 0.10031864, 0.29303319, 0.51209777, 0.20841458,
-                                 0.41822691, 0.23562407, 0.3091762, 0.37521886,
-                                 0.2365973])
-    objective = AffiliationObjective(100, .01, .3, 1000, np.random.default_rng(66))
+def test_consistancy(N: int, group_membership: np.ndarray, id_: int):
+    objective = AffiliationObjective(N, .01, .3, 1000, np.random.default_rng(66))
     _, edge_densities, clustering_coefficients = objective.run(group_membership)
-    for name, distribution in zip(('Edge Densities', 'Clustering Coefficients'),
-                                  (edge_densities, clustering_coefficients)):
+    base_name = f'N={N}_{id_}'
+    for dist_name, distribution in zip(('Edge Densities', 'Clustering Coefficients'),
+                                       (edge_densities, clustering_coefficients)):
+        plot_name = f'{dist_name} {base_name}\nEntropy: {calc_entropy(distribution, 1000)}'
         plt.figure()
-        plt.title(name + f'\nEntropy: {calc_entropy(distribution, 1000)}')
+        plt.title(plot_name)
         plt.boxplot(distribution)
-    plt.show()
+        plt.savefig(plot_name)
+
+
+def test_consistancies_of_random_arrays():
+    rng = np.random.default_rng(69)
+    for i in range(1):
+        group_memberships = rng.random(100) * .1
+        test_consistancy(1000, group_memberships, i)
 
 
 def calc_entropy(a: np.ndarray, bins: int) -> float:
@@ -151,4 +152,4 @@ def calc_entropy(a: np.ndarray, bins: int) -> float:
 
 if __name__ == '__main__':
     # evolve_affiliation_network(100, .01, .3)
-    test_consistancy()
+    test_consistancies_of_random_arrays()
