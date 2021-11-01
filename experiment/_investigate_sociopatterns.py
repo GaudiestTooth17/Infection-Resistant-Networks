@@ -12,6 +12,7 @@ def investigate_sociopatterns(name):
     nets = {i: fio.read_socio_patterns_network(f'networks/{name}', i)
             for i in threshold_range}
     N = nets[20].N
+    max_E = (N**2 - N) // 2
     print(f'N = {N}')
     title = f'{name} N={N}'
     threshold_to_visualize = 5*60  # visualize the network were it takes 5 minutes to form an edge
@@ -22,16 +23,17 @@ def investigate_sociopatterns(name):
         largest_comp: nx.Graph = nx.subgraph(net.G, max(comps, key=len))
         N_lc = len(largest_comp.nodes)
         diam_lc = nx.diameter(largest_comp)
-        return n_comps, diam_lc, N_lc / net.N, nx.average_clustering(largest_comp)
+        return (n_comps, diam_lc, N_lc / net.N, nx.average_clustering(largest_comp), net.E / max_E)
 
     metrics = [calc_net_metrics(net, step_threshold) for step_threshold, net in nets.items()]
-    n_comps, diams, perc_nodes, clusterings = zip(*metrics)
-    make_plot(title, threshold_range, n_comps, 'Number of Components')
-    make_plot(title, threshold_range, diams, 'Diameter of Largest Component')
-    make_plot(title, threshold_range, perc_nodes, 'Percentage of Nodes in Largest Component')
-    make_plot(title, threshold_range, clusterings, 'Average Clustering')
-    visualize_network(nets[threshold_to_visualize].G, nets[threshold_to_visualize].layout,
-                      f'{title} {threshold_to_visualize} s to form edge', save=True)
+    n_comps, diams, perc_nodes, clusterings, edge_density = zip(*metrics)
+    # make_plot(title, threshold_range, n_comps, 'Number of Components')
+    # make_plot(title, threshold_range, diams, 'Diameter of Largest Component')
+    # make_plot(title, threshold_range, perc_nodes, 'Percentage of Nodes in Largest Component')
+    # make_plot(title, threshold_range, clusterings, 'Average Clustering')
+    make_plot(title, threshold_range, edge_density, 'Edge Density')
+    # visualize_network(nets[threshold_to_visualize].G, nets[threshold_to_visualize].layout,
+    #                   f'{title} {threshold_to_visualize} s to form edge', save=True)
 
 
 def make_plot(title, xs, ys, y_label):
