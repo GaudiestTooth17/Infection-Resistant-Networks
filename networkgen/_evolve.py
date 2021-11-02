@@ -1,6 +1,6 @@
 import sys
-from typing import Sequence, Tuple
 sys.path.append('')
+from typing import Sequence, Tuple
 from networkgen import make_affiliation_network
 import krug.ga as ga
 import encoding_lib as lib
@@ -11,6 +11,7 @@ import numpy as np
 from scipy.stats import entropy
 import networkx as nx
 import itertools as it
+from multiprocessing import Pool
 
 
 def evolve_affiliation_network(N: int, target_edge_density: float,
@@ -126,23 +127,27 @@ def new_membership_population(n_groups: int, pop_size: int, rng) -> Sequence[np.
 
 
 def test_consistancy(N: int, group_membership: np.ndarray, id_: int):
-    objective = AffiliationObjective(N, .01, .3, 1000, np.random.default_rng(66))
+    objective = AffiliationObjective(N, .01, .3, 100, np.random.default_rng(66))
     _, edge_densities, clustering_coefficients = objective.run(group_membership)
     base_name = f'N={N}_{id_}'
     for dist_name, distribution in zip(('Edge Densities', 'Clustering Coefficients'),
                                        (edge_densities, clustering_coefficients)):
-        plot_name = f'{dist_name} {base_name}\nEntropy: {calc_entropy(distribution, 1000)}'
+        plot_name = f'{dist_name} {base_name}\nEntropy: {calc_entropy(distribution, 1000):.4f}'
         plt.figure()
         plt.title(plot_name)
         plt.boxplot(distribution)
-        plt.savefig(plot_name)
+        plt.savefig(f'results/{plot_name}.png', format='png')
+
+
+def test_consistancy_wrapper(args):
+    return test_consistancy(*args)
 
 
 def test_consistancies_of_random_arrays():
     rng = np.random.default_rng(69)
-    for i in range(1):
-        group_memberships = rng.random(100) * .1
-        test_consistancy(1000, group_memberships, i)
+    list_of_args = [(1000, rng.random(100)*.1, i) for i in range(10)]
+    with Pool(5) as p:
+        p.map(test_consistancy_wrapper, list_of_args, 2)
 
 
 def calc_entropy(a: np.ndarray, bins: int) -> float:
@@ -151,5 +156,4 @@ def calc_entropy(a: np.ndarray, bins: int) -> float:
 
 
 if __name__ == '__main__':
-    # evolve_affiliation_network(100, .01, .3)
     test_consistancies_of_random_arrays()
