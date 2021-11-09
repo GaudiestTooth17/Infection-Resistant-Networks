@@ -4,3 +4,4 @@ configurationmodel.profile
 *.csv
 results/
 rmme.py
+target/

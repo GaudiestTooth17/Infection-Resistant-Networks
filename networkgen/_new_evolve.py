@@ -6,6 +6,7 @@ from sympy.core.function import diff
 from sympy.core.symbol import Symbol
 import numpy as np
 from network import Network
+from analysis import visualize_network
 import networkx as nx
 import itertools as it
 from sympy import Expr
@@ -92,23 +93,54 @@ def display_results_for(f_coeffs, g_coeffs, seed):
     rng = np.random.default_rng(seed)
     N = 1000
     M = 100
-    net = make_affiliation_network(f, g, N, M, rng)
+    net = make_affiliation_network(f_coeffs, g_coeffs, N, M, rng)
     actual_c = nx.average_clustering(net.G)
     actual_ed = net.edge_density
-    expected_c, expected_ed = calc_clustering_and_edge_density(f, g, N, M)
+    expected_c, expected_ed = calc_clustering_and_edge_density(f_coeffs, g_coeffs, N, M)
     print(f'Actual clustering: {actual_c}\nExpected clustering: {expected_c}\n')
     print(f'Actual edge density: {actual_ed}\nExpected edge density: {expected_ed}\n')
 
 
-if __name__ == '__main__':
+def ba_edge_density(N: int, m: int):
+    """
+    Calculate the edge density of the class of Barabasi-Albert networks with N nodes and m=m.
+    """
+    return (2*m*(N-m))/(N**2-N)
+
+
+def make_barabasi_albert(N: int, approximate_edge_density: float) -> Network:
+    """
+    Return a Barabasi-Albert network with N nodes and some approximate edge density.
+
+    Preconditions:
+        0 < approximate_edge_density < .5
+    """
+    m = 1
+    edge_density = ba_edge_density(N, m)
+    ed_diff = np.abs(edge_density - approximate_edge_density)
+    did_improve = True
+    while did_improve:
+        prev = (ed_diff, m)
+        m += 1
+        edge_density = ba_edge_density(N, m)
+        ed_diff = np.abs(edge_density - approximate_edge_density)
+        did_improve = ed_diff < prev[0]
+    print(f'm = {prev[1]}')
+    return Network(nx.barabasi_albert_graph(N, prev[1]))  # type: ignore
+
+
+def test_affiliation_networks():
     seed = 666
     rng = np.random.default_rng(seed)
-    # these arrays are troublesome
-    # f = np.array([0, .1, .2, .3, .4])
-    # g = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, .1, .2, .2, .5])
     for _ in range(10):
         f = rng.random(20)
         f /= np.sum(f)
         g = rng.random(100)
         g /= np.sum(g)
         display_results_for(f, g, seed)
+
+
+if __name__ == '__main__':
+    for ed in np.linspace(0, .5, 20):
+        net = make_barabasi_albert(1000, ed)
+        print(f'Expected: {ed}. Got: {net.edge_density}')
