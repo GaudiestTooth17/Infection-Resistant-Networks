@@ -1,4 +1,6 @@
 import sys
+
+from matplotlib import pyplot as plt
 sys.path.append('')
 from collections import defaultdict
 from typing import Tuple
@@ -129,6 +131,10 @@ def make_barabasi_albert(N: int, approximate_edge_density: float) -> Network:
     return Network(nx.barabasi_albert_graph(N, prev[1]))  # type: ignore
 
 
+def ws_clustering(k: int, p: float):
+    return (3*(k-1))/(2*(2*k-1))*((1-p)**3)
+
+
 def test_affiliation_networks():
     seed = 666
     rng = np.random.default_rng(seed)
@@ -141,6 +147,25 @@ def test_affiliation_networks():
 
 
 if __name__ == '__main__':
-    for ed in np.linspace(0, .5, 20):
-        net = make_barabasi_albert(1000, ed)
-        print(f'Expected: {ed}. Got: {net.edge_density}')
+    N = 1000
+    k = 8
+    ps = np.linspace(0, 1, 20)
+    n_trials = 40
+    p_to_Gs = {p: [nx.connected_watts_strogatz_graph(N, k, p) for _ in range(n_trials)] for p in ps}
+    expected_clusterings = []
+    actual_clusterings = []
+    for p, Gs in p_to_Gs.items():
+        expected_clusterings.append(ws_clustering(k, p))
+        actual_clusterings.append([nx.average_clustering(G) for G in Gs])
+
+    quartiles = np.quantile(actual_clusterings, (.25, .75), axis=1, interpolation='midpoint')
+    mean_actual = np.mean(actual_clusterings, axis=1)
+    name = f'Comparison of Clustering Estimation vs Reality\nk={k}'
+    plt.title(name)
+    plt.plot(ps, expected_clusterings)
+    plt.plot(ps, mean_actual)
+    plt.fill_between(ps, quartiles[0], quartiles[1], alpha=.4, color='orange')
+    plt.legend(('Expected', f'Actual (Avg over {n_trials} trials)'))
+    plt.xlabel('p')
+    plt.ylabel('Clustering')
+    plt.savefig(name.replace('\n', ' ')+'.png', format='png')
