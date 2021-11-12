@@ -209,25 +209,28 @@ class SimResults:
         return self._diameter_at_step
 
     @property
-    def num_comps_at_step(self):
+    def num_comps_at_step(self) -> np.ndarray:
         return self._num_comps_at_step
 
     @property
-    def avg_comp_size_at_step(self):
+    def avg_comp_size_at_step(self) -> np.ndarray:
         return self._avg_comp_size_at_step
 
     @property
-    def percent_edges_node_loses_at_step(self):
+    def percent_edges_node_loses_at_step(self) -> Sequence[np.ndarray]:
         return self._percent_edges_node_loses_at_step
 
     # Surival
 
     @property
-    def survival_rate(self):
+    def survival_rate(self) -> float:
         return self._survival_rate
 
     @property
-    def max_num_infectious(self):
+    def max_num_infectious(self) -> int:
+        """
+        The max number of infectious agents over all time steps
+        """
         return self._max_num_infectious
 
 

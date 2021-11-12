@@ -2,7 +2,7 @@ from network import Network
 import os
 import networkx as nx
 import numpy as np
-from typing import Counter, DefaultDict, List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
+from typing import Counter, List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
 from customtypes import Layout, Communities, Number
 import csv
 import itertools as it
@@ -13,8 +13,8 @@ from colorama import Fore, Style
 import tarfile
 import re
 import matplotlib.pyplot as plt
-from collections import defaultdict
-import analysis as an
+import pickle
+from sim_dynamic import SimResults
 NETWORK_DIR = 'networks'
 
 
@@ -240,6 +240,22 @@ def write_network_class(class_name: str, nets: Sequence[Network]) -> None:
 def save_animation(net: Network, sirs: List[np.ndarray], output_name: str) -> None:
     """Save an animation of the the sirs on the network."""
     pass
+
+
+def save_sim_results(name: str, results: SimResults):
+    """
+    Save results in 'results/' as name with .pickle appended
+    """
+    with open('results/'+name+'.pickle', 'wb') as pickle_file:
+        pickle.dump(results, pickle_file)
+
+
+def load_sim_results(name: str) -> SimResults:
+    """
+    Load the named file ending in .pickle from 'results/' and return it
+    """
+    with open('results/'+name+'.pickle', 'rb') as pickle_file:
+        return pickle.load(pickle_file)
 
 
 class RawDataCSV:
