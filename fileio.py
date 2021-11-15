@@ -65,7 +65,6 @@ def read_socio_patterns_network(file_name: str,
     """
     Read a network stored in the SocioPatterns format (http://www.sociopatterns.org/datasets/test/)
 
-
     file_name: Ends in '.dat' or '.sp'
     steps_to_form_edge: It is how many time steps (of 20s) two people need to spend
                         next to each other to have an edge between them in the

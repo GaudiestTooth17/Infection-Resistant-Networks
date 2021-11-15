@@ -7,7 +7,7 @@ from sympy.core.function import diff
 from sympy.core.symbol import Symbol
 import numpy as np
 from network import Network
-from analysis import visualize_network
+import fileio as fio
 import networkx as nx
 import itertools as it
 from sympy import Expr
@@ -131,7 +131,24 @@ def make_barabasi_albert(N: int, approximate_edge_density: float) -> Network:
 
 
 def ws_clustering(k: int, p: float):
+    """
+    Estimate the clustering coefficient of a Watts-Strogatz network
+    using the method described in section III C of
+    https://arxiv.org/pdf/cond-mat/9903411.pdf
+    """
     return (3*(k-1))/(2*(2*k-1))*((1-p)**3)
+
+
+def ws_edge_density(N: int, k: int):
+    """
+    Calculate the edge density of a Watts-Strogatz network
+    """
+    # Before rewiring, each node has k stubs.
+    # It takes 2 stubs to make 1 edge.
+    # Thus, there are Nk/2 edges
+    # Unsimplified: (N*k/2) / ((N**2 - N)/2)
+    # Simplified:
+    return k/(N-1)
 
 
 def test_affiliation_networks():
@@ -145,12 +162,14 @@ def test_affiliation_networks():
         display_results_for(f, g, seed)
 
 
-if __name__ == '__main__':
+def test_ws_clustering():
     N = 1000
     k = 8
     ps = np.linspace(0, 1, 20)
     n_trials = 40
-    p_to_Gs = {p: [nx.connected_watts_strogatz_graph(N, k, p) for _ in range(n_trials)] for p in ps}
+    p_to_Gs = {p: [nx.connected_watts_strogatz_graph(N, k, p)
+                   for _ in range(n_trials)]
+               for p in ps}
     expected_clusterings = []
     actual_clusterings = []
     for p, Gs in p_to_Gs.items():
@@ -168,3 +187,40 @@ if __name__ == '__main__':
     plt.xlabel('p')
     plt.ylabel('Clustering')
     plt.savefig(name.replace('\n', ' ')+'.png', format='png')
+
+
+def test_ws_edge_density():
+    N = 1000
+    for k in range(2, 203, 2):
+        G = nx.watts_strogatz_graph(N, k, 0)
+        if len(G) == 0:
+            print('no nodes. k =', k)
+            continue
+        net = Network(G)
+        expected_edge_density = ws_edge_density(N, k)
+        if net.edge_density != expected_edge_density:
+            print(f'Expected: {expected_edge_density} Got: {net.edge_density}')
+
+
+def gather_information_on_real_social_networks():
+    secs_to_form_edge = 5*60  # 5 minutes
+    net_paths = ('networks/sp_data_school_day_1_g.gexf',
+                 'networks/sp_data_school_day_2_g.gexf',
+                 'networks/High-School_data_2013.sp',
+                 'networks/workplace_1st_deployment.sp',
+                 'networks/workplace_2nd_deployment.sp')
+    nets = [fio.read_socio_patterns_network(path, secs_to_form_edge)
+            for path in net_paths]
+    net_names = map(fio.get_network_name, net_paths)
+
+    print(f'Networks were formed with {secs_to_form_edge} seconds to form an edge')
+    for net, name in zip(nets, net_names):
+        cc = nx.average_clustering(net.G)
+        print(name)
+        print(f'N: {net.N}')
+        print(f'Clustering: {cc}')
+        print(f'Edge Density = {net.edge_density}\n')
+
+
+if __name__ == '__main__':
+    gather_information_on_real_social_networks()
