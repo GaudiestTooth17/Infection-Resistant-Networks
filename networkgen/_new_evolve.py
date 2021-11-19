@@ -109,25 +109,26 @@ def ba_edge_density(N: int, m: int):
     return (2*m*(N-m))/(N**2-N)
 
 
-def make_barabasi_albert(N: int, approximate_edge_density: float) -> Network:
+def find_best_m(N: int, desired_edge_density: float) -> int:
     """
-    Return a Barabasi-Albert network with N nodes and some approximate edge density.
+    Return the parameter m for a Barabasi-Albert network with N nodes
+    such that m is the integer that yields the closest edge density to the
+    desired edge density.
 
     Preconditions:
         0 < approximate_edge_density < .5
     """
     m = 1
     edge_density = ba_edge_density(N, m)
-    ed_diff = np.abs(edge_density - approximate_edge_density)
+    ed_diff = np.abs(edge_density - desired_edge_density)
     did_improve = True
     while did_improve:
         prev = (ed_diff, m)
         m += 1
         edge_density = ba_edge_density(N, m)
-        ed_diff = np.abs(edge_density - approximate_edge_density)
+        ed_diff = np.abs(edge_density - desired_edge_density)
         did_improve = ed_diff < prev[0]
-    print(f'm = {prev[1]}')
-    return Network(nx.barabasi_albert_graph(N, prev[1]))  # type: ignore
+    return prev[1]  # type: ignore
 
 
 def ws_clustering(k: int, p: float):
@@ -222,5 +223,23 @@ def gather_information_on_real_social_networks():
         print(f'Edge Density = {net.edge_density}\n')
 
 
+def find_best_k(N: int, desired_edge_density: float) -> int:
+    best_k = 1
+    best_density = ws_edge_density(N, best_k)
+    for k, e_density in zip(range(2, N+1), (ws_edge_density(N, k) for k in range(2, N+1))):
+        if np.abs(e_density - desired_edge_density) >= np.abs(best_density - desired_edge_density):
+            print('in if')
+            break
+        best_k = k
+        best_density = e_density
+    return best_k
+
+
 if __name__ == '__main__':
-    gather_information_on_real_social_networks()
+    N = 1000
+    # k = find_best_k(N, 0.03932205793709889)
+    # print(f'k: {k}')
+    # print(f'Edge density: {ws_edge_density(N, k)}')
+    m = find_best_m(N, 0.03932205793709889)
+    print(f'm: {m}')
+    print(f'Edge Density: {ba_edge_density(N, m)}')
