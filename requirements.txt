@@ -6,3 +6,4 @@ tqdm
 scipy
 colorama
 retworkx
+sympy

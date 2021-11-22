@@ -24,11 +24,11 @@ class Network:
             # make sure that nodes are identified by integers
             if not isinstance(next(iter(data.nodes)), int):
                 data = nx.relabel_nodes(data, {old: new for new, old in enumerate(data.nodes)})
-            self._G = data
-            self._M = None
+            self._G: nx.Graph = data  # type: ignore
+            self._M = None  # type: ignore
         else:
-            self._G = None
-            self._M = data
+            self._G = None  # type: ignore
+            self._M: np.ndarray = data
         self._intercommunity_edges = intercommunity_edges
         self._communities = communities
         self._community_size = community_size
@@ -65,7 +65,7 @@ class Network:
     def E(self) -> int:
         if self._G is not None:
             return len(self._G.edges)
-        return np.sum(self._M > 0) // 2  # type: ignore
+        return np.sum(self._M > 0) // 2
 
     @property
     def edge_density(self) -> float:
