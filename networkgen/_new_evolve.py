@@ -11,6 +11,8 @@ import fileio as fio
 import networkx as nx
 import itertools as it
 from sympy import Expr
+from tqdm import tqdm
+import time
 
 
 def make_affiliation_network(f_coeffs: np.ndarray, g_coeffs: np.ndarray,
@@ -136,6 +138,8 @@ def ws_clustering(k: int, p: float):
     Estimate the clustering coefficient of a Watts-Strogatz network
     using the method described in section III C of
     https://arxiv.org/pdf/cond-mat/9903411.pdf
+
+    The minimum value of k this function is accurate for is 8.
     """
     return (3*(k-1))/(2*(2*k-1))*((1-p)**3)
 
@@ -150,6 +154,10 @@ def ws_edge_density(N: int, k: int):
     # Unsimplified: (N*k/2) / ((N**2 - N)/2)
     # Simplified:
     return k/(N-1)
+
+
+def find_best_p(k: int, desired_clustering: float) -> float:
+    return 1 - np.cbrt((2*desired_clustering*(2*k-1))/(3*(k-1)))
 
 
 def test_affiliation_networks():
@@ -228,18 +236,46 @@ def find_best_k(N: int, desired_edge_density: float) -> int:
     best_density = ws_edge_density(N, best_k)
     for k, e_density in zip(range(2, N+1), (ws_edge_density(N, k) for k in range(2, N+1))):
         if np.abs(e_density - desired_edge_density) >= np.abs(best_density - desired_edge_density):
-            print('in if')
             break
         best_k = k
         best_density = e_density
     return best_k
 
 
+def save_box_plot(title: str, data, fix_scale: bool):
+    plt.figure()
+    plt.title(title)
+    if fix_scale:
+        plt.ylim(0, 1)
+    plt.boxplot(data)
+    plt.savefig(f'{title} ({"fixed" if fix_scale else "dynamic"}).png', format='png')
+
+
+def test_ws_creation(N: int, n_trials: int):
+    optimal_edge_density = 0.03932205793709889
+    optimal_clustering = 0.3651320425884889
+    k = find_best_k(N, optimal_edge_density)
+    p = find_best_p(k, optimal_clustering)
+    nets = [Network(nx.watts_strogatz_graph(N, k, p), layout=nx.circular_layout)  # type: ignore
+            for _ in range(n_trials)]
+    ccs = [nx.average_clustering(net.G) for net in nets]
+
+    save_box_plot('Clustering Coefficients', ccs, True)
+    save_box_plot('Clustering Coefficients', ccs, False)
+
+
 if __name__ == '__main__':
+    optimal_edge_density = 0.03932205793709889
+    optimal_clustering = 0.3651320425884889
     N = 1000
-    # k = find_best_k(N, 0.03932205793709889)
-    # print(f'k: {k}')
-    # print(f'Edge density: {ws_edge_density(N, k)}')
-    m = find_best_m(N, 0.03932205793709889)
-    print(f'm: {m}')
-    print(f'Edge Density: {ba_edge_density(N, m)}')
+    # k = find_best_k(N, optimal_edge_density)
+    # p = find_best_p(k, optimal_clustering)
+    # print(f'p: {p}')
+    # nets = [Network(nx.watts_strogatz_graph(N, k, p)) for _ in tqdm(range(100))]
+    # start_time = time.time()
+    # fio.write_network_class('WattsStrogatz', nets)
+    # print(f'Finished writing networks ({time.time()-start_time} s)')
+
+    m = find_best_m(N, optimal_edge_density)
+    nets = [Network(nx.barabasi_albert_graph(N, m)) for _ in range(100)]
+    fio.write_network_class('BarabasiAlbert', nets)
