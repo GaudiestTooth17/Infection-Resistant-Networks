@@ -14,7 +14,7 @@ import tarfile
 import re
 import matplotlib.pyplot as plt
 import pickle
-from sim_dynamic import SimResults
+from simresults import SimResults
 NETWORK_DIR = 'networks'
 
 
