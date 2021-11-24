@@ -91,7 +91,7 @@ class UpdateConnections(ABC):
     def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
         pressured_nodes = self._pressure_handler(sir)
         D = self._call(D, M, time_step, pressured_nodes)
-        R = M - D
+        R: np.ndarray = M - D  # type: ignore
 
         # Collect Data
         self._last_pressured_nodes = pressured_nodes
@@ -185,7 +185,7 @@ class MultiPressureHandler(PressureHandler):
         Takes multiple pressure handlers and returns all of the pressured nodes among any of them
         as a true/false ndarray.
         """
-    
+
     @property
     def name(self) -> str:
         n = 'OrPressureHandler: '
@@ -254,7 +254,8 @@ class FlickerPressureBehavior(UpdateConnections):
 class MultiPressureBehavior(UpdateConnections):
     def __init__(self, rng,
                  behaviors: Tuple[UpdateConnections, ...]):
-        super().__init__(None)
+        # It's okay to pass None in here because we redefined __call__
+        super().__init__(None)  # type: ignore
         self._rng = rng
         self._behaviors = behaviors
 
@@ -263,7 +264,9 @@ class MultiPressureBehavior(UpdateConnections):
         return 'MultiPressureBehavior'
 
     def __call__(self, D: np.ndarray, M: np.ndarray, time_step: int, sir: np.ndarray) -> np.ndarray:
-
+        """
+        Since __call__ was redefined, we don't need _call.
+        """
         final_ND = np.zeros(D.shape, dtype=bool)
         final_pressured_nodes = np.zeros(D.shape[0], dtype=bool)
         for behavior in self._behaviors:
@@ -273,7 +276,7 @@ class MultiPressureBehavior(UpdateConnections):
             final_pressured_nodes = final_pressured_nodes | pressured_nodes
 
         # Collect Data
-        R = M - final_ND
+        R: np.ndarray = M - final_ND  # type: ignore
         self._last_pressured_nodes = final_pressured_nodes
         self._last_removed_edges = R
         G = nx.from_numpy_array(final_ND)
@@ -281,11 +284,4 @@ class MultiPressureBehavior(UpdateConnections):
         self._last_diameter = np.max(rx.distance_matrix(rx.networkx_converter(G)))
         self._last_perc_edges_removed = np.sum(R, axis=0) / np.sum(M, axis=0)
 
-        return ND
-
-    def _call(self, D: np.ndarray, M: np.ndarray, time_step: int,
-              pressured_nodes: np.ndarray) -> np.ndarray:
-        """
-        Since __call__ was redefined, we don't need this.
-        """
-        pass
+        return ND  # type: ignore
