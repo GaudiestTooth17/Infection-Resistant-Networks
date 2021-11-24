@@ -241,10 +241,12 @@ def save_animation(net: Network, sirs: List[np.ndarray], output_name: str) -> No
     pass
 
 
-def save_sim_results(name: str, results: SimResults):
+def save_sim_results(name: str, results: Sequence[SimResults]):
     """
     Save results in 'results/' as name with .pickle appended
     """
+    if not os.path.exists('results'):
+        os.mkdir('results')
     with open('results/'+name+'.pickle', 'wb') as pickle_file:
         pickle.dump(results, pickle_file)
 
