@@ -1,5 +1,6 @@
 import sys
 sys.path.append('')
+from networkgen import Agent, make_social_circles_network
 from matplotlib import pyplot as plt
 from collections import defaultdict
 from typing import Tuple
@@ -12,7 +13,6 @@ import networkx as nx
 import itertools as it
 from sympy import Expr
 from tqdm import tqdm
-import time
 
 
 def make_affiliation_network(f_coeffs: np.ndarray, g_coeffs: np.ndarray,
@@ -265,17 +265,26 @@ def test_ws_creation(N: int, n_trials: int):
 
 
 if __name__ == '__main__':
-    optimal_edge_density = 0.03932205793709889
-    optimal_clustering = 0.3651320425884889
+    class_name = 'Elitist'
     N = 1000
-    # k = find_best_k(N, optimal_edge_density)
-    # p = find_best_p(k, optimal_clustering)
-    # print(f'p: {p}')
-    # nets = [Network(nx.watts_strogatz_graph(N, k, p)) for _ in tqdm(range(100))]
-    # start_time = time.time()
-    # fio.write_network_class('WattsStrogatz', nets)
-    # print(f'Finished writing networks ({time.time()-start_time} s)')
+    n_green = int(N * .7)
+    n_blue = int(N * .2)
+    n_purple = N - n_green - n_blue
 
-    m = find_best_m(N, optimal_edge_density)
-    nets = [Network(nx.barabasi_albert_graph(N, m)) for _ in range(100)]
-    fio.write_network_class('BarabasiAlbert', nets)
+    rng = np.random.default_rng(42)
+    grid_width = 750
+    agents = {Agent('green', 30): n_green, Agent('blue', 40): n_blue, Agent('purple', 50): n_purple}
+    samples = [make_social_circles_network(agents, (grid_width, grid_width),
+                                           max_tries=1, rng=rng)[0]  # type: ignore
+               for _ in tqdm(range(25), 'taking samples')]
+    ccs = [nx.average_clustering(net.G) for net in tqdm(samples, 'calculating clustering')]
+    eds = [net.edge_density for net in samples]
+
+    # save plots
+    plt.boxplot(ccs)
+    plt.title(f'{class_name} {grid_width}x{grid_width} Clustering')
+    plt.savefig(f'{class_name} {grid_width}x{grid_width} Clustering.png', format='png')
+    plt.figure()
+    plt.boxplot(eds)
+    plt.title(f'{class_name} {grid_width}x{grid_width} Edge Density')
+    plt.savefig(f'{class_name} {grid_width}x{grid_width} Edge Density.png', format='png')

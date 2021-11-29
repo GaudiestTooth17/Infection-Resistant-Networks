@@ -12,7 +12,6 @@ import networkx as nx
 from partitioning import fluidc_partition
 from tqdm import tqdm
 import itertools as it
-RAND = np.random.default_rng()
 
 
 @dataclass(unsafe_hash=True, frozen=True)
@@ -25,7 +24,7 @@ def social_circles_entry_point():
     # if len(sys.argv) < 2:
     #     print(f'Usage: {sys.argv[0]} <output name>')
     #     return
-    rand = np.random.default_rng(0)
+    rng = np.random.default_rng(0)
     num_agents = 250
     num_purple = int(num_agents * .1)
     num_blue = int(num_agents * .2)
@@ -39,7 +38,7 @@ def social_circles_entry_point():
     for _ in range(100):
         start_time = time.time()
         social_circles_result = make_social_circles_network(agents, (grid_dim, grid_dim),
-                                                            verbose=False, rand=rand)
+                                                            verbose=False, rng=rng)
         if social_circles_result is None:
             print('Generation failed.')
             exit(1)
@@ -59,9 +58,10 @@ def social_circles_entry_point():
 def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
                                 grid_size: Tuple[int, int],
                                 none_on_disconnected: bool = False,
+                                *,
                                 verbose: bool = False,
                                 max_tries: int = 5,
-                                rand=RAND)\
+                                rng)\
         -> Optional[Tuple[Network, NodeColors]]:
     """Return a social circles network or None on timeout."""
     for attempt in range(max_tries):
@@ -86,7 +86,7 @@ def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
             else:
                 range_quantity = range(quantity)
             for _ in range_quantity:
-                x, y = choose_empty_spot(grid, rand)
+                x, y = choose_empty_spot(grid, rng)
                 grid[x, y] = agent.reach
                 new_agents.append((x, y))
                 loc_to_id[(x, y)] = current_id
