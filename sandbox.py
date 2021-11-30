@@ -432,7 +432,8 @@ if __name__ == '__main__':
     #     plt.hist(distance_to_survival_rates[i], bins=None)
     #     plt.title(f'Distance {i} - Avg: {sum(distance_to_survival_rates[i]) / len(distance_to_survival_rates[i])}')
     #     plt.figure()
-    #     for j in range(i, 3):
+    #     for j in range(i, 3):global_flicker_half(net, rng),
+                                            local_flicker_half(net, rng),
     #         ed = wasserstein_distance(distance_to_survival_rates[i], distance_to_survival_rates[j])
     #         emd[i, j] = ed
     #         emd[j, i] = ed
