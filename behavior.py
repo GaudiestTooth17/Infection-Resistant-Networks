@@ -1,4 +1,4 @@
-from typing import Set, Tuple
+from typing import Sequence, Set, Tuple
 import networkx as nx
 import retworkx as rx
 import numpy as np
@@ -253,7 +253,7 @@ class FlickerPressureBehavior(UpdateConnections):
 
 class MultiPressureBehavior(UpdateConnections):
     def __init__(self, rng,
-                 behaviors: Tuple[UpdateConnections, ...]):
+                 behaviors: Sequence[UpdateConnections]):
         # It's okay to pass None in here because we redefined __call__
         super().__init__(None)  # type: ignore
         self._rng = rng
@@ -285,3 +285,7 @@ class MultiPressureBehavior(UpdateConnections):
         self._last_perc_edges_removed = np.sum(R, axis=0) / np.sum(M, axis=0)
 
         return ND  # type: ignore
+
+    def _call(self, D: np.ndarray, M: np.ndarray, time_step: int, pressured_nodes: np.ndarray)\
+            -> np.ndarray:
+        return super()._call(D, M, time_step, pressured_nodes)
