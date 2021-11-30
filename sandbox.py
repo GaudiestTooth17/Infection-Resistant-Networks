@@ -4,6 +4,8 @@ import fileio as fio
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from networkgen import _connected_community as cc
+from networkgen import make_social_circles_network
+from networkgen import Agent
 from sim_dynamic import *
 import networkx as nx
 # from mpl_toolkits import mplot3d
@@ -352,23 +354,83 @@ def multi_pressure_handler_test(display=True):
     A basic test for the MultiPressureHandler.
     """
     net = fio.read_network('networks/elitist-500.txt')
+    if display:
+        layout = net.layout
     ph1 = behavior.BetweenDistancePressureHandler(net.dm, 2, 3)
     ph2 = behavior.BetweenDistancePressureHandler(net.dm, 10, 40)
     ph = behavior.MultiPressureHandler((ph1, ph2))
     update_behavior = behavior.FlickerPressureBehavior(RNG, ph, 1)
+    return simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
+                    disease=Disease(6, .3),
+                    update_connections=update_behavior,
+                    max_steps=200, rng=RNG, layout=net.layout)
+
+
+def degree_minus_common_neighbors_as_distance(display=True):
+    net = fio.read_network('networks/elitist-500.txt')
+    # net = fio.read_network('caveman_3-4.txt')
+    layout = None
     if display:
-        return simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
-                        disease=Disease(4, .3),
-                        update_connections=update_behavior,
-                        max_steps=200, rng=RNG, layout=net.layout)
-    else:
-        return simulate(M=net.M, sir0=make_starting_sir(net.N, 1, RNG),
-                        disease=Disease(4, .3),
-                        update_connections=update_behavior,
-                        max_steps=200, rng=RNG, layout=None)
+        layout = net.layout
+
+    dm = (- net.common_neighbors_matrix + np.sum(net.M, axis=0)) * (net.common_neighbors_matrix > 0)
+
+    # nx.draw(net.G, net.layout, with_labels=True)
+    # plt.show()
+
+    # plt.hist(net.common_neighbors_matrix[net.M > 0].flatten())
+    # plt.title('common neighbors')
+    # plt.figure()
+
+    # plt.hist(np.sum(net.M, axis=0))
+    # plt.title('degree dist')
+    # plt.figure()
+
+    # plt.hist(dm.flatten())
+    # plt.title('dm distribution')
+    # plt.show()
+
+    fdm = list(dm[dm > 0].flatten())
+    fdm.sort()
+    dm_size = len(fdm)
+    quarter_dm_value = fdm[int(dm_size/4)]
+    half_dm_value = fdm[int(dm_size/2)]
+    # print(dm)
+    ph1 = behavior.BetweenDistancePressureHandler(dm, quarter_dm_value, half_dm_value)
+    ph2 = behavior.BetweenDistancePressureHandler(dm, half_dm_value, np.inf)
+
+    behaviors = [
+        behavior.FlickerPressureBehavior(RNG, ph1, .5),
+        behavior.FlickerPressureBehavior(RNG, ph2, 1)
+    ]
+    update_behavior = behavior.MultiPressureBehavior(RNG, behaviors)
+
+    return simulate(M=net.M, sir0=make_starting_sir(net.N, 5, RNG),
+                    disease=Disease(6, .3),
+                    update_connections=update_behavior,
+                    max_steps=200, rng=RNG, layout=net.layout)
+
+
+def ss_edge_density():
+    s = 500
+    n = 500
+    r = 30
+
+    expected = (((n*np.pi*r*r) / (s*s)) - 1) / (n - 1)
+
+    edge_densities = []
+    for _ in tqdm(range(1000)):
+        net, _ = make_social_circles_network({Agent('r', r): 100}, (50, 50))
+        edge_densities.append(net.edge_density)
+    actual = np.average(edge_densities)
+
+    plt.boxplot(edge_densities)
+    plt.title(f's: {s}, n: {n}, r: {r}, expected: {expected}, actual: {actual}')
+    plt.show()
 
 
 if __name__ == '__main__':
+    ss_edge_density()
     # net = Network(np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]]))
     # # net = Network(nx.connected_caveman_graph(5, 5))
     # layout = nx.spring_layout(net.G)
@@ -379,8 +441,12 @@ if __name__ == '__main__':
     # distance_to_survival_rates = [[pressure_flicker_test(i) for _ in tqdm(range(1))] for i in tqdm(range(3))]
 
     # multi_behavior_test()
-    multi_pressure_handler_test()
+    # multi_pressure_handler_test()
     # pressure_flicker_test(1)
+
+    # mng = plt.get_current_fig_manager()
+    # mng.full_screen_toggle()
+    # degree_minus_common_neighbors_as_distance()
 
     # emd = np.zeros((3, 3))
     # for i in range(3):

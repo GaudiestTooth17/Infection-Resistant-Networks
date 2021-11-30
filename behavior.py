@@ -220,6 +220,12 @@ class BetweenDistancePressureHandler(PressureHandler):
         infectious node as a true/false ndarray.
         """
         infectious_agents = sir[1] > 0
+        # print(infectious_agents.shape)
+
+        # detected_infectious_agents = np.random.rand(*infectious_agents.shape) < .75
+        # # print(detected_infectious_agents.shape)
+        # infectious_agents = infectious_agents * detected_infectious_agents
+
         greater_than_min = self.min_distance <= self.DM[infectious_agents]
         less_than_max = self.DM[infectious_agents] < self.max_distance
         return np.sum((greater_than_min * less_than_max), axis=0) > 0

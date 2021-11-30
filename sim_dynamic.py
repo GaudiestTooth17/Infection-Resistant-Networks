@@ -250,6 +250,9 @@ class Visualize:
             for node in range(sir.shape[1]):
                 if sir[state, node] > 0:
                     node_colors[node] = self._state_to_color[state]
+
+        
+
         plt.clf()
         nx.draw_networkx(G, pos=self._layout, with_labels=False,
                          node_color=node_colors, node_size=50)
