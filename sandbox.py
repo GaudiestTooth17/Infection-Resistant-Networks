@@ -368,6 +368,51 @@ def multi_pressure_handler_test(display=True):
                         max_steps=200, rng=RNG, layout=None)
 
 
+def degree_minus_common_neighbors_as_distance(display=True):
+    net = fio.read_network('networks/elitist-500.txt')
+    # net = fio.read_network('caveman_3-4.txt')
+    layout = None
+    if display:
+        layout = net.layout
+
+    dm = (- net.common_neighbors_matrix + np.sum(net.M, axis=0)) * (net.common_neighbors_matrix > 0)
+
+    # nx.draw(net.G, net.layout, with_labels=True)
+    # plt.show()
+
+    # plt.hist(net.common_neighbors_matrix[net.M > 0].flatten())
+    # plt.title('common neighbors')
+    # plt.figure()
+
+    # plt.hist(np.sum(net.M, axis=0))
+    # plt.title('degree dist')
+    # plt.figure()
+
+    # plt.hist(dm.flatten())
+    # plt.title('dm distribution')
+    # plt.show()
+
+    fdm = list(dm[dm > 0].flatten())
+    fdm.sort()
+    dm_size = len(fdm)
+    quarter_dm_value = fdm[int(dm_size/4)]
+    half_dm_value = fdm[int(dm_size/2)]
+    # print(dm)
+    ph1 = behavior.BetweenDistancePressureHandler(dm, quarter_dm_value, half_dm_value)
+    ph2 = behavior.BetweenDistancePressureHandler(dm, half_dm_value, np.inf)
+
+    behaviors = [
+        behavior.FlickerPressureBehavior(RNG, ph1, .5),
+        behavior.FlickerPressureBehavior(RNG, ph2, 1)
+    ]
+    update_behavior = behavior.MultiPressureBehavior(RNG, behaviors)
+
+    return simulate(M=net.M, sir0=make_starting_sir(net.N, 5, RNG),
+                    disease=Disease(6, .3),
+                    update_connections=update_behavior,
+                    max_steps=200, rng=RNG, layout=net.layout)
+
+
 if __name__ == '__main__':
     # net = Network(np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]]))
     # # net = Network(nx.connected_caveman_graph(5, 5))
@@ -393,3 +438,5 @@ if __name__ == '__main__':
     #         emd[j, i] = ed
     # print(emd)
     # plt.show()
+
+
