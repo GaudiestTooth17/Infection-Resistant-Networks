@@ -147,8 +147,3 @@ class Network:
         if self._M is not None:
             return len(self._M)
         return len(self._G)  # type: ignore
-
-    def __len__(self) -> int:
-        if self._M is not None:
-            return len(self._M)
-        return len(self._G)  # type: ignore
