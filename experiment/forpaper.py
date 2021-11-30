@@ -14,8 +14,10 @@ def run_sims_on_class(class_name: str, sims_per_config: int, i0: int, disease: D
                       rng: np.random.Generator):
     nets = fio.read_network_class(class_name)
     for net in nets:
-        for intervention_strategy, name in (make_global_flicker(net, rng),
-                                            make_local_flicker(net, rng),
+        for intervention_strategy, name in (global_flicker_half(net, rng),
+                                            local_flicker_half(net, rng),
+                                            global_flicker_quarter(net, rng),
+                                            local_flicker_quarter(net, rng),
                                             totally_isolate_inf_agents(net, rng),
                                             partially_isolate_inf_agents(net, rng)):
             results = []
@@ -28,14 +30,30 @@ def run_sims_on_class(class_name: str, sims_per_config: int, i0: int, disease: D
 
 # TODO: verify all of these with Michael
 # TODO: Decide what to do with hypothesis 3
-def make_global_flicker(net: Network, rng: Generator) -> Tuple[UpdateConnections, str]:
+def no_mitigation(net: Network, rng: Generator) -> Tuple[UpdateConnections, str]:
     """For hypothesis 1"""
-    return FlickerPressureBehavior(rng, AllPressureHandler()), 'Global Flicker'
+    return NoMitigation(), 'No Mitigation'
 
 
-def make_local_flicker(net: Network, rng: Generator) -> Tuple[UpdateConnections, str]:
+def global_flicker_quarter(net: Network, rng: Generator) -> Tuple[UpdateConnections, str]:
     """For hypothesis 1"""
-    return FlickerPressureBehavior(rng, DistancePressureHandler(net.dm, 1), .5), 'Local Flicker'
+    return FlickerPressureBehavior(rng, AllPressureHandler(), .25), f'Global Flicker .25'
+
+
+def global_flicker_half(net: Network, rng: Generator) -> Tuple[UpdateConnections, str]:
+    """For hypothesis 1"""
+    return FlickerPressureBehavior(rng, AllPressureHandler(), .5), f'Global Flicker .5'
+
+
+def local_flicker_half(net: Network, rng: Generator) -> Tuple[UpdateConnections, str]:
+    """For hypothesis 1"""
+    return FlickerPressureBehavior(rng, DistancePressureHandler(net.dm, 1), .5), 'Local Flicker .5'
+
+
+def local_flicker_quarter(net: Network, rng: Generator) -> Tuple[UpdateConnections, str]:
+    """For hypothesis 1"""
+    return FlickerPressureBehavior(rng, DistancePressureHandler(net.dm, 1), .25),\
+        'Local Flicker .25'
 
 
 def totally_isolate_inf_agents(net: Network, rng: Generator) -> Tuple[UpdateConnections, str]:
