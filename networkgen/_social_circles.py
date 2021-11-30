@@ -4,14 +4,12 @@ sys.path.append('')
 from typing import Union, Tuple, Dict, Optional
 from dataclasses import dataclass
 from customtypes import Number, NodeColors
-import time
-from analysis import visualize_network
 from scipy.sparse import dok_matrix
 import numpy as np
 import networkx as nx
-from partitioning import fluidc_partition
 from tqdm import tqdm
 import itertools as it
+from numba import njit
 
 
 @dataclass(unsafe_hash=True, frozen=True)
@@ -21,38 +19,23 @@ class Agent:
 
 
 def social_circles_entry_point():
-    # if len(sys.argv) < 2:
-    #     print(f'Usage: {sys.argv[0]} <output name>')
-    #     return
     rng = np.random.default_rng(0)
-    num_agents = 250
+    num_agents = 1000
     num_purple = int(num_agents * .1)
     num_blue = int(num_agents * .2)
     num_green = num_agents - num_purple - num_blue
-    grid_dim = int(num_agents+100)  # the denominator is the desired density
+    grid_dim = 600
     print(f'Density = {num_agents/(grid_dim**2)}')
 
     agents = {Agent('green', 30): num_green,
               Agent('blue', 40): num_blue,
               Agent('purple', 50): num_purple}
-    for _ in range(100):
-        start_time = time.time()
-        social_circles_result = make_social_circles_network(agents, (grid_dim, grid_dim),
-                                                            verbose=False, rng=rng)
-        if social_circles_result is None:
-            print('Generation failed.')
-            exit(1)
-        net, _ = social_circles_result
-        print(f'Finished social circles network ({time.time() - start_time}s).')
-        visualize_network(net.G, net.layout, 'Social Circles', block=False)
-        num_communities = net.N // 20
-        print(f'Aiming for {num_communities} communities.')
-        to_remove = fluidc_partition(net.G, num_communities)
-        H = nx.Graph(net.G)
-        H.remove_edges_from(to_remove)
-        print(f'G has {nx.number_connected_components(H)} connected components.')
-        visualize_network(H, net.layout, 'Partitioned')
-        print('\n\n')
+    data = []
+    for _ in range(4):
+        data.append(make_social_circles_network(agents, (grid_dim, grid_dim),
+                                                verbose=False, rng=rng,
+                                                max_tries=1))
+    print(f'Generated {len(data)} networks')
 
 
 def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
@@ -95,7 +78,7 @@ def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
                 new_agents = tqdm(new_agents)
                 print('Connecting agents.')
             for x, y in new_agents:
-                neighbors = search_for_neighbors(grid, x, y)
+                neighbors = fast_search_for_neighbors(grid, x, y)
                 for i, j in neighbors:
                     M[loc_to_id[(x, y)], loc_to_id[(i, j)]] = 1
                     M[loc_to_id[(i, j)], loc_to_id[(x, y)]] = 1
@@ -125,7 +108,7 @@ def choose_empty_spot(grid, rand) -> Tuple[int, int]:
     return x, y
 
 
-def search_for_neighbors(grid, x, y):
+def search_for_neighbors(grid, x: int, y: int):
     reach = grid[x, y]
     # The connections on the grid need to wrap around,
     # so we mod the values by the grid  dims
@@ -147,7 +130,30 @@ def search_for_neighbors(grid, x, y):
     return neighbors
 
 
-def distance(x0, y0, x1, y1) -> float:
+@njit
+def fast_search_for_neighbors(grid, x: int, y: int):
+    reach = grid[x, y]
+    # The connections on the grid need to wrap around,
+    # so we mod the values by the grid  dims
+    min_x = (x-reach) % grid.shape[0]
+    max_x = (x+reach) % grid.shape[0]
+    min_y = (y-reach) % grid.shape[1]
+    max_y = (y+reach) % grid.shape[1]
+    # Because the values got modded, the mins might actually be higher than the maxes,
+    # so we reassign the values here to make sure that the values are properly labeled
+    min_x, max_x = sorted((min_x, max_x))
+    min_y, max_y = sorted((min_y, max_y))
+
+    neighbors = []
+    for i in range(min_x, max_x+1):
+        for j in range(min_y, max_y+1):
+            if grid[i, j] > 0 and distance(x, y, i, j) <= reach and (x, y) != (i, j):
+                neighbors.append((i, j))
+    return neighbors
+
+
+@njit
+def distance(x0: int, y0: int, x1: int, y1: int) -> float:
     return np.sqrt((x0-x1)**2 + (y0-y1)**2)
 
 

@@ -2,6 +2,7 @@ networkx==2.5.1
 krug
 matplotlib
 numpy
+numba
 tqdm
 scipy
 colorama

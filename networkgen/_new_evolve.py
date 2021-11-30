@@ -265,26 +265,33 @@ def test_ws_creation(N: int, n_trials: int):
 
 
 if __name__ == '__main__':
-    class_name = 'Elitist'
     N = 1000
+
+    class_name = 'Elitist'
     n_green = int(N * .7)
     n_blue = int(N * .2)
     n_purple = N - n_green - n_blue
+    # class_name = 'Democratic'
+    # n_green = N // 3
+    # n_blue = N // 3
+    # n_purple = N - n_green - n_blue
+
+    grid_width = 450
+    label = f'{class_name} {grid_width}x{grid_width}'
 
     rng = np.random.default_rng(42)
-    grid_width = 750
     agents = {Agent('green', 30): n_green, Agent('blue', 40): n_blue, Agent('purple', 50): n_purple}
     samples = [make_social_circles_network(agents, (grid_width, grid_width),
                                            max_tries=1, rng=rng)[0]  # type: ignore
-               for _ in tqdm(range(25), 'taking samples')]
+               for _ in tqdm(range(25), label)]
     ccs = [nx.average_clustering(net.G) for net in tqdm(samples, 'calculating clustering')]
     eds = [net.edge_density for net in samples]
 
     # save plots
     plt.boxplot(ccs)
-    plt.title(f'{class_name} {grid_width}x{grid_width} Clustering')
-    plt.savefig(f'{class_name} {grid_width}x{grid_width} Clustering.png', format='png')
+    plt.title(f'{label} Clustering')
+    plt.savefig(f'{label} Clustering.png', format='png')
     plt.figure()
     plt.boxplot(eds)
-    plt.title(f'{class_name} {grid_width}x{grid_width} Edge Density')
-    plt.savefig(f'{class_name} {grid_width}x{grid_width} Edge Density.png', format='png')
+    plt.title(f'{label} Edge Density')
+    plt.savefig(f'{label} Edge Density.png', format='png')
