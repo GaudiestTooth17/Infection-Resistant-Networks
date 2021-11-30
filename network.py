@@ -126,6 +126,28 @@ class Network:
             self._edm = m
         return self._edm
 
+    @property
+    def common_neighbors_matrix(self):
+        if self._common_neighbors_matrix is None:
+            cnm = -1 * np.ones(self.M.shape)
+            for node_a in range(self.N):
+                neighbors_a = self.M[node_a]
+                for node_b in np.where(neighbors_a > 0)[0]:
+                    if cnm[node_a, node_b] != -1:
+                        pass
+                    else:
+                        neighbors_b = self.M[node_b]
+                        cnm[node_a, node_b] = np.sum(neighbors_a * neighbors_b)
+                        cnm[node_b, node_a] = np.sum(neighbors_a * neighbors_b)
+            cnm[cnm == -1] = 0
+            self._common_neighbors_matrix = cnm
+        return self._common_neighbors_matrix
+
+    def __len__(self) -> int:
+        if self._M is not None:
+            return len(self._M)
+        return len(self._G)  # type: ignore
+
     def __len__(self) -> int:
         if self._M is not None:
             return len(self._M)
