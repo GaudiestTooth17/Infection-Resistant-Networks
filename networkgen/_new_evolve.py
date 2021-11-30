@@ -264,19 +264,19 @@ def test_ws_creation(N: int, n_trials: int):
     save_box_plot('Clustering Coefficients', ccs, False)
 
 
-if __name__ == '__main__':
+def find_parameters_of_social_circles():
     N = 1000
 
-    class_name = 'Elitist'
-    n_green = int(N * .7)
-    n_blue = int(N * .2)
-    n_purple = N - n_green - n_blue
-    # class_name = 'Democratic'
-    # n_green = N // 3
-    # n_blue = N // 3
+    # class_name = 'Elitist'
+    # n_green = int(N * .7)
+    # n_blue = int(N * .2)
     # n_purple = N - n_green - n_blue
+    class_name = 'Democratic'
+    n_green = N // 3
+    n_blue = N // 3
+    n_purple = N - n_green - n_blue
 
-    grid_width = 450
+    grid_width = 225
     label = f'{class_name} {grid_width}x{grid_width}'
 
     rng = np.random.default_rng(42)
@@ -295,3 +295,7 @@ if __name__ == '__main__':
     plt.boxplot(eds)
     plt.title(f'{label} Edge Density')
     plt.savefig(f'{label} Edge Density.png', format='png')
+
+
+if __name__ == '__main__':
+    find_parameters_of_social_circles()
