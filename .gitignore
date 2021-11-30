@@ -5,3 +5,4 @@ configurationmodel.profile
 results/
 rmme.py
 target/
+*.prof
