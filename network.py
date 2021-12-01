@@ -37,6 +37,7 @@ class Network:
         self._R = None
         self._dm = None
         self._edm = None  # Edge distance matrix (distance to attached edges is 1)
+        self._common_neighbors_matrix = None
 
     @property
     def G(self) -> nx.Graph:

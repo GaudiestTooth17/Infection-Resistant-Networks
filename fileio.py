@@ -2,7 +2,7 @@ from network import Network
 import os
 import networkx as nx
 import numpy as np
-from typing import Counter, List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
+from typing import Counter, Iterable, List, Optional, Sequence, Union, Callable, Tuple, Dict, Any
 from customtypes import Layout, Communities, Number
 import csv
 import itertools as it
@@ -198,7 +198,7 @@ def network_names_to_paths(network_names: Sequence[str]) -> Sequence[str]:
     return network_paths
 
 
-def read_network_class(class_name: str) -> Tuple[Network, ...]:
+def read_network_class(class_name: str) -> Iterable[Network]:
     """
     Return all the saved instances of the specified network class.
 
@@ -208,7 +208,7 @@ def read_network_class(class_name: str) -> Tuple[Network, ...]:
     extraction_dir = os.path.join('/tmp', class_name)
 
     with tarfile.open(os.path.join('networks', archive_name)) as tar:
-        tar.extractall('/tmp')
+        tar.extractall(extraction_dir)
 
     allowed_names = re.compile(r'instance-\d+.txt')
     id_num = re.compile(r'\d+')
@@ -251,7 +251,7 @@ def save_sim_results(name: str, results: Sequence[SimResults]):
         pickle.dump(results, pickle_file)
 
 
-def load_sim_results(name: str) -> SimResults:
+def load_sim_results(name: str) -> Sequence[SimResults]:
     """
     Load the named file ending in .pickle from 'results/' and return it
     """

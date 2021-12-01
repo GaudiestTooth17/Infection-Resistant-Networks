@@ -39,6 +39,9 @@ class SimResults:
         self._survival_rate = np.sum(sirs[-1][0] > 0) / sirs[-1].shape[1]
         self._max_num_infectious = max(np.sum(sir[1] > 0) for sir in sirs)
         self._percent_edges_node_loses_at_step = percent_edges_node_loses_at_step
+        self._max_num_edges_removed = None
+        self._temporal_average_edges_removed = None
+        self._avg_edge_removal_duration = None
 
     # Invasiveness
 

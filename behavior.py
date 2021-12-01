@@ -51,7 +51,7 @@ class UpdateConnections(ABC):
 
     @property
     def last_num_removed_edges(self) -> int:
-        return len(self.last_removed_edges)
+        return np.sum(self.last_removed_edges > 0) // 2
 
     @property
     def last_diameter(self) -> int:
@@ -130,7 +130,7 @@ class NoMitigation(UpdateConnections):
             return 'No Pressure'
 
         def __call__(self, sir: np.ndarray):
-            return np.zeros(sir.shape[1])
+            return np.zeros(sir.shape[1], dtype=np.int32)
 
     def __init__(self):
         super().__init__(NoMitigation.NoPressure())
@@ -154,7 +154,7 @@ class AllPressureHandler(PressureHandler):
         """
         Returns every node as a true/false ndarray.
         """
-        return np.ones(sir.shape[1])
+        return np.ones(sir.shape[1], dtype=np.int32)
 
 
 class DistancePressureHandler(PressureHandler):
@@ -195,7 +195,7 @@ class MultiPressureHandler(PressureHandler):
 
     def __call__(self, sir: np.ndarray) -> np.ndarray:
 
-        pressured_nodes = np.zeros(sir.shape[1])
+        pressured_nodes = np.zeros(sir.shape[1], dtype=np.int32)
         for p in self.pressure_handlers:
             pressured_nodes += p(sir)
         return pressured_nodes > 0
