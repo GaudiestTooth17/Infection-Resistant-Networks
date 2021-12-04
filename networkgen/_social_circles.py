@@ -1,6 +1,6 @@
-from network import Network
 import sys
 sys.path.append('')
+from network import Network
 from typing import Union, Tuple, Dict, Optional
 from dataclasses import dataclass
 from customtypes import Number, NodeColors
@@ -10,6 +10,7 @@ import networkx as nx
 from tqdm import tqdm
 import itertools as it
 from numba import njit
+import fileio as fio
 
 
 @dataclass(unsafe_hash=True, frozen=True)
@@ -20,22 +21,20 @@ class Agent:
 
 def social_circles_entry_point():
     rng = np.random.default_rng(0)
-    num_agents = 1000
-    num_purple = int(num_agents * .1)
-    num_blue = int(num_agents * .2)
-    num_green = num_agents - num_purple - num_blue
-    grid_dim = 600
-    print(f'Density = {num_agents/(grid_dim**2)}')
+    N = 1000
+    n_green = N // 3
+    n_blue = N // 3
+    n_purple = N - n_green - n_blue
+    grid_dim = 225
+    print(f'Density = {N/(grid_dim**2)}')
 
-    agents = {Agent('green', 30): num_green,
-              Agent('blue', 40): num_blue,
-              Agent('purple', 50): num_purple}
-    data = []
-    for _ in range(4):
-        data.append(make_social_circles_network(agents, (grid_dim, grid_dim),
-                                                verbose=False, rng=rng,
-                                                max_tries=1))
-    print(f'Generated {len(data)} networks')
+    agents = {Agent('green', 30): n_green,
+              Agent('blue', 40): n_blue,
+              Agent('purple', 50): n_purple}
+    nets = [make_social_circles_network(agents, (grid_dim, grid_dim), verbose=False,
+                                        rng=rng, max_tries=1)[0]  # type: ignore
+            for _ in tqdm(range(100))]
+    fio.write_network_class('SocialCircles', nets)
 
 
 def make_social_circles_network(agent_type_to_quantity: Dict[Agent, int],
